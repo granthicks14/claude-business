@@ -32,7 +32,7 @@ import {
   type PayoffStyle,
   type RiskTolerance,
 } from "@/lib/types";
-import { useAIStatus } from "@/lib/useAI";
+import { useAIStatus, useIntelligence } from "@/lib/useAI";
 
 const PREFERENCES = Object.keys(PREFERENCE_LABEL) as BusinessPreference[];
 
@@ -56,7 +56,7 @@ function Settings() {
         onChange={(id) => setTab(id as typeof tab)}
         tabs={[
           { id: "profile", label: "Founder profile" },
-          { id: "ai", label: "AI setup" },
+          { id: "ai", label: "Intelligence" },
           { id: "data", label: "Your data" },
         ]}
       />
@@ -269,11 +269,71 @@ function ProfileEditor() {
 
 function AISetup() {
   const { status, loading } = useAIStatus();
+  const intelligence = useIntelligence();
+  const toast = useToast();
 
   return (
     <div className="space-y-4">
       <Card className="p-5">
-        <SectionHeader title="AI provider" description="Configured on the server through environment variables. Keys are never sent to your browser." />
+        <SectionHeader
+          title="What generates your results"
+          description="The app works completely without any paid service. An AI provider is optional, and switching to it costs money per request."
+        />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            onClick={() => {
+              actions.setIntelligence("engine");
+              toast("Using the built-in engine — free and local", "good");
+            }}
+            aria-pressed={intelligence === "engine"}
+            className={`text-left p-4 rounded-xl border transition-all ${
+              intelligence === "engine" ? "border-accent bg-accent-soft" : "border-border hover:border-accent-border"
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm">Business Intelligence Engine</span>
+              <Badge tone="good">Free</Badge>
+              {intelligence === "engine" && <Badge tone="accent">Active</Badge>}
+            </div>
+            <p className="text-[13px] text-muted mt-2 leading-relaxed">
+              A structured recommendation system that runs in your browser. Instant, works offline, and costs nothing
+              to you or the developer. It is not a language model — so it&apos;s precise on business questions and
+              can&apos;t hold an open-ended conversation.
+            </p>
+          </button>
+
+          <button
+            onClick={() => {
+              actions.setIntelligence("ai");
+              toast(status?.configured ? "Using the AI provider — this costs money per request" : "AI selected, but no provider is configured", status?.configured ? "good" : "bad");
+            }}
+            aria-pressed={intelligence === "ai"}
+            className={`text-left p-4 rounded-xl border transition-all ${
+              intelligence === "ai" ? "border-accent bg-accent-soft" : "border-border hover:border-accent-border"
+            }`}
+          >
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium text-sm">Optional Advanced AI</span>
+              <Badge tone="warn">Paid</Badge>
+              {intelligence === "ai" && <Badge tone="accent">Active</Badge>}
+            </div>
+            <p className="text-[13px] text-muted mt-2 leading-relaxed">
+              Routes generation to a configured provider. More varied writing and open-ended conversation, but every
+              request is billed by that provider, and it needs a network connection. Falls back to the engine
+              automatically if it&apos;s unavailable.
+            </p>
+          </button>
+        </div>
+
+        <p className="text-xs text-faint mt-3">
+          Whichever you pick, your data stays on this device. Selecting AI sends the relevant parts of your profile and
+          business to the configured provider so it can respond.
+        </p>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="Optional AI provider" description="Configured on the server through environment variables. Keys are never sent to your browser." />
 
         {loading ? (
           <p className="text-sm text-muted">Checking…</p>
@@ -300,27 +360,18 @@ function AISetup() {
           </div>
         ) : (
           <div className="space-y-4">
-            <Badge tone="warn">Not connected</Badge>
+            <Badge tone="neutral">Not connected — and not needed</Badge>
+            <p className="text-sm text-muted leading-relaxed">
+              No provider is configured, so everything runs through the built-in engine. That is the intended default:
+              the entire core workflow — profile, ideas, scoring, comparison, validation, plans, marketing, sales,
+              money, tasks, experiments and the coach — works with no API key and no cost.
+            </p>
             <div>
-              <p className="text-sm font-medium">What doesn&apos;t work without it</p>
+              <p className="text-sm font-medium">The one thing a provider adds</p>
               <ul className="text-sm text-muted mt-1.5 space-y-1">
-                {["Generating and scoring business ideas", "The Validation Lab and competitor analysis", "Business plans, offers, personas, brand and website copy", "Marketing, content and sales generation", "The AI coach", "Roadmaps and the first-money plan"].map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <span className="text-faint shrink-0">•</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-medium">What still works</p>
-              <ul className="text-sm text-muted mt-1.5 space-y-1">
-                {["Your founder profile", "Opportunity scoring of ideas you already have", "The money model and all its calculations", "Tasks, customers, revenue and expenses", "Journal, decisions and assumptions", "Search, export and sharing"].map((f) => (
-                  <li key={f} className="flex gap-2">
-                    <span className="text-good shrink-0">✓</span>
-                    {f}
-                  </li>
-                ))}
+                <li className="flex gap-2"><span className="text-faint shrink-0">•</span>Open-ended conversation with the coach, rather than structured answers</li>
+                <li className="flex gap-2"><span className="text-faint shrink-0">•</span>More varied phrasing across generated documents</li>
+                <li className="flex gap-2"><span className="text-faint shrink-0">•</span>The MVP technical specification, which needs genuine language generation</li>
               </ul>
             </div>
           </div>

@@ -134,6 +134,7 @@ function RoadmapView({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Build my 90-day plan"
       emptyDescription={`Four phases, sized to fit ${profile.hoursPerWeek} hours a week. Anything that could cheaply prove the idea wrong comes first — you shouldn't build before you have evidence.`}
       actions={
@@ -389,6 +390,7 @@ function FirstMoneyView({ business }: { business: SelectedBusiness }) {
         loading={task.loading}
         stage={task.stage}
         error={task.error}
+        source={task.meta}
         generateLabel="How do I make my first $100?"
         emptyDescription="A day-by-day plan to your first $10, $50, $100, $500 and $1,000 — built around how this business specifically earns money, with the actual words to send."
       >

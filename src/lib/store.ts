@@ -81,6 +81,7 @@ export function defaultMoneyInputs(): MoneyModelInputs {
 export function emptyState(): AppState {
   return {
     version: STATE_VERSION,
+    settings: { intelligence: "engine" },
     profile: emptyProfile(),
     ideas: [],
     businesses: [],
@@ -135,6 +136,7 @@ function migrate(raw: unknown): AppState {
     ...base,
     ...parsed,
     version: STATE_VERSION,
+    settings: { ...base.settings, ...(parsed.settings ?? {}) },
     profile: { ...base.profile, ...(parsed.profile ?? {}) },
     stats: { ...base.stats, ...(parsed.stats ?? {}) },
     ideas: parsed.ideas ?? [],
@@ -378,6 +380,10 @@ export const actions = {
       businesses: s.businesses.filter((b) => b.id !== id),
       activeBusinessId: s.activeBusinessId === id ? null : s.activeBusinessId,
     }));
+  },
+
+  setIntelligence(intelligence: AppState["settings"]["intelligence"]) {
+    update((s) => ({ ...s, settings: { ...s.settings, intelligence } }));
   },
 
   addNicheReport(report: AppState["niches"][number]) {

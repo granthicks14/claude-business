@@ -133,6 +133,7 @@ function Compare() {
     const result = await task.run({
       profile: state.profile,
       input: {
+        ideaObjects: ideas,
         ideas: ideas
           .map(
             (i) =>

@@ -54,7 +54,7 @@ function Best() {
   const generateIdeas = async () => {
     const found = await generation.generate({
       profile: state.profile,
-      angles: DEFAULT_ANGLES.map((a) => ({ brief: a.brief, count: 5 })),
+      angles: DEFAULT_ANGLES.map((a) => ({ brief: a.brief, angleId: a.angleId, count: 5 })),
       avoid: state.ideas.map((i) => i.name),
     });
     if (found.length) toast(`${found.length} opportunities analysed`, "good");
@@ -65,6 +65,7 @@ function Best() {
     const result = await verdict.run({
       profile: state.profile,
       input: {
+        ideaObjects: top,
         ideas: top
           .map(
             (i) =>

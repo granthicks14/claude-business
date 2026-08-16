@@ -60,7 +60,7 @@ function useNav(): NavGroup[] {
     }
 
     const track: NavItem[] = [
-      { href: "/coach", label: "AI coach", icon: "chat" },
+      { href: "/coach", label: "Coach", icon: "chat" },
       { href: "/journal", label: "Journal", icon: "book" },
       { href: "/search", label: "Search", icon: "search" },
     ];
@@ -68,6 +68,7 @@ function useNav(): NavGroup[] {
       track.push({ href: "/graveyard", label: "Graveyard", icon: "archive" });
     }
     track.push({ href: "/settings", label: "Settings", icon: "settings" });
+    track.push({ href: "/cost", label: "Cost audit", icon: "money" });
     groups.push({ title: business ? "Track" : "You", items: track });
 
     return groups;

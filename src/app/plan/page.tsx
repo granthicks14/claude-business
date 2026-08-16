@@ -130,6 +130,7 @@ function Blueprint({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Write my business plan"
       emptyDescription="Eighteen sections covering concept, model, pricing, operations, competitive advantage, risks and growth — all specific to this business and your resources."
     >
@@ -216,6 +217,7 @@ function Models({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Find the best way to make money"
       emptyDescription="Which monetisation models actually fit this business and your resources — subscription, service, digital product, licensing and the rest — with the reasoning for each and one clear recommendation."
     >
@@ -277,6 +279,7 @@ function OfferSection({ business }: { business: SelectedBusiness }) {
         loading={task.loading}
         stage={task.stage}
         error={task.error}
+        source={task.meta}
         generateLabel="Build my offer"
         emptyDescription="The specific thing you put in front of a customer: what they get, what it costs, why that price, and what to say to close it."
       >
@@ -368,6 +371,7 @@ function Personas({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Generate customer personas"
       emptyDescription="Who exactly you're selling to: their situation, what they want, what stops them buying, and where they already spend time."
     >
@@ -465,6 +469,7 @@ function BrandSection({ business }: { business: SelectedBusiness }) {
         loading={task.loading}
         stage={task.stage}
         error={task.error}
+        source={task.meta}
         generateLabel="Generate brand direction"
         emptyDescription="Names, taglines, positioning, personality, colour direction and logo concepts — regenerate as often as you like until something fits."
         actions={
@@ -595,6 +600,7 @@ function Website({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Write my website"
       emptyDescription="Structure and finished copy for every page — home, about, services, pricing, FAQ, contact — plus SEO metadata. Paste it straight into any site builder."
       actions={
@@ -760,6 +766,7 @@ function ServiceBuilder({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Build my service business"
       emptyDescription="Packages and prices, how you find clients, how you deliver, what you say on a sales call, and how you keep them coming back."
     >
@@ -836,6 +843,7 @@ function ProductBuilder({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Define my product"
       emptyDescription="What it is, what goes in v1, what deliberately doesn't, the customer journey, and how you'd launch it."
     >

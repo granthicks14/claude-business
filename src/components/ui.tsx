@@ -831,7 +831,7 @@ export function ErrorPanel({
         </svg>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-text">
-            {noProvider ? "AI isn't set up on this deployment" : "AI generation failed"}
+            {noProvider ? "That needs an optional AI provider" : "Generation failed"}
           </p>
           <p className="text-sm text-muted mt-1 break-words">{error.message}</p>
           <div className="flex flex-wrap gap-2 mt-3">
@@ -840,9 +840,9 @@ export function ErrorPanel({
                 Try again
               </Button>
             )}
-            {noProvider && (
+            {(noProvider || error.code === "engine_unsupported") && (
               <LinkButton size="sm" variant="secondary" href="/settings">
-                How to set it up
+                Intelligence settings
               </LinkButton>
             )}
           </div>

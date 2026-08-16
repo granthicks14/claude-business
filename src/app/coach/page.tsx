@@ -1,14 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { PageHeader, Ready } from "@/components/page";
-import { Badge, Button, Card, EmptyState, LinkButton, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Spinner, Textarea } from "@/components/ui";
 import { activeBusiness, newId, update, useAppState } from "@/lib/store";
 import type { AIMessage } from "@/lib/types";
-import { useAIStatus } from "@/lib/useAI";
+import { useAIStatus, useIntelligence } from "@/lib/useAI";
 
 const SUGGESTIONS_NO_BUSINESS = [
   "I don't know where to start. What should I do first?",
@@ -37,6 +38,7 @@ export default function CoachPage() {
 function Coach() {
   const state = useAppState((s) => s);
   const { status } = useAIStatus();
+  const intelligence = useIntelligence();
   const business = activeBusiness(state);
   const conversation = state.conversations[0];
   const messages = conversation?.messages ?? [];
@@ -87,6 +89,23 @@ function Coach() {
     abortRef.current = controller;
 
     try {
+      if (intelligence === "engine") {
+        const { coachAnswer } = await import("@/lib/engine");
+        const reply = coachAnswer(trimmed, { state, business, journal: state.journal });
+        // Reveal it progressively — an instant wall of text reads worse than
+        // a short, visible response.
+        const words = reply.split(" ");
+        for (let i = 0; i < words.length; i += 12) {
+          if (controller.signal.aborted) break;
+          setStreamText(words.slice(0, i + 12).join(" "));
+          await new Promise((resolve) => setTimeout(resolve, 16));
+        }
+        if (!controller.signal.aborted) {
+          pushMessage({ id: newId("msg"), role: "assistant", content: reply, createdAt: Date.now() });
+        }
+        return;
+      }
+
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -100,13 +119,13 @@ function Coach() {
       });
 
       if (!res.ok || !res.body) {
-        const err = (await res.json().catch(() => ({ error: "The coach couldn't respond." }))) as { error?: string };
+        const err = (await res.json().catch(() => ({ error: "The coach couldn't respond." }))) as { error?: string; code?: string };
+        const { coachAnswer } = await import("@/lib/engine");
         pushMessage({
           id: newId("msg"),
           role: "assistant",
-          content: err.error ?? "The coach couldn't respond. Please try again.",
+          content: `_${err.code === "no_provider" ? "No AI provider is configured" : "The AI provider didn't respond"}, so the built-in engine answered instead._\n\n${coachAnswer(trimmed, { state, business, journal: state.journal })}`,
           createdAt: Date.now(),
-          error: true,
         });
         return;
       }
@@ -134,12 +153,13 @@ function Coach() {
       }
     } catch (err) {
       if ((err as Error).name !== "AbortError") {
+        // Offline or unreachable — the engine still works.
+        const { coachAnswer } = await import("@/lib/engine");
         pushMessage({
           id: newId("msg"),
           role: "assistant",
-          content: "Couldn't reach the coach. Check your connection and try again.",
+          content: `_Couldn't reach the AI provider, so the built-in engine answered instead._\n\n${coachAnswer(trimmed, { state, business, journal: state.journal })}`,
           createdAt: Date.now(),
-          error: true,
         });
       }
     } finally {
@@ -155,7 +175,7 @@ function Coach() {
   return (
     <div className="flex flex-col min-h-[calc(100dvh-8rem)]">
       <PageHeader
-        title="AI coach"
+        title="Business coach"
         description={
           business
             ? `Knows your profile, ${business.idea.name}, your tasks, decisions and journal. You don't need to explain the context.`
@@ -174,16 +194,21 @@ function Coach() {
         }
       />
 
-      {noProvider && (
-        <Card className="mb-4">
-          <EmptyState
-            icon={<Icon.chat className="size-8 mx-auto text-warn" />}
-            title="The coach needs an AI provider"
-            description="Nothing is configured on this deployment, so there's no model to talk to. Everything you write yourself still works."
-            action={<LinkButton href="/settings" variant="primary">See how to connect one</LinkButton>}
-          />
-        </Card>
-      )}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Badge tone={intelligence === "engine" ? "accent" : "info"}>
+          {intelligence === "engine" ? "Business Intelligence Engine" : "AI provider"}
+        </Badge>
+        <p className="text-xs text-muted">
+          {intelligence === "engine"
+            ? "Answers are generated locally by a structured system — free, instant, works offline. Not a language model, so it's best on specific business questions."
+            : noProvider
+              ? "AI is selected but no provider is configured — the built-in engine will answer instead."
+              : "Answers come from the configured AI provider, which costs money per message."}{" "}
+          <Link href="/settings" className="text-accent-text underline underline-offset-2">
+            Change
+          </Link>
+        </p>
+      </div>
 
       <div className="flex-1 space-y-4">
         {messages.length === 0 && !noProvider && (
@@ -273,7 +298,7 @@ function Coach() {
             }}
             placeholder={business ? `Ask about ${business.idea.name}…` : "Ask your coach anything…"}
             aria-label="Message the coach"
-            disabled={!!noProvider}
+            disabled={false}
             className="min-h-11 max-h-40 flex-1 resize-none py-2.5"
             rows={1}
           />
@@ -282,7 +307,7 @@ function Coach() {
               Stop
             </Button>
           ) : (
-            <Button variant="primary" onClick={() => send(input)} disabled={!input.trim() || !!noProvider}>
+            <Button variant="primary" onClick={() => send(input)} disabled={!input.trim()}>
               Send
             </Button>
           )}

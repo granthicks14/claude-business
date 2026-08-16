@@ -175,6 +175,17 @@ export interface BusinessIdea {
   source: "generated" | "surprise" | "category" | "constraints" | "pivot" | "manual";
   /** Set when this idea came out of the pivot engine. */
   pivotedFrom?: ID;
+  /**
+   * Set when the Business Intelligence Engine produced this idea. Lets later
+   * generators (plan, marketing, roadmap…) look the same knowledge back up
+   * instead of re-deriving it from prose.
+   */
+  engine?: {
+    industryId: string;
+    segmentId: string;
+    problemId: string;
+    modelId: string;
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -553,8 +564,19 @@ export interface SelectedBusiness {
   radar: RadarItem[];
 }
 
+/** Which system answers generation requests. */
+export type Intelligence = "engine" | "ai";
+
 export interface AppState {
   version: number;
+  settings: {
+    /**
+     * "engine" is the built-in Business Intelligence Engine: free, local, and
+     * the default. "ai" routes to an optional configured provider, which costs
+     * money per request and falls back to the engine when unavailable.
+     */
+    intelligence: Intelligence;
+  };
   profile: FounderProfile;
   ideas: BusinessIdea[];
   businesses: SelectedBusiness[];

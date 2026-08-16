@@ -9,13 +9,17 @@ import { useAIStatus } from "@/lib/useAI";
 
 const PIPELINE = [
   { label: "You", detail: "Skills, time, money, goals" },
-  { label: "AI analysis", detail: "Matched against real business models" },
+  { label: "Analysis", detail: "Matched against real business models" },
   { label: "Opportunities", detail: "Scored 0–100 against your situation" },
   { label: "Validation", detail: "Evidence before you commit" },
   { label: "Launch", detail: "A plan for what to do today" },
 ];
 
 const PROOF = [
+  {
+    title: "Free to run, by design",
+    body: "A structured recommendation engine runs locally in your browser — no API key, no account, no database, and it works offline. An AI provider is optional, never required.",
+  },
   {
     title: "Scored against you, not in general",
     body: "Ten dimensions — founder fit, demand, speed to revenue, competition and more — weighted by what you told us you want, with the reasoning shown for every number.",
@@ -95,14 +99,17 @@ export default function HomePage() {
             </p>
           )}
 
-          {status && !status.configured && (
-            <div className="mt-6 rounded-xl border border-warn/30 bg-warn-soft px-4 py-3 max-w-2xl">
-              <p className="text-sm font-medium">AI isn&apos;t connected on this deployment yet</p>
+          {ready && (
+            <div className="mt-6 rounded-xl border border-good/30 bg-good-soft px-4 py-3 max-w-2xl">
+              <p className="text-sm font-medium">Works with no account, no API key and no cost</p>
               <p className="text-sm text-muted mt-1">
-                Idea generation, validation and the coach all need an AI provider. Scoring, the money model, tasks and
-                everything you write yourself work without one.{" "}
-                <Link href="/settings" className="text-accent-text font-medium underline underline-offset-2">
-                  Set it up in Settings
+                Everything runs on a built-in Business Intelligence Engine in your own browser — ideas, scoring,
+                validation, plans, marketing, money and the coach.{" "}
+                {status?.configured
+                  ? "An optional AI provider is also configured on this deployment if you want it."
+                  : "An optional AI provider can be added, but nothing here needs one."}{" "}
+                <Link href="/cost" className="text-accent-text font-medium underline underline-offset-2">
+                  See the cost audit
                 </Link>
                 .
               </p>
@@ -193,7 +200,7 @@ export default function HomePage() {
         </Card>
       </section>
 
-      <section aria-labelledby="why" className="grid gap-3 sm:grid-cols-3">
+      <section aria-labelledby="why" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <h2 id="why" className="sr-only">
           What makes this different
         </h2>

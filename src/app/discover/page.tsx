@@ -25,25 +25,27 @@ import { actions, useAppState } from "@/lib/store";
 import type { BusinessIdea, NicheReport } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
 
-const CATEGORIES = [
-  { id: "ai", label: "AI", hint: "Tools, services and content built around AI" },
-  { id: "sports", label: "Sports", hint: "Teams, athletes, gear, coaching" },
-  { id: "fitness", label: "Fitness", hint: "Training, nutrition, accountability" },
-  { id: "gaming", label: "Gaming", hint: "Players, creators, communities" },
-  { id: "education", label: "Education", hint: "Teaching, tutoring, courses" },
-  { id: "music", label: "Music", hint: "Artists, producers, venues, fans" },
-  { id: "fashion", label: "Fashion", hint: "Clothing, styling, resale" },
-  { id: "food", label: "Food", hint: "Cooking, catering, food businesses" },
-  { id: "automotive", label: "Automotive", hint: "Cars, repairs, detailing, enthusiasts" },
-  { id: "finance", label: "Finance", hint: "Money management, bookkeeping, education" },
-  { id: "pets", label: "Pets", hint: "Owners, care, products, services" },
-  { id: "outdoors", label: "Outdoors", hint: "Hiking, fishing, camping, hunting" },
-  { id: "local", label: "Local services", hint: "In-person work in your area" },
-  { id: "creator", label: "Creator economy", hint: "Content, audiences, sponsorship" },
-  { id: "software", label: "Software", hint: "Apps, SaaS, automation" },
-  { id: "ecommerce", label: "E-commerce", hint: "Selling physical products" },
-  { id: "realestate", label: "Real estate services", hint: "Adjacent services, not property investment" },
-  { id: "professional", label: "Professional services", hint: "Consulting, admin, B2B support" },
+const CATEGORIES: { id: string; industryId: string; label: string; hint: string }[] = [
+  { id: "ai", industryId: "ai", label: "AI", hint: "Tools, services and content built around AI" },
+  { id: "sports", industryId: "sports", label: "Sports", hint: "Teams, athletes, gear, coaching" },
+  { id: "fitness", industryId: "fitness", label: "Fitness", hint: "Training, nutrition, accountability" },
+  { id: "gaming", industryId: "gaming", label: "Gaming", hint: "Players, creators, communities" },
+  { id: "education", industryId: "education", label: "Education", hint: "Teaching, tutoring, courses" },
+  { id: "music", industryId: "music", label: "Music", hint: "Artists, producers, venues, fans" },
+  { id: "fashion", industryId: "fashion", label: "Fashion", hint: "Clothing, styling, resale" },
+  { id: "food", industryId: "food", label: "Food", hint: "Cooking, catering, food businesses" },
+  { id: "automotive", industryId: "automotive", label: "Automotive", hint: "Cars, repairs, detailing, enthusiasts" },
+  { id: "finance", industryId: "professional", label: "Finance", hint: "Money management, bookkeeping, education" },
+  { id: "pets", industryId: "pets", label: "Pets", hint: "Owners, care, products, services" },
+  { id: "outdoors", industryId: "outdoors", label: "Outdoors", hint: "Hiking, fishing, camping, hunting" },
+  { id: "local", industryId: "home-services", label: "Local services", hint: "In-person work in your area" },
+  { id: "creator", industryId: "creator", label: "Creator economy", hint: "Content, audiences, sponsorship" },
+  { id: "software", industryId: "tech", label: "Software", hint: "Apps, SaaS, automation" },
+  { id: "ecommerce", industryId: "ecommerce", label: "E-commerce", hint: "Selling physical products" },
+  { id: "realestate", industryId: "home-life", label: "Real estate services", hint: "Adjacent services, not property investment" },
+  { id: "professional", industryId: "professional", label: "Professional services", hint: "Consulting, admin, B2B support" },
+  { id: "events", industryId: "events", label: "Events", hint: "Weddings, parties, gatherings" },
+  { id: "home", industryId: "home-life", label: "Home & family", hint: "Organising, moving, household help" },
 ];
 
 type Tab = "categories" | "now" | "surprise" | "mine" | "niches";
@@ -105,12 +107,19 @@ function useExplorer(source: BusinessIdea["source"]) {
   const [results, setResults] = useState<BusinessIdea[]>([]);
   const toast = useToast();
 
-  const explore = async (brief: string, category?: string, count = 5) => {
+  const explore = async (
+    brief: string,
+    category?: string,
+    count = 5,
+    engineAngle: "balanced" | "fast" | "ceiling" | "cheap" | "unusual" | "local" | "online" = "balanced",
+    industryId?: string,
+  ) => {
     setResults([]);
     const found = await generation.generate({
       profile: state.profile,
-      angles: [{ brief, count }],
+      angles: [{ brief, count, angleId: engineAngle }],
       category,
+      industryId,
       avoid: state.ideas.map((i) => i.name),
       source,
     });
@@ -141,6 +150,9 @@ function CategoryExplorer() {
               explore(
                 `opportunities in the ${cat.label.toLowerCase()} space (${cat.hint}), built around what this founder can actually deliver`,
                 cat.label,
+                5,
+                "balanced",
+                cat.industryId,
               );
             }}
             disabled={loading}
@@ -199,6 +211,7 @@ function BuildNow() {
               `${EXPLORE_ANGLES.now}${extra.trim() ? `. They also have access to: ${extra.trim()}` : ""}`,
               undefined,
               6,
+              "cheap",
             )
           }
           icon={<Icon.bolt />}
@@ -222,7 +235,7 @@ function SurpriseMe() {
           title="Surprise me"
           description="Unusual combinations you probably wouldn't arrive at yourself — still built from your actual skills and resources, and still required to survive a sceptical reading."
         />
-        <Button variant="primary" onClick={() => explore(EXPLORE_ANGLES.surprise, undefined, 5)} loading={loading} icon={<Icon.spark />}>
+        <Button variant="primary" onClick={() => explore(EXPLORE_ANGLES.surprise, undefined, 5, "unusual")} loading={loading} icon={<Icon.spark />}>
           Surprise me
         </Button>
       </Card>
@@ -261,6 +274,7 @@ function StressTest() {
       profile: state.profile,
       angles: [
         {
+          angleId: "balanced",
           brief: `developing the founder's OWN idea into something concrete and workable. Their description: "${idea.trim()}". Produce sharper, more specific versions of this idea — different customers, models or scopes — rather than unrelated businesses. Keep what they clearly care about`,
           count: 3,
         },

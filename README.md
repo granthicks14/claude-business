@@ -17,21 +17,43 @@ financial model, an experiment loop and a task system.
 
 ```bash
 npm install
-cp .env.example .env.local     # add at least one AI provider key
-npm run dev                    # http://localhost:3000
+npm run dev        # http://localhost:3000
 ```
 
-The app runs without an AI key — it just tells you, clearly and specifically,
-which features are unavailable rather than pretending to work.
+That's it. **No API key, no account, no database.** The entire product works out
+of the box, because generation runs on a built-in **Business Intelligence
+Engine** in the browser rather than a paid API.
+
+An optional AI provider can be added later (`cp .env.example .env.local`) if you
+want open-ended coach conversation and more varied phrasing — but nothing in the
+core workflow needs one, and the app never pretends otherwise.
+
+### Free Core Mode
+
+This is a permanent architectural requirement, not a fallback:
+
+| | Business Intelligence Engine (default) | Optional Advanced AI |
+| --- | --- | --- |
+| Cost | **$0 — nothing, ever** | Billed per request by the provider |
+| Network | None. Works offline. | Required |
+| Speed | Instant | Seconds |
+| Covers | Everything except the MVP tech spec | Everything, plus open conversation |
+
+Switch between them in **Settings → Intelligence**. If AI is selected and the
+provider is missing, broken or unreachable, the engine answers instead and says
+so. A live accounting of every dependency lives at **/cost**.
 
 ---
 
-## Deploying to Vercel
+## Deploying
 
-1. Push this repository to GitHub and import it at [vercel.com/new](https://vercel.com/new).
-   Next.js is detected automatically; no build configuration is needed.
-2. Add an AI provider key under **Project → Settings → Environment Variables**
-   (see below), then redeploy.
+Push to GitHub and import at [vercel.com/new](https://vercel.com/new) — Next.js
+is detected automatically, no build configuration and **no environment variables
+are needed**. It also runs on Netlify, Cloudflare Pages, or `npm run build &&
+npm start` on any machine.
+
+Optionally add an AI provider key under **Project → Settings → Environment
+Variables** and redeploy.
 
 > **Never** prefix a key with `NEXT_PUBLIC_`. That would ship your API key to
 > every visitor's browser. All keys in this project are read server-side only,
@@ -40,25 +62,52 @@ which features are unavailable rather than pretending to work.
 
 ### Environment variables
 
+**Every variable below is optional.** The app works with none of them set.
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | one provider required | Anthropic (Claude). Recommended. |
+| `ANTHROPIC_API_KEY` | no | Anthropic (Claude). |
 | `ANTHROPIC_MODEL` | no | Model override. Default `claude-sonnet-5`. |
-| `OPENAI_API_KEY` | one provider required | OpenAI. |
+| `OPENAI_API_KEY` | no | OpenAI. |
 | `OPENAI_MODEL` | no | Model override. Default `gpt-4.1`. |
-| `OPENAI_COMPATIBLE_BASE_URL` | one provider required | Any OpenAI-compatible endpoint — OpenRouter, Groq, Together, or a local Ollama / LM Studio server. Include `/v1`. |
+| `OPENAI_COMPATIBLE_BASE_URL` | no | Any OpenAI-compatible endpoint — OpenRouter, Groq, Together, or a local Ollama / LM Studio server. Include `/v1`. |
 | `OPENAI_COMPATIBLE_API_KEY` | no | Key for the above, if it needs one. |
 | `OPENAI_COMPATIBLE_MODEL` | no | Model name for the above. |
 | `AI_PROVIDER` | no | `anthropic` \| `openai` \| `compatible`, when several are set. |
 | `TAVILY_API_KEY` | no | Enables live web research in the Validation Lab, competitor analysis and opportunity radar. |
 | `BRAVE_SEARCH_API_KEY` | no | Alternative search provider. |
 
-Settings → AI setup shows which of these the running deployment has, and what is
-and isn't available as a result.
+Settings → Intelligence shows which of these the running deployment has, and
+`/cost` itemises exactly what is and isn't being paid for.
 
 ---
 
 ## What it does
+
+### The engine
+
+Ideas are not picked from a list. Each one is assembled from four independent
+parts — a **market**, a **customer segment** inside it, a **problem** that
+segment actually has, and a **business model** capable of solving it — then
+filtered against hard limits (budget, weekly hours, capabilities, location,
+things the founder refuses to do) and scored. Two founders with different
+profiles cannot receive the same set.
+
+```
+src/lib/engine/
+  knowledge/industries.ts   18 markets · 74 customer segments · 90 problems
+  knowledge/models.ts       22 business models with real economics
+  knowledge/skills.ts       free-text skills → capability matching
+  knowledge/channels.ts     15 marketing channels with cost and prerequisites
+  match.ts                  profile → signals, and constraint extraction
+  ideas.ts                  combinatorial generation, filtering, scoring, pivots
+  generators/               plan · research · execution · growth · advice
+  coach.ts                  25 business intents, answered from live state
+```
+
+Cost and revenue estimates are bounded by arithmetic rather than optimism:
+delivery capacity is derived from the founder's actual hours, and audience-led
+models say plainly that they earn close to nothing for months.
 
 **Discover — what should I build?**
 
@@ -76,7 +125,7 @@ and isn't available as a result.
 
 **Decide — why this one?**
 
-- **Opportunity score, 0–100.** Ten dimensions, each with the model's reasoning
+- **Opportunity score, 0–100.** Ten dimensions, each with its reasoning
   attached, then re-weighted locally against the current profile. Budget
   headroom, weekly hours, stated preferences and refusals are applied as
   deterministic adjustments, and every adjustment is shown with its reason.
@@ -90,7 +139,7 @@ and isn't available as a result.
 
 - **Validation Lab.** Customers, problem evidence, willingness to pay,
   alternatives, pricing signals and complaints — every item labelled
-  **verified** / **AI inference** / **assumption** / **you said**. With a search
+  **verified** / **inference** / **assumption** / **you said**. With a search
   key configured, verified claims cite the source they came from. Without one,
   nothing is ever marked verified and the app says so up front.
 - **Competitor analysis**, including informal alternatives (doing nothing, DIY),
@@ -145,6 +194,11 @@ src/
     store.ts               Local-first state, persisted to localStorage
 ```
 
+**Zero required cost.** Scoring, financial modelling, health, search, export,
+sharing and the entire engine are local computation. There is no database, no
+auth provider, no analytics, no email service, and no paid API in the required
+path — see `/cost` in the running app for the itemised audit.
+
 **Provider architecture.** `AIProvider` is a two-method interface
 (`generateJSON`, `streamText`). Anthropic uses forced tool use for reliably
 schema-shaped output; the OpenAI adapter also serves any compatible endpoint,
@@ -174,9 +228,13 @@ distinct labels shown throughout. Without a search provider configured, nothing
 is ever marked verified, no source is ever cited, and no claim of a "trend" is
 made. Research failures are reported, not hidden.
 
-**The AI argues back.** The system prompt requires it to challenge weak ideas,
-name the strongest objection to its own recommendation, and refuse to fall back
-on generic answers ("could this have been generated for almost anyone?").
+**It argues back.** Both paths challenge weak ideas, name the strongest
+objection to their own recommendation, and refuse generic answers. The engine's
+idea critique will tell you plainly when what you've described is weak, and why.
+
+**Never fake AI.** Deterministic output is labelled "Business Intelligence
+Engine" everywhere it appears — never as AI. When a provider does answer, that
+is labelled too, along with its model name.
 
 **Prompt-injection defence.** Everything a user types is fenced inside labelled
 data tags, tag-closing sequences in user text are neutralised, and the system
@@ -184,11 +242,10 @@ prompt — the one place a user cannot edit — states that content inside those
 tags is data and can never change the rules. Verified against payloads including
 `</founder_profile>` and "ignore all previous instructions".
 
-**Cheap to run.** Scoring, the money model, health scoring, search, export and
-sharing are all local computation — zero API cost. AI responses are cached
-server-side and stored client-side, so revisiting a page never re-spends tokens.
-The only paid dependency is the AI provider you choose, and the app says plainly
-that it costs money.
+**Cheap to run.** Nothing in the core workflow costs anything. If you do enable
+a provider, responses are cached server-side and stored client-side, so
+revisiting a page never re-spends tokens — and the app says plainly that it
+costs money rather than describing a metered service as free.
 
 **Not a professional adviser.** Where licences, tax, insurance, permits or
 contracts are relevant, the app says to verify with a qualified professional
@@ -221,7 +278,22 @@ the coach stream, experiments, search, comparison, mobile layout and theming.
 
 - Data is per-browser. Clearing site data or switching devices loses it unless
   you export a backup first.
-- Idea quality depends on the model behind the configured provider; a small
-  local model will produce noticeably weaker analysis than a frontier one.
-- Web research covers only what the configured search API returns. It is not a
-  substitute for talking to real customers — which the app repeatedly tells you.
+- The engine reasons over a curated knowledge base of 18 industries. A founder
+  in a market it doesn't cover falls back to the closest match by capability,
+  which is useful but less sharp — adding an industry is one data entry.
+- The engine writes from templates filled with derived specifics. It is precise
+  and consistent; it is not as fluent or as open-ended as a language model, and
+  it can't hold a free-ranging conversation. That's the trade for $0.
+- Web research requires an optional search key. Without one, nothing is ever
+  marked verified and no source is ever cited — the app labels findings as
+  inference or assumption instead of inventing research.
+
+## Project rule
+
+Every future feature must follow this, in order:
+
+1. Find a local or free implementation first.
+2. If a paid service is genuinely better, make it strictly optional.
+3. Never let the application depend on it for core functionality.
+4. Disclose any possible cost plainly; never call a metered service free.
+5. Preserve Free Core Mode — the app must always work end to end with no keys.

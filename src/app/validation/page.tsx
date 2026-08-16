@@ -111,6 +111,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
           loading={validation.loading}
           stage={validation.stage}
           error={validation.error}
+          source={validation.meta}
           generateLabel="Run validation review"
           emptyDescription="Investigates who the customers are, whether the problem is real, whether people appear willing to pay, what already exists, and what would have to be true for this to work."
         >
@@ -244,6 +245,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
           loading={competitors.loading}
           stage={competitors.stage}
           error={competitors.error}
+          source={competitors.meta}
           generateLabel="Analyse competitors"
           emptyDescription="Who you'd be up against — including the informal alternatives people actually use, like doing it themselves or asking a friend. Then how you could differentiate, never imitate."
         >

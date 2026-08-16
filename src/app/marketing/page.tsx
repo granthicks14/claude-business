@@ -85,6 +85,7 @@ function ChannelPlan({ business }: { business: SelectedBusiness }) {
       loading={task.loading}
       stage={task.stage}
       error={task.error}
+      source={task.meta}
       generateLabel="Build my marketing plan"
       emptyDescription="Which channels are worth your time given your hours and what you're comfortable doing — plus the first three moves on each, concrete enough to do this week."
     >

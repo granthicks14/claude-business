@@ -4,7 +4,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { stagesFor } from "./ai/stages";
 import type { AIStatus } from "./ai/providers";
-import type { BusinessIdea, FounderProfile, SelectedBusiness } from "./types";
+import { snapshot, useAppState } from "./store";
+import type { BusinessIdea, FounderProfile, Intelligence, SelectedBusiness } from "./types";
+
+/**
+ * Generation entry point for the whole app.
+ *
+ * By default every task runs through the built-in Business Intelligence Engine
+ * — locally, in the browser, with no network request and no cost. An optional
+ * AI provider can be configured and selected, in which case requests go to the
+ * server instead. If that provider is missing or fails, the engine takes over
+ * rather than the feature breaking.
+ */
 
 export interface AIRunPayload {
   profile: FounderProfile;
@@ -15,10 +26,14 @@ export interface AIRunPayload {
 }
 
 export interface AIMeta {
-  provider: string;
-  model: string;
-  cached: boolean;
-  research: { attempted: boolean; provider: string | null; resultCount: number; error: string | null } | null;
+  /** Which system actually produced this result. Always shown to the user. */
+  source: Intelligence;
+  provider?: string;
+  model?: string;
+  cached?: boolean;
+  research?: { attempted: boolean; provider: string | null; resultCount: number; error: string | null } | null;
+  /** Set when AI was selected but the engine answered instead. */
+  fellBack?: string;
 }
 
 export interface AIError {
@@ -27,9 +42,18 @@ export interface AIError {
   code?: string;
 }
 
+/** Reads the current preference without subscribing (for use inside callbacks). */
+export function currentIntelligence(): Intelligence {
+  return snapshot().settings?.intelligence ?? "engine";
+}
+
+export function useIntelligence(): Intelligence {
+  return useAppState((s) => s.settings?.intelligence ?? "engine");
+}
+
 /**
- * Runs one AI task, with staged progress messages, an abortable request, and
- * an error surface that always offers a retry. Never swallows a failure.
+ * Runs one task, with staged progress messages and an error surface that always
+ * offers a retry. Never swallows a failure.
  */
 export function useAITask<T>(task: string) {
   const [loading, setLoading] = useState(false);
@@ -64,9 +88,35 @@ export function useAITask<T>(task: string) {
       const timer = setInterval(() => {
         stageIndex = Math.min(stageIndex + 1, stages.length - 1);
         if (mounted.current) setStage(stages[stageIndex]);
-      }, 2600);
+      }, 900);
 
       try {
+        const mode = currentIntelligence();
+        const { engineSupports, runEngineTask } = await import("./engine");
+
+        // --- Local engine path: no network, no cost, works offline ----------
+        if (mode === "engine" && engineSupports(task)) {
+          const data = runEngineTask(task, payload) as T;
+          // A short, honest pause: results are instant, and a UI that flashes
+          // through five status messages in 20ms reads as broken.
+          await new Promise((resolve) => setTimeout(resolve, 220));
+          if (mounted.current) setMeta({ source: "engine" });
+          return data;
+        }
+
+        if (mode === "engine" && !engineSupports(task)) {
+          if (mounted.current) {
+            setError({
+              message:
+                "This particular feature needs an optional AI provider — the built-in engine doesn't cover it. Everything else in the app works without one.",
+              retryable: false,
+              code: "engine_unsupported",
+            });
+          }
+          return null;
+        }
+
+        // --- Optional AI provider path --------------------------------------
         const res = await fetch("/api/ai", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -75,14 +125,30 @@ export function useAITask<T>(task: string) {
         });
 
         const json = (await res.json()) as
-          | { data: T; meta: AIMeta }
+          | { data: T; meta: Omit<AIMeta, "source"> }
           | { error: string; retryable?: boolean; code?: string };
 
         if (!res.ok || "error" in json) {
           const err = json as { error: string; retryable?: boolean; code?: string };
+
+          // Provider unavailable — fall back rather than blocking the user.
+          if (engineSupports(task)) {
+            const data = runEngineTask(task, payload) as T;
+            if (mounted.current) {
+              setMeta({
+                source: "engine",
+                fellBack:
+                  err.code === "no_provider"
+                    ? "No AI provider is configured, so the built-in engine answered instead."
+                    : `The AI provider failed (${err.error}). The built-in engine answered instead.`,
+              });
+            }
+            return data;
+          }
+
           if (mounted.current) {
             setError({
-              message: err.error ?? "AI generation failed. Please try again.",
+              message: err.error ?? "Generation failed. Please try again.",
               retryable: err.retryable ?? true,
               code: err.code,
             });
@@ -90,16 +156,29 @@ export function useAITask<T>(task: string) {
           return null;
         }
 
-        if (mounted.current) setMeta(json.meta);
+        if (mounted.current) setMeta({ source: "ai", ...json.meta });
         return json.data;
       } catch (err) {
         if ((err as Error)?.name === "AbortError") return null;
+
+        // Network died, or the engine threw. Try the engine before giving up —
+        // this is what keeps the app working with no connection at all.
+        try {
+          const { engineSupports, runEngineTask } = await import("./engine");
+          if (currentIntelligence() === "ai" && engineSupports(task)) {
+            const data = runEngineTask(task, payload) as T;
+            if (mounted.current) {
+              setMeta({ source: "engine", fellBack: "Couldn't reach the AI provider, so the built-in engine answered instead." });
+            }
+            return data;
+          }
+        } catch {
+          /* fall through to the error below */
+        }
+
         if (mounted.current) {
           setError({
-            message:
-              err instanceof TypeError
-                ? "Couldn't reach the server. Check your connection and try again."
-                : "AI generation failed. Please try again.",
+            message: err instanceof Error ? err.message : "Generation failed. Please try again.",
             retryable: true,
           });
         }
@@ -144,7 +223,7 @@ function fetchStatus(): Promise<AIStatus> {
   return statusPromise;
 }
 
-/** Whether an AI provider is configured, fetched once per page load. */
+/** Whether an optional AI provider is configured, fetched once per page load. */
 export function useAIStatus(): { status: AIStatus | null; loading: boolean } {
   const [status, setStatus] = useState<AIStatus | null>(null);
 

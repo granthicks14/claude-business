@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { stagesFor } from "./ai/stages";
 import { computeScore } from "./scoring";
 import { actions, newId } from "./store";
+import { currentIntelligence } from "./useAI";
 import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type ScoreDimension } from "./types";
 
 /**
@@ -20,25 +21,31 @@ import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type ScoreDim
 export interface Angle {
   id: string;
   label: string;
+  /** Prompt text, used only when an optional AI provider is selected. */
   brief: string;
+  /** Selection bias used by the built-in engine. */
+  angleId: "balanced" | "fast" | "ceiling" | "cheap" | "unusual" | "local" | "online";
 }
 
 export const DEFAULT_ANGLES: Angle[] = [
   {
     id: "leverage",
     label: "Highest leverage",
+    angleId: "balanced",
     brief:
       "the strongest all-round options — where this founder's specific skills and resources give them an unusual advantage over a random person starting the same thing",
   },
   {
     id: "fast",
     label: "Fastest to first dollar",
+    angleId: "fast",
     brief:
       "money soonest — things that could realistically produce a first paying customer in days or a couple of weeks, even if the ceiling is lower",
   },
   {
     id: "ceiling",
     label: "Biggest long-term potential",
+    angleId: "ceiling",
     brief:
       "the highest ceiling — options that start slower but could become something durable, scalable, or eventually sellable",
   },
@@ -54,12 +61,14 @@ export const EXPLORE_ANGLES: Record<string, string> = {
 
 export interface GenerateOptions {
   profile: FounderProfile;
-  angles: { brief: string; count: number }[];
+  angles: { brief: string; count: number; angleId?: Angle["angleId"] }[];
   constraints?: string;
   source?: BusinessIdea["source"];
   /** Names already on screen, so batches don't duplicate each other. */
   avoid?: string[];
   category?: string;
+  /** Industry id, when exploring a specific category with the local engine. */
+  industryId?: string;
 }
 
 interface RawIdea {
@@ -170,13 +179,45 @@ export function useIdeaGeneration() {
     const timer = setInterval(() => {
       stageIndex = Math.min(stageIndex + 1, stages.length - 1);
       if (mounted.current) setStage(stages[stageIndex]);
-    }, 2600);
+    }, currentIntelligence() === "engine" ? 300 : 2600);
 
     const seen = new Set((options.avoid ?? []).map(normalizeName));
     const collected: BusinessIdea[] = [];
     let firstError: { message: string; retryable: boolean; code?: string } | null = null;
 
-    const runBatch = async (angle: { brief: string; count: number }) => {
+    const mode = currentIntelligence();
+    const engine = await import("./engine");
+
+    const runBatch = async (angle: { brief: string; count: number; angleId?: Angle["angleId"] }, index: number) => {
+      // --- Built-in engine: instant, local, free -------------------------
+      if (mode === "engine") {
+        const generated = engine.generateIdeas(options.profile, {
+          angle: angle.angleId ?? "balanced",
+          count: angle.count,
+          industryId: options.industryId,
+          constraints: options.constraints,
+          avoid: [...seen],
+          seed: Math.floor(Math.random() * 1000) + index * 7,
+        });
+
+        const fresh: BusinessIdea[] = [];
+        for (const idea of generated) {
+          const key = normalizeName(idea.name);
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          fresh.push(options.source ? { ...idea, source: options.source } : idea);
+        }
+        if (fresh.length && mounted.current) {
+          actions.addIdeas(fresh);
+          collected.push(...fresh);
+        }
+        // Brief pause so the staged progress UI doesn't flash past unread.
+        await new Promise((resolve) => setTimeout(resolve, 260 + index * 120));
+        if (mounted.current) setProgress((p) => ({ ...p, done: p.done + 1 }));
+        return;
+      }
+
+      // --- Optional AI provider ------------------------------------------
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -203,6 +244,28 @@ export function useIdeaGeneration() {
 
       if (!res.ok || "error" in json) {
         const err = json as { error: string; retryable?: boolean; code?: string };
+        // The provider is optional: if it can't answer, the engine can.
+        const generated = engine.generateIdeas(options.profile, {
+          angle: angle.angleId ?? "balanced",
+          count: angle.count,
+          industryId: options.industryId,
+          constraints: options.constraints,
+          avoid: [...seen],
+          seed: Math.floor(Math.random() * 1000) + index * 7,
+        });
+        const recovered: BusinessIdea[] = [];
+        for (const idea of generated) {
+          const key = normalizeName(idea.name);
+          if (!key || seen.has(key)) continue;
+          seen.add(key);
+          recovered.push(idea);
+        }
+        if (recovered.length && mounted.current) {
+          actions.addIdeas(recovered);
+          collected.push(...recovered);
+          setProgress((p) => ({ ...p, done: p.done + 1 }));
+          return;
+        }
         throw Object.assign(new Error(err.error ?? "Idea generation failed."), {
           retryable: err.retryable ?? true,
           code: err.code,
@@ -225,7 +288,7 @@ export function useIdeaGeneration() {
       if (mounted.current) setProgress((p) => ({ ...p, done: p.done + 1 }));
     };
 
-    const results = await Promise.allSettled(options.angles.map(runBatch));
+    const results = await Promise.allSettled(options.angles.map((a, i) => runBatch(a, i)));
     clearInterval(timer);
 
     for (const r of results) {

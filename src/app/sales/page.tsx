@@ -38,6 +38,7 @@ function Sales({ business }: { business: SelectedBusiness }) {
         loading={task.loading}
         stage={task.stage}
         error={task.error}
+        source={task.meta}
         generateLabel="Build my sales playbook"
         emptyDescription="Outreach strategies, cold emails and DMs you can send today, discovery questions, objection handling, follow-up, onboarding and referral requests — all specific to this business."
       >

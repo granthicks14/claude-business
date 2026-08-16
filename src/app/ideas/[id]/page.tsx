@@ -30,9 +30,10 @@ import { download, ideaToMarkdown, slugify } from "@/lib/export";
 import { useIdeaGeneration } from "@/lib/ideas";
 import { computeScore } from "@/lib/scoring";
 import { actions, useAppState } from "@/lib/store";
+import { currentIntelligence } from "@/lib/useAI";
 import { DIMENSION_LABEL, LEVEL_LABEL, SCORE_DIMENSIONS, type BusinessIdea } from "@/lib/types";
 
-const PIVOTS = [
+const PIVOTS: { id: "market" | "product" | "customer" | "problem" | "model" | "place"; label: string; brief: string }[] = [
   { id: "market", label: "Same skills, different market", brief: "keep the founder's skills but aim them at a completely different market and customer" },
   { id: "product", label: "Same market, different product", brief: "keep the same market and customer but sell them something different" },
   { id: "customer", label: "Same product, different customer", brief: "keep roughly the same offering but sell it to a different type of customer, including business buyers" },
@@ -62,6 +63,7 @@ function IdeaDetail() {
   const [pivotOpen, setPivotOpen] = useState(false);
   const [pivots, setPivots] = useState<BusinessIdea[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [pivoting, setPivoting] = useState(false);
 
   if (!idea) {
     return (
@@ -79,14 +81,36 @@ function IdeaDetail() {
   const existingBusiness = state.businesses.find((b) => b.ideaId === idea.id && !b.archivedAt);
   const inCompare = state.compareIds.includes(idea.id);
 
-  const runPivot = async (brief: string) => {
+  const runPivot = async (pivot: (typeof PIVOTS)[number]) => {
     clearError();
     setPivots([]);
+
+    // The built-in engine has a structural pivot function; the optional AI
+    // path gets the same intent expressed as a brief.
+    if (currentIntelligence() === "engine") {
+      setPivoting(true);
+      try {
+        const { generatePivots } = await import("@/lib/engine");
+        const found = generatePivots(state.profile, idea, pivot.id, 3);
+        if (found.length) {
+          actions.addIdeas(found);
+          setPivots(found);
+          toast(`${found.length} pivot options generated`, "good");
+        } else {
+          toast("No clear pivot in that direction — try another", "bad");
+        }
+      } finally {
+        setPivoting(false);
+      }
+      return;
+    }
+
     const found = await generate({
       profile: state.profile,
       angles: [
         {
-          brief: `alternatives to an existing idea. The founder is currently considering: "${idea.name} — ${idea.oneLiner}" (target customer: ${idea.targetCustomer}; offering: ${idea.offering}; model: ${idea.revenueModel}). Pivot direction: ${brief}. Each idea must be a real alternative to that one, not a rewording of it, and should carry over whatever was genuinely working about it`,
+          angleId: "balanced",
+          brief: `alternatives to an existing idea. The founder is currently considering: "${idea.name} — ${idea.oneLiner}" (target customer: ${idea.targetCustomer}; offering: ${idea.offering}; model: ${idea.revenueModel}). Pivot direction: ${pivot.brief}. Each idea must be a real alternative to that one, not a rewording of it, and should carry over whatever was genuinely working about it`,
           count: 3,
         },
       ],
@@ -204,7 +228,7 @@ function IdeaDetail() {
       <Card className="p-5">
         <SectionHeader
           title={`Opportunity score: ${idea.opportunityScore}/100`}
-          description="The AI scores each dimension and explains it. Those scores are then adjusted and weighted locally against your current profile — the adjustments are listed below."
+          description={`Each dimension is scored and explained by ${idea.engine ? "the Business Intelligence Engine" : "the AI provider"}, then adjusted and weighted locally against your current profile — the adjustments are listed below.`}
         />
         <div className="grid gap-4 sm:grid-cols-2">
           {SCORE_DIMENSIONS.map((dim) => (
@@ -239,8 +263,9 @@ function IdeaDetail() {
         )}
 
         <p className="text-xs text-faint mt-4 pt-3 border-t border-border">
-          This score is a structured opinion, not a measurement. It reflects the AI&apos;s reasoning plus rules applied
-          to your stated budget, hours, preferences and constraints — all of which are visible above.
+          This score is a structured opinion, not a measurement. It reflects{" "}
+          {idea.engine ? "a deterministic scoring system" : "the AI provider's reasoning"} plus rules applied to your
+          stated budget, hours, preferences and constraints — all of which are visible above.
         </p>
       </Card>
 
@@ -360,10 +385,10 @@ function IdeaDetail() {
           they&apos;re added to your ideas so you can compare them properly.
         </p>
 
-        {error && <ErrorPanel error={error} onRetry={() => runPivot(PIVOTS[0].brief)} retrying={loading} />}
+        {error && <ErrorPanel error={error} onRetry={() => runPivot(PIVOTS[0])} retrying={loading} />}
 
-        {loading ? (
-          <AILoading stage={stage} />
+        {loading || pivoting ? (
+          <AILoading stage={pivoting ? "Finding alternatives…" : stage} />
         ) : pivots.length > 0 ? (
           <div className="space-y-3">
             <ul className="grid gap-3">
@@ -378,7 +403,7 @@ function IdeaDetail() {
             {PIVOTS.map((pivot) => (
               <button
                 key={pivot.id}
-                onClick={() => runPivot(pivot.brief)}
+                onClick={() => runPivot(pivot)}
                 className="text-left px-4 py-3 rounded-xl border border-border hover:border-accent-border hover:bg-surface-2 transition-colors min-h-12"
               >
                 <span className="text-sm font-medium">{pivot.label}</span>

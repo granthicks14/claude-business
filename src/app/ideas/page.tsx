@@ -21,7 +21,6 @@ import { DEFAULT_ANGLES, useIdeaGeneration } from "@/lib/ideas";
 import { actions, useAppState } from "@/lib/store";
 import { rescore } from "@/lib/scoring";
 import type { BusinessIdea } from "@/lib/types";
-import { useAIStatus } from "@/lib/useAI";
 
 type SortKey = "score" | "cost" | "speed" | "potential" | "newest";
 type FilterKey = "all" | "favorites" | "online" | "local" | "cheap" | "fast";
@@ -38,7 +37,6 @@ export default function IdeasPage() {
 
 function Ideas() {
   const state = useAppState((s) => s);
-  const { status } = useAIStatus();
   const toast = useToast();
   const { generate, retry, loading, stage, progress, error, clearError } = useIdeaGeneration();
 
@@ -73,7 +71,7 @@ function Ideas() {
     clearError();
     const found = await generate({
       profile: state.profile,
-      angles: DEFAULT_ANGLES.map((a) => ({ brief: a.brief, count: 5 })),
+      angles: DEFAULT_ANGLES.map((a) => ({ brief: a.brief, angleId: a.angleId, count: 5 })),
       constraints: constraints.trim() || undefined,
       avoid: opts.fresh ? [] : ideas.map((i) => i.name),
       source: constraints.trim() ? "constraints" : "generated",
@@ -81,7 +79,6 @@ function Ideas() {
     if (found.length) toast(`${found.length} new opportunities`, "good");
   };
 
-  const noProvider = status && !status.configured;
 
   return (
     <div className="space-y-6">
@@ -94,7 +91,7 @@ function Ideas() {
         }
         action={
           ideas.length > 0 && (
-            <Button variant="primary" onClick={() => run()} loading={loading} icon={<Icon.plus />} disabled={!!noProvider}>
+            <Button variant="primary" onClick={() => run()} loading={loading} icon={<Icon.plus />}>
               More ideas
             </Button>
           )
@@ -124,25 +121,16 @@ function Ideas() {
 
       {ideas.length === 0 && !loading && (
         <Card>
-          {noProvider ? (
-            <EmptyState
-              icon={<Icon.spark className="size-8 mx-auto text-warn" />}
-              title="AI isn't connected yet"
-              description="Idea generation needs an AI provider configured on the server. Everything you write yourself — the money model, tasks, journal, decisions — works without one."
-              action={<LinkButton href="/settings" variant="primary">See how to connect one</LinkButton>}
-            />
-          ) : (
-            <EmptyState
-              icon={<Icon.bolt className="size-8 mx-auto text-accent" />}
-              title="Generate your first opportunities"
-              description="Three batches run in parallel — highest leverage, fastest to a first dollar, and biggest long-term potential — so you see genuinely different options rather than one idea five times."
-              action={
-                <Button variant="primary" size="lg" onClick={() => run({ fresh: true })} icon={<Icon.bolt />}>
-                  Generate ideas
-                </Button>
-              }
-            />
-          )}
+          <EmptyState
+            icon={<Icon.bolt className="size-8 mx-auto text-accent" />}
+            title="Generate your first opportunities"
+            description="Three angles run at once — highest leverage, fastest to a first dollar, and biggest long-term potential — so you see genuinely different options rather than one idea five times. Generated locally, free, in about a second."
+            action={
+              <Button variant="primary" size="lg" onClick={() => run({ fresh: true })} icon={<Icon.bolt />}>
+                Generate ideas
+              </Button>
+            }
+          />
         </Card>
       )}
 
@@ -168,7 +156,7 @@ function Ideas() {
                 aria-label="Constraints for the next batch of ideas"
               />
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="primary" size="sm" onClick={() => run()} loading={loading} disabled={!!noProvider}>
+                <Button variant="primary" size="sm" onClick={() => run()} loading={loading}>
                   Generate with these constraints
                 </Button>
                 <p className="text-xs text-muted">
