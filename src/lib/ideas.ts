@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { stagesFor } from "./ai/stages";
 import { computeScore } from "./scoring";
 import { actions, newId } from "./store";
-import { currentIntelligence } from "./useAI";
+import { currentIntelligence, type AIMeta } from "./useAI";
 import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type ScoreDimension } from "./types";
 
 /**
@@ -146,8 +146,26 @@ function normalizeName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
+/**
+ * Attribution for a set of ideas that may have been generated in an earlier
+ * session, so the in-memory generation meta is gone. Only the engine sets
+ * `idea.engine`, so who produced them is recoverable from the ideas themselves
+ * rather than guessed from the current setting.
+ */
+export function ideaSourceNote(ideas: BusinessIdea[]): AIMeta | null {
+  if (!ideas.length) return null;
+  const fromEngine = ideas.filter((i) => i.engine).length;
+  if (fromEngine === ideas.length) return { source: "engine" };
+  if (fromEngine === 0) return { source: "ai" };
+  return {
+    source: "engine",
+    fellBack: `${ideas.length - fromEngine} of these ${ideas.length} came from an AI provider instead.`,
+  };
+}
+
 export function useIdeaGeneration() {
   const [loading, setLoading] = useState(false);
+  const [meta, setMeta] = useState<AIMeta | null>(null);
   const [stage, setStage] = useState("");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<{ message: string; retryable: boolean; code?: string } | null>(null);
@@ -188,6 +206,11 @@ export function useIdeaGeneration() {
     const mode = currentIntelligence();
     const engine = await import("./engine");
 
+    // Track which system actually produced each batch, so the page can say so
+    // rather than leaving generated output unattributed.
+    const produced = { engine: 0, ai: 0, fellBack: 0 };
+    let providerInfo: { provider?: string; model?: string } = {};
+
     const runBatch = async (angle: { brief: string; count: number; angleId?: Angle["angleId"] }, index: number) => {
       // --- Built-in engine: instant, local, free -------------------------
       if (mode === "engine") {
@@ -211,6 +234,7 @@ export function useIdeaGeneration() {
           actions.addIdeas(fresh);
           collected.push(...fresh);
         }
+        produced.engine += 1;
         // Brief pause so the staged progress UI doesn't flash past unread.
         await new Promise((resolve) => setTimeout(resolve, 260 + index * 120));
         if (mounted.current) setProgress((p) => ({ ...p, done: p.done + 1 }));
@@ -239,7 +263,7 @@ export function useIdeaGeneration() {
       });
 
       const json = (await res.json()) as
-        | { data: { ideas: RawIdea[] } }
+        | { data: { ideas: RawIdea[] }; meta?: Omit<AIMeta, "source"> }
         | { error: string; retryable?: boolean; code?: string };
 
       if (!res.ok || "error" in json) {
@@ -263,6 +287,7 @@ export function useIdeaGeneration() {
         if (recovered.length && mounted.current) {
           actions.addIdeas(recovered);
           collected.push(...recovered);
+          produced.fellBack += 1;
           setProgress((p) => ({ ...p, done: p.done + 1 }));
           return;
         }
@@ -285,6 +310,8 @@ export function useIdeaGeneration() {
         actions.addIdeas(fresh);
         collected.push(...fresh);
       }
+      produced.ai += 1;
+      if (json.meta) providerInfo = { provider: json.meta.provider, model: json.meta.model };
       if (mounted.current) setProgress((p) => ({ ...p, done: p.done + 1 }));
     };
 
@@ -306,6 +333,26 @@ export function useIdeaGeneration() {
     if (mounted.current) {
       setLoading(false);
       setStage("");
+      // Attribute the result honestly. If any batch came back from the engine
+      // after AI was asked, say that too rather than calling the whole set AI.
+      if (produced.engine || produced.ai || produced.fellBack) {
+        setMeta(
+          produced.ai > 0
+            ? {
+                source: "ai",
+                ...providerInfo,
+                fellBack: produced.fellBack
+                  ? `${produced.fellBack} of ${produced.ai + produced.fellBack} batches came from the engine instead, because the provider could not answer.`
+                  : undefined,
+              }
+            : {
+                source: "engine",
+                fellBack: produced.fellBack
+                  ? "AI was selected, but the provider could not answer, so the engine generated these."
+                  : undefined,
+              },
+        );
+      }
       // Partial success is still success — only surface the error if nothing landed.
       if (firstError && collected.length === 0) setError(firstError);
       else if (firstError) {
@@ -324,5 +371,5 @@ export function useIdeaGeneration() {
     return generate(lastOptions.current);
   }, [generate]);
 
-  return { generate, retry, loading, stage, progress, error, clearError: () => setError(null) };
+  return { generate, retry, loading, stage, progress, error, meta, clearError: () => setError(null) };
 }

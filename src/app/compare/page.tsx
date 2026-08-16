@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready } from "@/components/page";
+import { PageHeader, Ready, SourceNote } from "@/components/page";
 import {
   AILoading,
   Button,
@@ -278,6 +278,8 @@ function Compare() {
                 <p className="text-sm leading-relaxed">{verdict.challenge}</p>
               </div>
             )}
+
+            <SourceNote source={task.meta} intelligence={state.settings.intelligence} />
           </div>
         )}
       </Card>

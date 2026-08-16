@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { IdeaCard } from "@/components/idea-card";
-import { PageHeader, Ready, RequireProfile } from "@/components/page";
+import { PageHeader, Ready, RequireProfile, SourceNote } from "@/components/page";
 import {
   AILoading,
   Badge,
@@ -17,7 +17,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
-import { DEFAULT_ANGLES, useIdeaGeneration } from "@/lib/ideas";
+import { DEFAULT_ANGLES, ideaSourceNote, useIdeaGeneration } from "@/lib/ideas";
 import { actions, useAppState } from "@/lib/store";
 import { rescore } from "@/lib/scoring";
 import type { BusinessIdea } from "@/lib/types";
@@ -38,7 +38,7 @@ export default function IdeasPage() {
 function Ideas() {
   const state = useAppState((s) => s);
   const toast = useToast();
-  const { generate, retry, loading, stage, progress, error, clearError } = useIdeaGeneration();
+  const { generate, retry, loading, stage, progress, error, meta, clearError } = useIdeaGeneration();
 
   const [sort, setSort] = useState<SortKey>("score");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -46,6 +46,8 @@ function Ideas() {
   const [showConstraints, setShowConstraints] = useState(false);
 
   const ideas = state.ideas;
+
+  const sourceNote = useMemo(() => meta ?? ideaSourceNote(ideas), [meta, ideas]);
 
   const visible = useMemo(() => {
     const filtered = ideas.filter((i) => {
@@ -274,6 +276,8 @@ function Ideas() {
           </Card>
         </>
       )}
+
+      {ideas.length > 0 && <SourceNote source={sourceNote} intelligence={state.settings.intelligence} />}
 
       {ideas.length > 0 && (
         <p className="text-xs text-faint">

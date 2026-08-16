@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready, RequireProfile } from "@/components/page";
+import { PageHeader, Ready, RequireProfile, SourceNote } from "@/components/page";
 import {
   AILoading,
   Badge,
@@ -201,8 +201,8 @@ function Best() {
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold">Still torn?</h2>
             <p className="text-sm text-muted mt-1">
-              These rankings are computed locally from the scores. Ask the AI to weigh your top five against each
-              other and argue for one — including the strongest case against it.
+              These rankings are computed locally from the scores. Ask for your top five to be weighed against each
+              other and argued down to one — including the strongest case against it.
             </p>
           </div>
           <Button variant="primary" onClick={explain} loading={verdict.loading}>
@@ -254,6 +254,8 @@ function Best() {
                 <p className="text-sm leading-relaxed">{comparison.challenge}</p>
               </div>
             )}
+
+            <SourceNote source={verdict.meta} intelligence={state.settings.intelligence} />
           </div>
         )}
       </Card>

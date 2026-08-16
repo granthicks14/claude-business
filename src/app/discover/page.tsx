@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { IdeaCard } from "@/components/idea-card";
-import { PageHeader, Ready, RequireProfile } from "@/components/page";
+import { PageHeader, Ready, RequireProfile, SourceNote } from "@/components/page";
 import {
   AILoading,
   Badge,
@@ -20,7 +20,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
-import { EXPLORE_ANGLES, useIdeaGeneration } from "@/lib/ideas";
+import { EXPLORE_ANGLES, ideaSourceNote, useIdeaGeneration } from "@/lib/ideas";
 import { actions, useAppState } from "@/lib/store";
 import type { BusinessIdea, NicheReport } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
@@ -469,9 +469,11 @@ function NicheFinder() {
             })}
           </div>
           <p className="text-xs text-faint mt-4">
-            Scores are the AI&apos;s structured judgement from your profile and general knowledge, not measured market
-            data.
+            Scores are a structured judgement from your profile and general knowledge, not measured market data.
           </p>
+          <div className="mt-2">
+            <SourceNote source={task.meta} intelligence={state.settings.intelligence} />
+          </div>
         </Card>
       ))}
     </div>
@@ -493,6 +495,7 @@ function Results({
   onRetry: () => void;
   results: BusinessIdea[];
 }) {
+  const intelligence = useAppState((s) => s.settings.intelligence);
   return (
     <>
       {error && <ErrorPanel error={error} onRetry={onRetry} retrying={loading} />}
@@ -516,6 +519,7 @@ function Results({
               <IdeaCard key={idea.id} idea={idea} />
             ))}
           </ul>
+          <SourceNote source={ideaSourceNote(results)} intelligence={intelligence} />
         </>
       )}
     </>
