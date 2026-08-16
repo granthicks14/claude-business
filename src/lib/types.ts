@@ -1,0 +1,612 @@
+/**
+ * Core data models for AI Business Builder.
+ *
+ * Everything the user creates lives in a single versioned `AppState` object
+ * that is persisted locally (see lib/store.ts). Keeping the models flat and
+ * id-referenced keeps the architecture extensible: swapping local persistence
+ * for a database later means writing an adapter, not rewriting the app.
+ */
+
+export type ID = string;
+
+/** Where a piece of information came from. Shown in the UI so users can tell
+ *  verified research apart from the AI's inference and their own input. */
+export type EvidenceKind = "verified" | "inference" | "assumption" | "user";
+
+export interface Evidence {
+  kind: EvidenceKind;
+  statement: string;
+  /** Only ever populated from a real search result. Never invented. */
+  source?: { title: string; url: string };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Founder profile                                                            */
+/* -------------------------------------------------------------------------- */
+
+export type RiskTolerance = "low" | "medium" | "high";
+export type PayoffStyle = "fast" | "balanced" | "moonshot";
+export type Commitment = "side" | "fulltime" | "undecided";
+
+export type BusinessPreference =
+  | "online"
+  | "local"
+  | "remote"
+  | "physical"
+  | "digital"
+  | "service"
+  | "product"
+  | "subscription"
+  | "marketplace"
+  | "saas"
+  | "content"
+  | "education"
+  | "ecommerce"
+  | "agency"
+  | "consulting";
+
+export interface FounderProfile {
+  name: string;
+
+  // Personal
+  interests: string[];
+  hobbies: string[];
+  skills: string[];
+  experience: string;
+  subjectsUnderstood: string[];
+  askedForHelpWith: string;
+  enjoys: string;
+  wontDo: string;
+
+  // Resources
+  startingBudget: number;
+  monthlyBudget: number;
+  equipment: string[];
+  audience: string;
+  followers: number;
+  hasWebsite: boolean;
+  existingCustomers: string;
+  existingBusiness: string;
+  hasTransportation: boolean;
+  location: string;
+  localMarketNotes: string;
+
+  // Time
+  hoursPerWeek: number;
+  schedule: string;
+  commitment: Commitment;
+  firstDollarTarget: string;
+
+  // Goals
+  incomeGoal: number;
+  shortTermGoal: string;
+  longTermGoal: string;
+  lifestyle: string;
+  wantsScalable: boolean;
+  wantsSellable: boolean;
+  wantsPassive: boolean;
+
+  // Risk
+  risk: RiskTolerance;
+  payoffStyle: PayoffStyle;
+
+  // Preferences
+  preferences: BusinessPreference[];
+
+  /** Free-form hard constraints the engine must respect, e.g. "no face on camera". */
+  constraints: string[];
+
+  updatedAt: number;
+  completedOnboarding: boolean;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ideas & scoring                                                            */
+/* -------------------------------------------------------------------------- */
+
+export type Level = "very-low" | "low" | "medium" | "high" | "very-high";
+
+export const SCORE_DIMENSIONS = [
+  "founderFit",
+  "marketDemand",
+  "monetization",
+  "startupAccessibility",
+  "competition",
+  "scalability",
+  "speedToRevenue",
+  "profitPotential",
+  "defensibility",
+  "personalInterest",
+] as const;
+
+export type ScoreDimension = (typeof SCORE_DIMENSIONS)[number];
+
+export type DimensionScores = Record<ScoreDimension, number>;
+
+export interface ScoredDimension {
+  score: number;
+  /** Why the AI landed on this number. Always shown next to the score. */
+  reasoning: string;
+}
+
+export interface RevenueRange {
+  low: number;
+  high: number;
+  /** The assumptions behind the range, in plain language. */
+  basis: string;
+}
+
+export interface BusinessIdea {
+  id: ID;
+  name: string;
+  oneLiner: string;
+  whyThisFitsYou: string;
+  problem: string;
+  targetCustomer: string;
+  customerPain: string;
+  offering: string;
+  revenueModel: string;
+  pricing: string;
+  startupCost: number;
+  startupCostNotes: string;
+  timeToLaunchDays: number;
+  difficulty: Level;
+  competition: Level;
+  scalability: Level;
+  speedToFirstRevenueDays: number;
+  monthlyRevenuePotential: RevenueRange;
+  firstSteps: string[];
+  risks: string[];
+  /** online / local / hybrid — drives which builder mode the app switches into. */
+  mode: "online" | "local" | "hybrid";
+  category: string;
+  tags: string[];
+
+  scores: Record<ScoreDimension, ScoredDimension>;
+  /** Composite 0-100, recomputed locally against the current profile. */
+  opportunityScore: number;
+  scoreExplanation: string;
+
+  // User-owned metadata
+  saved: boolean;
+  favorite: boolean;
+  notes: string;
+  createdAt: number;
+  source: "generated" | "surprise" | "category" | "constraints" | "pivot" | "manual";
+  /** Set when this idea came out of the pivot engine. */
+  pivotedFrom?: ID;
+}
+
+/* -------------------------------------------------------------------------- */
+/* The selected business and everything hanging off it                        */
+/* -------------------------------------------------------------------------- */
+
+export interface BusinessPlan {
+  concept: string;
+  mission: string;
+  targetCustomer: string;
+  customerProblem: string;
+  solution: string;
+  uniqueValueProposition: string;
+  businessModel: string;
+  revenueStreams: string[];
+  pricing: string;
+  costs: string[];
+  distribution: string[];
+  marketing: string;
+  sales: string;
+  operations: string;
+  technology: string;
+  competitiveAdvantage: string;
+  risks: string[];
+  growthStrategy: string;
+  legalConsiderations: string[];
+  generatedAt: number;
+}
+
+export interface ValidationReport {
+  validationScore: number;
+  scoreExplanation: string;
+  customers: Evidence[];
+  problemEvidence: Evidence[];
+  willingnessToPay: Evidence[];
+  alternatives: Evidence[];
+  trends: Evidence[];
+  pricingSignals: Evidence[];
+  complaints: Evidence[];
+  differentiation: string[];
+  barriers: string[];
+  openQuestions: string[];
+  nextTests: string[];
+  researchMode: "web" | "model-only";
+  sources: { title: string; url: string }[];
+  generatedAt: number;
+}
+
+export interface Competitor {
+  id: ID;
+  name: string;
+  whatTheySell: string;
+  pricing: string;
+  audience: string;
+  strengths: string[];
+  weaknesses: string[];
+  marketing: string;
+  positioning: string;
+  customerComplaints: Evidence[];
+  howYouCouldBeatThem: string[];
+  url?: string;
+  evidenceKind: EvidenceKind;
+}
+
+export interface BusinessModelOption {
+  model: string;
+  whyItFits: string;
+  pricingApproach: string;
+  effort: Level;
+  revenuePredictability: Level;
+  recommended: boolean;
+}
+
+export interface Persona {
+  id: ID;
+  name: string;
+  ageRange: string;
+  situation: string;
+  goals: string[];
+  problems: string[];
+  buyingMotivations: string[];
+  objections: string[];
+  whereTheyHangOut: string[];
+  whatTheySearchFor: string[];
+  whyTheyWouldBuy: string;
+  whyTheyWouldNot: string;
+  confidence: "assumption" | "inference";
+}
+
+export interface Offer {
+  coreOffer: string;
+  deliverables: string[];
+  price: string;
+  priceRationale: string;
+  bonuses: string[];
+  guarantee: string;
+  guaranteeNotes: string;
+  positioning: string;
+  valueProposition: string;
+  callToAction: string;
+  generatedAt: number;
+}
+
+export interface Brand {
+  names: { name: string; rationale: string; domainIdeas: string[]; handleIdeas: string[] }[];
+  taglines: string[];
+  positioning: string;
+  personality: string[];
+  colorDirection: { name: string; hex: string; role: string }[];
+  logoConcepts: string[];
+  voiceNotes: string;
+  generatedAt: number;
+}
+
+export interface MarketingPlan {
+  channels: {
+    channel: string;
+    whyThisChannel: string;
+    cadence: string;
+    firstThreeMoves: string[];
+    effort: Level;
+  }[];
+  contentPillars: string[];
+  referralStrategy: string;
+  partnerships: string[];
+  communityStrategy: string;
+  paidConcepts: string[];
+  localTactics: string[];
+  generatedAt: number;
+}
+
+export interface ContentBatch {
+  id: ID;
+  platform: string;
+  goal: string;
+  audience: string;
+  topic: string;
+  tone: string;
+  items: { hook: string; body: string; cta: string; format: string }[];
+  createdAt: number;
+}
+
+export interface SalesPlaybook {
+  outreachStrategies: { name: string; when: string; steps: string[] }[];
+  coldEmails: { subject: string; body: string; whyItWorks: string }[];
+  dms: { platform: string; message: string }[];
+  discoveryQuestions: string[];
+  objections: { objection: string; response: string }[];
+  followUpPlan: string[];
+  onboarding: string[];
+  referralRequests: string[];
+  ethicsNotes: string;
+  generatedAt: number;
+}
+
+export interface WebsiteSpec {
+  siteName: string;
+  pages: {
+    path: string;
+    title: string;
+    sections: { heading: string; copy: string; cta?: string }[];
+  }[];
+  faq: { q: string; a: string }[];
+  testimonialsPlan: string;
+  seo: { title: string; description: string; keywords: string[] };
+  generatedAt: number;
+}
+
+export interface ProductSpec {
+  concept: string;
+  features: { name: string; description: string; priority: "must" | "should" | "later" }[];
+  mvpScope: string[];
+  outOfScope: string[];
+  requirements: string[];
+  customerJourney: string[];
+  prototypePlan: string[];
+  launchPlan: string[];
+  techSpec?: string;
+  generatedAt: number;
+}
+
+export interface ServiceSpec {
+  packages: { name: string; price: string; deliverables: string[]; idealFor: string }[];
+  clientAcquisition: string[];
+  fulfillment: string[];
+  salesScript: string[];
+  proposalStructure: string[];
+  onboarding: string[];
+  retention: string[];
+  upsells: string[];
+  referralSystem: string[];
+  generatedAt: number;
+}
+
+export interface Task {
+  id: ID;
+  title: string;
+  description: string;
+  phase: "week1" | "days8to30" | "days31to60" | "days61to90" | "money" | "custom";
+  priority: "high" | "medium" | "low";
+  estimatedMinutes: number;
+  difficulty: Level;
+  expectedOutcome: string;
+  done: boolean;
+  completedAt?: number;
+  createdAt: number;
+  /** For the first-money plan: which milestone this belongs to ($10/$50/...). */
+  milestone?: string;
+  day?: number;
+}
+
+export interface Experiment {
+  id: ID;
+  hypothesis: string;
+  experiment: string;
+  successMetric: string;
+  cost: string;
+  timeboxDays: number;
+  status: "planned" | "running" | "done";
+  result: string;
+  verdict?: {
+    decision: "continue" | "modify" | "pivot" | "abandon";
+    reasoning: string;
+    nextSteps: string[];
+    decidedAt: number;
+  };
+  createdAt: number;
+}
+
+export interface Assumption {
+  id: ID;
+  statement: string;
+  confidence: number; // 0-100
+  evidence: string;
+  test: string;
+  result: string;
+  status: "untested" | "testing" | "supported" | "refuted";
+  createdAt: number;
+}
+
+export interface Decision {
+  id: ID;
+  decision: string;
+  reason: string;
+  expectedOutcome: string;
+  actualOutcome: string;
+  date: number;
+}
+
+export interface JournalEntry {
+  id: ID;
+  type: "idea" | "feedback" | "experiment" | "lesson" | "problem" | "decision" | "note";
+  title: string;
+  body: string;
+  createdAt: number;
+}
+
+export interface Customer {
+  id: ID;
+  name: string;
+  contact: string;
+  status: "lead" | "conversation" | "customer" | "churned";
+  notes: string;
+  value: number;
+  createdAt: number;
+}
+
+export interface RevenueEntry {
+  id: ID;
+  label: string;
+  amount: number;
+  date: string; // yyyy-mm-dd
+  customerId?: ID;
+}
+
+export interface ExpenseEntry {
+  id: ID;
+  label: string;
+  amount: number;
+  date: string;
+  recurring: boolean;
+}
+
+export interface MoneyModelInputs {
+  price: number;
+  customersPerMonth: number;
+  conversionRate: number; // %
+  monthlyTraffic: number;
+  cac: number;
+  monthlyExpenses: number;
+  variableCostPerSale: number;
+  refundRate: number; // %
+}
+
+export interface AIMessage {
+  id: ID;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: number;
+  error?: boolean;
+}
+
+export interface AIConversation {
+  id: ID;
+  title: string;
+  messages: AIMessage[];
+  createdAt: number;
+}
+
+export interface NicheReport {
+  market: string;
+  niches: {
+    name: string;
+    description: string;
+    demand: number;
+    competition: number;
+    spendingPower: number;
+    accessibility: number;
+    founderFit: number;
+    reasoning: string;
+  }[];
+  generatedAt: number;
+}
+
+export interface HealthReport {
+  score: number;
+  dimensions: { name: string; score: number; note: string }[];
+  hurting: string[];
+  topFixes: { fix: string; why: string; effort: Level }[];
+  generatedAt: number;
+}
+
+export interface RadarItem {
+  id: ID;
+  title: string;
+  description: string;
+  whyRelevant: string;
+  evidence: EvidenceKind;
+  sources: { title: string; url: string }[];
+  createdAt: number;
+}
+
+/** The workspace for one business the user is actively building. */
+export interface SelectedBusiness {
+  id: ID;
+  ideaId: ID;
+  idea: BusinessIdea;
+  startedAt: number;
+  archivedAt?: number;
+  archiveReason?: string;
+  archiveLessons?: string;
+  revenueTarget: number;
+
+  plan?: BusinessPlan;
+  validation?: ValidationReport;
+  competitors: Competitor[];
+  models: BusinessModelOption[];
+  personas: Persona[];
+  offer?: Offer;
+  brand?: Brand;
+  marketing?: MarketingPlan;
+  content: ContentBatch[];
+  sales?: SalesPlaybook;
+  website?: WebsiteSpec;
+  product?: ProductSpec;
+  service?: ServiceSpec;
+  tasks: Task[];
+  experiments: Experiment[];
+  assumptions: Assumption[];
+  decisions: Decision[];
+  customers: Customer[];
+  revenue: RevenueEntry[];
+  expenses: ExpenseEntry[];
+  money: MoneyModelInputs;
+  health?: HealthReport;
+  radar: RadarItem[];
+}
+
+export interface AppState {
+  version: number;
+  profile: FounderProfile;
+  ideas: BusinessIdea[];
+  businesses: SelectedBusiness[];
+  activeBusinessId: ID | null;
+  journal: JournalEntry[];
+  conversations: AIConversation[];
+  niches: NicheReport[];
+  compareIds: ID[];
+  stats: {
+    ideasExplored: number;
+    ideasEvaluated: number;
+    experimentsCompleted: number;
+    tasksCompleted: number;
+  };
+  lastGeneratedAt: number | null;
+}
+
+export const LEVEL_LABEL: Record<Level, string> = {
+  "very-low": "Very low",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  "very-high": "Very high",
+};
+
+export const DIMENSION_LABEL: Record<ScoreDimension, string> = {
+  founderFit: "Founder Fit",
+  marketDemand: "Market Demand",
+  monetization: "Monetization",
+  startupAccessibility: "Startup Accessibility",
+  competition: "Competition",
+  scalability: "Scalability",
+  speedToRevenue: "Speed to Revenue",
+  profitPotential: "Profit Potential",
+  defensibility: "Defensibility",
+  personalInterest: "Personal Interest",
+};
+
+export const PREFERENCE_LABEL: Record<BusinessPreference, string> = {
+  online: "Online",
+  local: "Local",
+  remote: "Remote",
+  physical: "Physical",
+  digital: "Digital",
+  service: "Service",
+  product: "Product",
+  subscription: "Subscription",
+  marketplace: "Marketplace",
+  saas: "SaaS / Software",
+  content: "Content",
+  education: "Education",
+  ecommerce: "E-commerce",
+  agency: "Agency",
+  consulting: "Consulting",
+};

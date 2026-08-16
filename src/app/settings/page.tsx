@@ -1,0 +1,502 @@
+"use client";
+
+import { useRef, useState } from "react";
+
+import { Icon } from "@/components/icons";
+import { PageHeader, Ready } from "@/components/page";
+import {
+  Badge,
+  Button,
+  Card,
+  Dialog,
+  Field,
+  Input,
+  NumberInput,
+  SectionHeader,
+  Select,
+  Stat,
+  TagInput,
+  Tabs,
+  Textarea,
+  Toggle,
+  useToast,
+} from "@/components/ui";
+import { download } from "@/lib/export";
+import { rescore } from "@/lib/scoring";
+import { actions, snapshot, useAppState } from "@/lib/store";
+import {
+  PREFERENCE_LABEL,
+  type BusinessPreference,
+  type Commitment,
+  type FounderProfile,
+  type PayoffStyle,
+  type RiskTolerance,
+} from "@/lib/types";
+import { useAIStatus } from "@/lib/useAI";
+
+const PREFERENCES = Object.keys(PREFERENCE_LABEL) as BusinessPreference[];
+
+export default function SettingsPage() {
+  return (
+    <Ready>
+      <Settings />
+    </Ready>
+  );
+}
+
+function Settings() {
+  const [tab, setTab] = useState<"profile" | "ai" | "data">("profile");
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Settings" description="Your founder profile, how AI is connected, and what happens to your data." />
+
+      <Tabs
+        active={tab}
+        onChange={(id) => setTab(id as typeof tab)}
+        tabs={[
+          { id: "profile", label: "Founder profile" },
+          { id: "ai", label: "AI setup" },
+          { id: "data", label: "Your data" },
+        ]}
+      />
+
+      {tab === "profile" && <ProfileEditor />}
+      {tab === "ai" && <AISetup />}
+      {tab === "data" && <DataSettings />}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------- profile */
+
+function ProfileEditor() {
+  const stored = useAppState((s) => s.profile);
+  const state = useAppState((s) => s);
+  const toast = useToast();
+  const [draft, setDraft] = useState<FounderProfile>(stored);
+  const [dirty, setDirty] = useState(false);
+
+  const set = (patch: Partial<FounderProfile>) => {
+    setDraft((d) => ({ ...d, ...patch }));
+    setDirty(true);
+  };
+
+  const save = () => {
+    actions.saveProfile({ ...draft, completedOnboarding: true });
+    setDirty(false);
+    toast("Profile saved", "good");
+  };
+
+  const saveAndRescore = () => {
+    actions.saveProfile({ ...draft, completedOnboarding: true });
+    const rescored = rescore(state.ideas, { ...draft, completedOnboarding: true });
+    for (const idea of rescored) {
+      actions.updateIdea(idea.id, {
+        scores: idea.scores,
+        opportunityScore: idea.opportunityScore,
+        scoreExplanation: idea.scoreExplanation,
+      });
+    }
+    setDirty(false);
+    toast(`Saved and re-scored ${rescored.length} ideas`, "good");
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <SectionHeader
+          title="Founder profile"
+          description="Everything is scored against this. Change it whenever your situation changes — re-scoring is instant and costs nothing."
+        />
+
+        <div className="grid gap-5">
+          <Field label="Your name" htmlFor="p-name">
+            <Input id="p-name" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Optional" />
+          </Field>
+
+          <Field label="Skills" htmlFor="p-skills">
+            <TagInput id="p-skills" value={draft.skills} onChange={(skills) => set({ skills })} placeholder="Add a skill" />
+          </Field>
+
+          <Field label="Interests" htmlFor="p-interests">
+            <TagInput id="p-interests" value={draft.interests} onChange={(interests) => set({ interests })} placeholder="Add an interest" />
+          </Field>
+
+          <Field label="Hobbies" htmlFor="p-hobbies">
+            <TagInput id="p-hobbies" value={draft.hobbies} onChange={(hobbies) => set({ hobbies })} placeholder="Add a hobby" />
+          </Field>
+
+          <Field label="Subjects you understand well" htmlFor="p-subjects">
+            <TagInput
+              id="p-subjects"
+              value={draft.subjectsUnderstood}
+              onChange={(subjectsUnderstood) => set({ subjectsUnderstood })}
+              placeholder="Add a subject"
+            />
+          </Field>
+
+          <Field label="Equipment you own" htmlFor="p-equipment">
+            <TagInput id="p-equipment" value={draft.equipment} onChange={(equipment) => set({ equipment })} placeholder="Add equipment" />
+          </Field>
+
+          <Field label="Experience" htmlFor="p-exp">
+            <Textarea id="p-exp" value={draft.experience} onChange={(e) => set({ experience: e.target.value })} />
+          </Field>
+
+          <Field label="What people ask you for help with" htmlFor="p-help">
+            <Input id="p-help" value={draft.askedForHelpWith} onChange={(e) => set({ askedForHelpWith: e.target.value })} />
+          </Field>
+
+          <Field label="What you enjoy" htmlFor="p-enjoys">
+            <Textarea id="p-enjoys" value={draft.enjoys} onChange={(e) => set({ enjoys: e.target.value })} />
+          </Field>
+
+          <Field label="What you won't do" hint="A hard limit — ideas matching this get pushed down." htmlFor="p-wont">
+            <Textarea id="p-wont" value={draft.wontDo} onChange={(e) => set({ wontDo: e.target.value })} />
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Starting budget" htmlFor="p-budget">
+              <NumberInput id="p-budget" value={draft.startingBudget} onChange={(startingBudget) => set({ startingBudget })} prefix="$" label="Starting budget" />
+            </Field>
+            <Field label="Monthly budget" htmlFor="p-monthly">
+              <NumberInput id="p-monthly" value={draft.monthlyBudget} onChange={(monthlyBudget) => set({ monthlyBudget })} prefix="$" label="Monthly budget" />
+            </Field>
+            <Field label="Hours per week" htmlFor="p-hours">
+              <NumberInput id="p-hours" value={draft.hoursPerWeek} onChange={(hoursPerWeek) => set({ hoursPerWeek })} suffix="hrs" max={168} label="Hours per week" />
+            </Field>
+            <Field label="Income goal" htmlFor="p-goal">
+              <NumberInput id="p-goal" value={draft.incomeGoal} onChange={(incomeGoal) => set({ incomeGoal })} prefix="$" suffix="/mo" label="Income goal" />
+            </Field>
+            <Field label="Location" htmlFor="p-location">
+              <Input id="p-location" value={draft.location} onChange={(e) => set({ location: e.target.value })} placeholder="City, region" />
+            </Field>
+            <Field label="Social following" htmlFor="p-followers">
+              <NumberInput id="p-followers" value={draft.followers} onChange={(followers) => set({ followers })} label="Social following" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Risk tolerance" htmlFor="p-risk">
+              <Select id="p-risk" value={draft.risk} onChange={(e) => set({ risk: e.target.value as RiskTolerance })}>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </Select>
+            </Field>
+            <Field label="Payoff preference" htmlFor="p-payoff">
+              <Select id="p-payoff" value={draft.payoffStyle} onChange={(e) => set({ payoffStyle: e.target.value as PayoffStyle })}>
+                <option value="fast">Fast, lower ceiling</option>
+                <option value="balanced">Balanced</option>
+                <option value="moonshot">Slow, big potential</option>
+              </Select>
+            </Field>
+            <Field label="Commitment" htmlFor="p-commit">
+              <Select id="p-commit" value={draft.commitment} onChange={(e) => set({ commitment: e.target.value as Commitment })}>
+                <option value="side">Side hustle</option>
+                <option value="fulltime">Full-time</option>
+                <option value="undecided">Undecided</option>
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="First dollar target" htmlFor="p-first">
+            <Select id="p-first" value={draft.firstDollarTarget} onChange={(e) => set({ firstDollarTarget: e.target.value })}>
+              <option value="7 days">Within 7 days</option>
+              <option value="30 days">Within 30 days</option>
+              <option value="90 days">Within 90 days</option>
+              <option value="6 months">Within 6 months</option>
+              <option value="no rush">No rush</option>
+            </Select>
+          </Field>
+
+          <Field label="Preferred business types">
+            <div className="flex flex-wrap gap-2">
+              {PREFERENCES.map((pref) => {
+                const on = draft.preferences.includes(pref);
+                return (
+                  <button
+                    key={pref}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      set({ preferences: on ? draft.preferences.filter((p) => p !== pref) : [...draft.preferences, pref] })
+                    }
+                    className={`px-3.5 py-2 rounded-full border text-sm font-medium transition-all min-h-10
+                      ${on ? "border-accent bg-accent-soft text-accent-text" : "border-border bg-surface text-muted hover:border-accent-border hover:text-text"}`}
+                  >
+                    {PREFERENCE_LABEL[pref]}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <Field label="Hard constraints" hint="One per line." htmlFor="p-constraints">
+            <Textarea
+              id="p-constraints"
+              value={draft.constraints.join("\n")}
+              onChange={(e) => set({ constraints: e.target.value.split("\n").map((c) => c.trim()).filter(Boolean) })}
+            />
+          </Field>
+
+          <div className="space-y-1">
+            <Toggle checked={draft.wantsScalable} onChange={(wantsScalable) => set({ wantsScalable })} label="I want something scalable" />
+            <Toggle checked={draft.wantsPassive} onChange={(wantsPassive) => set({ wantsPassive })} label="I want passive or semi-passive income" />
+            <Toggle checked={draft.wantsSellable} onChange={(wantsSellable) => set({ wantsSellable })} label="I'd like to sell it one day" />
+            <Toggle checked={draft.hasTransportation} onChange={(hasTransportation) => set({ hasTransportation })} label="I have reliable transportation" />
+            <Toggle checked={draft.hasWebsite} onChange={(hasWebsite) => set({ hasWebsite })} label="I have a website or domain" />
+          </div>
+        </div>
+      </Card>
+
+      <div className="sticky bottom-0 bg-bg/90 backdrop-blur-sm py-3 flex flex-wrap gap-2 items-center">
+        <Button variant="primary" onClick={save} disabled={!dirty}>
+          {dirty ? "Save changes" : "Saved"}
+        </Button>
+        {state.ideas.length > 0 && (
+          <Button onClick={saveAndRescore} disabled={!dirty} icon={<Icon.refresh className="size-4" />}>
+            Save and re-score {state.ideas.length} ideas
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------- AI setup */
+
+function AISetup() {
+  const { status, loading } = useAIStatus();
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <SectionHeader title="AI provider" description="Configured on the server through environment variables. Keys are never sent to your browser." />
+
+        {loading ? (
+          <p className="text-sm text-muted">Checking…</p>
+        ) : status?.configured ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge tone="good">Connected</Badge>
+              <span className="text-sm">
+                {status.active?.label} · <code className="text-xs font-mono">{status.active?.model}</code>
+              </span>
+            </div>
+            {status.available.length > 1 && (
+              <p className="text-sm text-muted">
+                Also available: {status.available.filter((p) => p.id !== status.active?.id).map((p) => p.label).join(", ")}.
+                Set <code className="text-xs font-mono">AI_PROVIDER</code> to choose.
+              </p>
+            )}
+            {status.active?.paid && (
+              <p className="text-sm text-muted">
+                This provider bills per token, so generating costs real money — usually a fraction of a cent to a few
+                cents per action. Responses are cached and reused so revisiting a page never re-charges you.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Badge tone="warn">Not connected</Badge>
+            <div>
+              <p className="text-sm font-medium">What doesn&apos;t work without it</p>
+              <ul className="text-sm text-muted mt-1.5 space-y-1">
+                {["Generating and scoring business ideas", "The Validation Lab and competitor analysis", "Business plans, offers, personas, brand and website copy", "Marketing, content and sales generation", "The AI coach", "Roadmaps and the first-money plan"].map((f) => (
+                  <li key={f} className="flex gap-2">
+                    <span className="text-faint shrink-0">•</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-sm font-medium">What still works</p>
+              <ul className="text-sm text-muted mt-1.5 space-y-1">
+                {["Your founder profile", "Opportunity scoring of ideas you already have", "The money model and all its calculations", "Tasks, customers, revenue and expenses", "Journal, decisions and assumptions", "Search, export and sharing"].map((f) => (
+                  <li key={f} className="flex gap-2">
+                    <span className="text-good shrink-0">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="How to connect one" description="Add one of these environment variables where the app is deployed, then redeploy." />
+        <div className="space-y-3">
+          {(status?.options ?? []).map((option) => (
+            <div key={option.id} className="rounded-xl border border-border p-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-medium text-sm">{option.label}</h3>
+                {status?.available.some((p) => p.id === option.id) && <Badge tone="good">Configured</Badge>}
+              </div>
+              <code className="text-xs font-mono bg-surface-2 border border-border rounded px-2 py-1 mt-2 inline-block">
+                {option.envVar}
+              </code>
+              <p className="text-sm text-muted mt-2 leading-relaxed">{option.note}</p>
+              <a
+                href={option.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-accent-text hover:underline mt-1.5 inline-block"
+              >
+                {option.docsUrl}
+              </a>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-lg bg-surface-2 p-4">
+          <p className="text-sm font-medium">On Vercel</p>
+          <p className="text-sm text-muted mt-1 leading-relaxed">
+            Project → Settings → Environment Variables. Add the key, then redeploy. Never prefix it with{" "}
+            <code className="text-xs font-mono">NEXT_PUBLIC_</code> — that would publish your key to every visitor.
+          </p>
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader
+          title="Web research (optional)"
+          description="Lets the Validation Lab, competitor analysis and opportunity radar cite real sources instead of labelling everything as inference."
+        />
+        {status?.research.configured ? (
+          <div className="flex items-center gap-2">
+            <Badge tone="good">Connected</Badge>
+            <span className="text-sm capitalize">{status.research.provider}</span>
+          </div>
+        ) : (
+          <div>
+            <Badge tone="neutral">Not connected</Badge>
+            <p className="text-sm text-muted mt-2 leading-relaxed">
+              Without it, nothing is fabricated — findings are simply labelled as AI inference or assumption, and no
+              sources are cited. Add <code className="text-xs font-mono">TAVILY_API_KEY</code> or{" "}
+              <code className="text-xs font-mono">BRAVE_SEARCH_API_KEY</code> to enable real research. Both have free
+              tiers.
+            </p>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------- data */
+
+function DataSettings() {
+  const state = useAppState((s) => s);
+  const toast = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const exportAll = () => {
+    download(`business-builder-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(snapshot(), null, 2), "application/json");
+    toast("Backup downloaded", "good");
+  };
+
+  const importFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+      if (!parsed || typeof parsed !== "object") throw new Error("Not a valid backup file.");
+      actions.importState(parsed);
+      toast("Data restored", "good");
+    } catch {
+      toast("That file couldn't be read as a backup", "bad");
+    }
+  };
+
+  const totalRevenue = state.businesses.reduce((sum, b) => sum + b.revenue.reduce((s2, r) => s2 + r.amount, 0), 0);
+  const customers = state.businesses.reduce((sum, b) => sum + b.customers.filter((c) => c.status === "customer").length, 0);
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <SectionHeader title="Where your data lives" />
+        <p className="text-sm text-muted leading-relaxed">
+          Everything you create is stored in this browser, on this device. There&apos;s no account and no server
+          database, which means nobody else can read it — and also that clearing your browser data, or switching to
+          another device, will lose it. Take a backup if it matters to you.
+        </p>
+        <p className="text-sm text-muted leading-relaxed mt-3">
+          When you generate something, the relevant parts of your profile and business are sent to the AI provider
+          configured on the server so it can respond. Nothing is stored there by this app.
+        </p>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="Your progress" description="Tracked quietly — this is a business, not a game." />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <Stat label="Ideas explored" value={state.stats.ideasExplored} />
+          <Stat label="Businesses started" value={state.businesses.length} />
+          <Stat label="Experiments run" value={state.stats.experimentsCompleted} />
+          <Stat label="Tasks completed" value={state.stats.tasksCompleted} />
+          <Stat label="Customers" value={customers} />
+          <Stat label="Revenue logged" value={`$${Math.round(totalRevenue).toLocaleString()}`} tone={totalRevenue > 0 ? "good" : undefined} />
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="Backup and restore" description="A plain JSON file. Keep it somewhere safe, or use it to move to another device." />
+        <div className="flex flex-wrap gap-2">
+          <Button variant="primary" onClick={exportAll} icon={<Icon.download className="size-4" />}>
+            Download backup
+          </Button>
+          <Button onClick={() => fileRef.current?.click()}>Restore from file</Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) importFile(file);
+              e.target.value = "";
+            }}
+          />
+        </div>
+        <p className="text-xs text-warn mt-3">Restoring replaces everything currently on this device.</p>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="Start over" description="Deletes your profile, ideas, businesses and journal from this browser." />
+        <Button variant="danger" onClick={() => setConfirmReset(true)} icon={<Icon.trash className="size-4" />}>
+          Delete everything
+        </Button>
+      </Card>
+
+      <Dialog
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        title="Delete everything?"
+        footer={
+          <>
+            <Button onClick={() => setConfirmReset(false)}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                actions.resetAll();
+                setConfirmReset(false);
+                toast("Everything deleted");
+              }}
+            >
+              Delete everything
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted">
+          This erases your founder profile, {state.ideas.length} ideas, {state.businesses.length} businesses and{" "}
+          {state.journal.length} journal entries from this browser. It can&apos;t be undone — download a backup first if
+          you might want any of it.
+        </p>
+      </Dialog>
+    </div>
+  );
+}
