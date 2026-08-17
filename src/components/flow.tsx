@@ -121,7 +121,7 @@ export function MoneyFlow({
         </div>
 
         <p className="text-[13px] text-muted mt-3 leading-relaxed">
-          You keep <span className="font-semibold text-fg tabular-nums">{currency(keep)}</span> of every{" "}
+          You keep <span className="font-semibold text-text tabular-nums">{currency(keep)}</span> of every{" "}
           <span className="tabular-nums">{currency(price)}</span>
           {price > 0 && <> — that&apos;s {Math.round((keep / price) * 100)}% of each sale</>}, before tax and before
           anything you spend finding the next customer.

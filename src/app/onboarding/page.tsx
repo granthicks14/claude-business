@@ -265,7 +265,7 @@ function StepAbout({ draft, set }: StepProps) {
         <p className="text-sm font-medium">Why this matters, and what it doesn&apos;t do</p>
         <ul className="text-sm text-muted mt-2 space-y-1.5 leading-relaxed">
           <li>
-            It <span className="text-fg font-medium">never</span> tells you you&apos;re too young to start a business.
+            It <span className="text-text font-medium">never</span> tells you you&apos;re too young to start a business.
           </li>
           <li>
             It does flag when something would need a parent or guardian on an account, or when a platform may have an

@@ -4,9 +4,19 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
+import {
+  CanIDoThis,
+  HowItWorks,
+  OnlineToolkit,
+  ShowMeTheMoney,
+  TheHonestHalf,
+  WhatIsIt,
+  WhatWouldIDo,
+} from "@/components/business-explainer";
 import { Icon } from "@/components/icons";
 import { IdeaCard } from "@/components/idea-card";
 import { Ready } from "@/components/page";
+import { AdvancedOnly } from "@/components/teach";
 import {
   AILoading,
   Badge,
@@ -22,9 +32,12 @@ import {
   Meter,
   ScoreRing,
   SectionHeader,
+  Tabs,
   Textarea,
   useToast,
 } from "@/components/ui";
+import { DIFFICULTY_LABEL } from "@/lib/engine";
+import { useBusinessAnalysis } from "@/lib/explain";
 import { currency } from "@/lib/finance";
 import { download, ideaToMarkdown, slugify } from "@/lib/export";
 import { useIdeaGeneration } from "@/lib/ideas";
@@ -58,12 +71,17 @@ function IdeaDetail() {
   const idea = state.ideas.find((i) => i.id === params.id);
 
   const { generate, loading, stage, error, clearError } = useIdeaGeneration();
+  const [tab, setTab] = useState<"what" | "how" | "can" | "money" | "do" | "tools" | "honest">("what");
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState("");
   const [pivotOpen, setPivotOpen] = useState(false);
   const [pivots, setPivots] = useState<BusinessIdea[]>([]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pivoting, setPivoting] = useState(false);
+
+  // Called before the early return so hook order stays stable when an idea is
+  // missing — the hook itself handles null.
+  const analysis = useBusinessAnalysis(idea ?? null, state.profile);
 
   if (!idea) {
     return (
@@ -78,6 +96,20 @@ function IdeaDetail() {
   }
 
   const scoreDetail = computeScore(idea, state.profile);
+  const feasibilityBadge = analysis ? (
+    <span
+      className={
+        analysis.feasibility.overall === "ok"
+          ? "text-good"
+          : analysis.feasibility.overall === "warn"
+            ? "text-warn"
+            : "text-bad"
+      }
+      aria-hidden="true"
+    >
+      {analysis.feasibility.overall === "ok" ? "\u2713" : analysis.feasibility.overall === "warn" ? "!" : "\u2715"}
+    </span>
+  ) : undefined;
   const existingBusiness = state.businesses.find((b) => b.ideaId === idea.id && !b.archivedAt);
   const inCompare = state.compareIds.includes(idea.id);
 
@@ -143,7 +175,15 @@ function IdeaDetail() {
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{idea.name}</h1>
             <p className="text-muted mt-2 leading-relaxed">{idea.oneLiner}</p>
           </div>
-          <ScoreRing score={idea.opportunityScore} size={80} />
+          <div className="flex items-center gap-3">
+            {analysis && (
+              <div className="text-right">
+                <div className="text-[11px] uppercase tracking-wide text-faint font-medium">Difficulty</div>
+                <div className="font-semibold">{DIFFICULTY_LABEL[analysis.difficulty]}</div>
+              </div>
+            )}
+            <ScoreRing score={idea.opportunityScore} size={80} />
+          </div>
         </div>
       </div>
 
@@ -193,6 +233,35 @@ function IdeaDetail() {
         <p className="text-sm leading-relaxed">{idea.whyThisFitsYou}</p>
       </Card>
 
+      <Tabs
+        active={tab}
+        onChange={(id) => setTab(id as typeof tab)}
+        tabs={[
+          { id: "what", label: "What is it?" },
+          { id: "how", label: "How it works" },
+          { id: "can", label: "Can I do it?", badge: feasibilityBadge },
+          { id: "money", label: "The money" },
+          { id: "do", label: "What I'd do" },
+          { id: "tools", label: "Tools" },
+          { id: "honest", label: "The downsides" },
+        ]}
+      />
+
+      {analysis && (
+        <div key={tab} className="animate-in">
+          {tab === "what" && <WhatIsIt analysis={analysis} />}
+          {tab === "how" && <HowItWorks analysis={analysis} />}
+          {tab === "can" && <CanIDoThis analysis={analysis} />}
+          {tab === "money" && <ShowMeTheMoney analysis={analysis} idea={idea} />}
+          {tab === "do" && <WhatWouldIDo analysis={analysis} />}
+          {tab === "tools" && <OnlineToolkit analysis={analysis} />}
+          {tab === "honest" && <TheHonestHalf analysis={analysis} />}
+        </div>
+      )}
+
+      <AdvancedOnly summary="The full breakdown — scores, estimates and raw detail">
+      <div className="space-y-4">
+
       <div className="grid gap-3 sm:grid-cols-2">
         <Card className="p-5 space-y-3">
           <h2 className="font-semibold">The business</h2>
@@ -210,7 +279,7 @@ function IdeaDetail() {
             <Figure label="Startup cost" value={currency(idea.startupCost)} note={idea.startupCostNotes} />
             <Figure label="Time to launch" value={`~${idea.timeToLaunchDays} days`} />
             <Figure label="First revenue" value={`~${idea.speedToFirstRevenueDays} days`} />
-            <Figure label="Difficulty" value={LEVEL_LABEL[idea.difficulty]} />
+            <Figure label="Difficulty" value={analysis ? DIFFICULTY_LABEL[analysis.difficulty] : LEVEL_LABEL[idea.difficulty]} />
             <Figure label="Competition" value={LEVEL_LABEL[idea.competition]} note="How crowded the market looks" />
             <Figure label="Scalability" value={LEVEL_LABEL[idea.scalability]} />
           </div>
@@ -298,6 +367,9 @@ function IdeaDetail() {
           </ul>
         </Card>
       </div>
+
+      </div>
+      </AdvancedOnly>
 
       <Card className="p-5">
         <h2 className="font-semibold mb-3">Your notes</h2>

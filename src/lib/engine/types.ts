@@ -56,6 +56,15 @@ export interface IndustryProblem {
   solvedBy: ModelKind[];
   /** What the customer does today instead. */
   alternative: string;
+  /**
+   * Which segment ids in this industry actually have this problem.
+   *
+   * Without this the generator pairs every segment with every problem, which
+   * produces confident nonsense — "session prep for PC builders", where the
+   * problem belongs to tabletop game masters and the customer doesn't have it.
+   * Omit only when a problem genuinely applies to everyone in the industry.
+   */
+  segments?: string[];
 }
 
 export interface Industry {

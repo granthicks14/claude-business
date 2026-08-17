@@ -236,6 +236,11 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
     for (const segment of industry.segments) {
       for (const problem of industry.problems) {
         for (const model of usable) {
+          // Not every segment in a market has every problem in it. Pairing
+          // freely produces confident nonsense — a problem belonging to one
+          // group described as the pain of a group that doesn't have it.
+          if (problem.segments && !problem.segments.includes(segment.id)) continue;
+
           const base = { industry, segment, problem, model };
           const { fit, notes } = scoreCandidate(base, signals, options.angle);
           if (fit < 0) continue;
