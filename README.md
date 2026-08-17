@@ -99,6 +99,11 @@ src/lib/engine/
   knowledge/models.ts       22 business models with real economics
   knowledge/skills.ts       free-text skills → capability matching
   knowledge/channels.ts     15 marketing channels with cost and prerequisites
+  knowledge/age.ts          practicality by age — never permission
+  knowledge/platforms.ts    platforms by job, with no invented pricing
+  feasibility.ts            can-you-start checks, cost breakdown, difficulty
+  generators/explain.ts     the plain-English explanation of a business
+  generators/toolkit.ts     the per-business tool stack
   match.ts                  profile → signals, and constraint extraction
   ideas.ts                  combinatorial generation, filtering, scoring, pivots
   generators/               plan · research · execution · growth · advice
@@ -111,9 +116,17 @@ models say plainly that they earn close to nothing for months.
 
 **Discover — what should I build?**
 
-- **Founder profile.** A seven-step onboarding covering skills, interests,
+- **Founder profile.** An eight-step onboarding covering age, skills, interests,
   resources, time, goals, risk appetite and hard limits. Asked once, editable
   forever, and used by every other feature.
+- **Age-aware, not age-gated.** Age is collected as a band, never a birthdate,
+  and "rather not say" applies no assumptions at all. It changes what is
+  *practical* — cost, transport, who can hold an account — never what you are
+  permitted to do. A model is rated possible / needs an adult / check the rules
+  / not practical, and only the last filters anything out; everything else
+  becomes a note and a ranking adjustment, so a younger founder sees the full
+  range with the real requirements attached. No age rule is ever stated as law,
+  because those differ by country and company and change.
 - **Idea engine.** Generates opportunities in parallel batches with different
   briefs — highest leverage, fastest to first dollar, biggest ceiling — so the
   results differ from each other instead of being one idea five times.
@@ -122,6 +135,32 @@ models say plainly that they earn close to nothing for months.
   niche finder, and a stress-test for an idea you brought yourself.
 - **Constraints.** "I have $50", "I don't want to show my face", "first customer
   within 30 days" — treated as hard limits on generation, not suggestions.
+
+**Understand — how does this actually make money?**
+
+Every idea opens with the plain-English version before any score: what it is in
+one sentence, how the business works as a step-by-step loop, who pays you and
+why, how the money moves through one sale with the arithmetic visible and
+editable, what you need, what it costs itemised with a cheaper path, your first
+customer, your first $100, your first seven days — and the honest half:
+downsides, red flags, how it could fail and a cheap test for each risk.
+
+**Can I actually start this?** Age, money, time, skills, equipment and location
+each get a pass, warning or block with a specific fix. Computed from your
+current profile rather than stored, so editing your profile re-answers the
+question instead of leaving a stale verdict on screen.
+
+**What would I use to run it?** A toolkit built per business, where every
+platform is attached to a job that business actually needs doing, free option
+first. It carries no prices by design — a price written into a repo is wrong by
+next month and the reader has no way to know — so it records whether a free tier
+exists and what it covers, and tells you to check the platform's own pricing
+page. Plus a $0 stack, when-to-upgrade triggers, what you don't need yet, and a
+platform-dependency warning where the business leans on one company.
+
+**Beginner and advanced modes.** Beginner is the default: plain language, terms
+defined where they appear, detail one tap away. Advanced shows everything at
+once. Nothing is ever hidden — the collapse is a summary, not a lock.
 
 **Decide — why this one?**
 

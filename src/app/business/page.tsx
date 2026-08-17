@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { GeneratedNote, PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { AdvancedOnly, Explain } from "@/components/teach";
 import {
   AILoading,
   Badge,
@@ -28,6 +29,76 @@ import { computeHealth } from "@/lib/health";
 import { actions, useAppState } from "@/lib/store";
 import type { HealthReport, RadarItem, SelectedBusiness, Task } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
+
+/**
+ * The four questions someone should be able to answer about their own business
+ * without reading a dashboard: what am I building, what am I aiming for, what
+ * do I do next, and how far have I got.
+ */
+function AtAGlance({
+  business,
+  health,
+  monthRevenue,
+  customerCount,
+}: {
+  business: SelectedBusiness;
+  health: { score: number; stage: string };
+  monthRevenue: number;
+  customerCount: number;
+}) {
+  const target = business.revenueTarget;
+  const pct = target > 0 ? Math.min(100, Math.round((monthRevenue / target) * 100)) : 0;
+
+  return (
+    <Card className="p-5">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <h2 className="text-xs uppercase tracking-wide text-faint font-medium">What you&apos;re building</h2>
+          <p className="text-[15px] mt-1 leading-relaxed">{business.idea.oneLiner}</p>
+        </div>
+        <div>
+          <h2 className="text-xs uppercase tracking-wide text-faint font-medium">What you&apos;re aiming for</h2>
+          <p className="text-[15px] mt-1 leading-relaxed">
+            {target > 0 ? (
+              <>
+                {currency(target)} a month. You&apos;re at {currency(monthRevenue)} this month
+                {customerCount > 0 ? ` from ${customerCount} ${customerCount === 1 ? "customer" : "customers"}` : " with no customers yet"}.
+              </>
+            ) : (
+              "No monthly target set yet — pick one in your plan so progress means something."
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-border">
+        <div className="flex items-baseline justify-between gap-3 mb-1.5">
+          <h2 className="text-xs uppercase tracking-wide text-faint font-medium">How far you&apos;ve got</h2>
+          <span className="text-xs text-muted">{health.stage}</span>
+        </div>
+        <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-accent transition-[width] duration-500"
+            style={{ width: `${Math.max(4, pct)}%` }}
+          />
+        </div>
+        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+          {monthRevenue > 0 ? (
+            <>
+              {pct}% of this month&apos;s target. The first{" "}
+              <Explain id="customer">customer</Explain> is the hard one — after that it&apos;s repetition.
+            </>
+          ) : (
+            <>
+              Nothing earned yet, which is exactly where every business starts. Your next step is below — do that one
+              thing rather than everything.
+            </>
+          )}
+        </p>
+      </div>
+    </Card>
+  );
+}
 
 export default function BusinessPage() {
   return (
@@ -100,6 +171,10 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         }
       />
 
+      {/* Four questions, answered in words. In beginner mode this is the whole
+          top of the page; the metric grids below collapse behind a summary. */}
+      <AtAGlance business={business} health={health} monthRevenue={monthRevenue} customerCount={customers.length} />
+
       {/* What should I do today — the most important thing on the page. */}
       <Card className="p-5 border-accent-border bg-accent-soft/40">
         <div className="flex items-start gap-3">
@@ -159,6 +234,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         </div>
       </Card>
 
+      <AdvancedOnly summary="The numbers — revenue, customers, tasks and health">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
           <Stat
@@ -229,6 +305,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           </p>
         </Card>
       </div>
+      </AdvancedOnly>
 
       <Card className="p-5">
         <SectionHeader

@@ -17,6 +17,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
+import { WhatIf } from "@/components/what-if";
 import { DEFAULT_ANGLES, ideaSourceNote, useIdeaGeneration } from "@/lib/ideas";
 import { actions, useAppState } from "@/lib/store";
 import { rescore } from "@/lib/scoring";
@@ -276,6 +277,8 @@ function Ideas() {
           </Card>
         </>
       )}
+
+      {ideas.length > 0 && <WhatIf />}
 
       {ideas.length > 0 && <SourceNote source={sourceNote} intelligence={state.settings.intelligence} />}
 

@@ -27,6 +27,45 @@ const SUGGESTIONS_WITH_BUSINESS = [
   "Should I change my business?",
 ];
 
+/**
+ * The questions a beginner doesn't know to ask.
+ *
+ * Deliberately phrased the way someone stuck would actually say it — "explain
+ * that more simply" rather than "elaborate" — because the point is to model
+ * that asking a basic question is normal.
+ */
+const FOLLOW_UPS = [
+  "Explain that more simply.",
+  "How would I get my first customer?",
+  "How much would this cost me?",
+  "Can I do this at my age?",
+  "What could go wrong?",
+  "Show me an example.",
+  "Give me another idea.",
+  "Make this easier.",
+];
+
+function FollowUps({ onPick, disabled }: { onPick: (q: string) => void; disabled: boolean }) {
+  return (
+    <div className="mt-4 pt-3 border-t border-border">
+      <p className="text-xs uppercase tracking-wide text-faint font-medium mb-2">Questions you can ask</p>
+      <div className="flex flex-wrap gap-1.5">
+        {FOLLOW_UPS.map((q) => (
+          <button
+            key={q}
+            type="button"
+            disabled={disabled}
+            onClick={() => onPick(q)}
+            className="min-h-9 px-3 rounded-lg border border-border bg-surface text-[13px] hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors disabled:opacity-50"
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CoachPage() {
   return (
     <Ready>
@@ -170,6 +209,7 @@ function Coach() {
   };
 
   const suggestions = business ? SUGGESTIONS_WITH_BUSINESS : SUGGESTIONS_NO_BUSINESS;
+  const lastCoachId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
   const noProvider = status && !status.configured;
 
   return (
@@ -258,6 +298,12 @@ function Coach() {
                   >
                     Try again
                   </Button>
+                )}
+
+                {/* Only on the latest answer: older ones would stack up chips
+                    down the whole conversation. */}
+                {!message.error && !streaming && message.id === lastCoachId && (
+                  <FollowUps onPick={send} disabled={streaming} />
                 )}
               </Card>
             )}

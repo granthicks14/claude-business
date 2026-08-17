@@ -61,7 +61,8 @@ function useNav(): NavGroup[] {
 
     const track: NavItem[] = [
       { href: "/coach", label: "Coach", icon: "chat" },
-      { href: "/journal", label: "Journal", icon: "book" },
+      { href: "/learn", label: "Learn the words", icon: "book" },
+      { href: "/journal", label: "Journal", icon: "doc" },
       { href: "/search", label: "Search", icon: "search" },
     ];
     if (state.businesses.some((b) => b.archivedAt)) {

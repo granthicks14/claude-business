@@ -158,12 +158,20 @@ function IdeaDetail() {
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/ideas" className="text-sm text-muted hover:text-text inline-flex items-center gap-1.5 mb-3">
+        {/* -ml-2 keeps the text optically aligned with the heading while the
+            padding gives it a real tap target on a phone. */}
+        <Link
+          href="/ideas"
+          className="text-sm text-muted hover:text-text inline-flex items-center gap-1.5 mb-1 -ml-2 px-2 min-h-11"
+        >
           <Icon.arrowRight className="size-3.5 rotate-180" /> All ideas
         </Link>
 
         <div className="flex flex-wrap items-start gap-4 justify-between">
-          <div className="min-w-0 flex-1">
+          {/* basis-72 rather than flex-1: on a phone the title and one-liner
+              take the full width and push the score block onto its own row,
+              instead of being squeezed into a narrow column beside it. */}
+          <div className="min-w-0 basis-72 grow">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <Badge tone={idea.mode === "local" ? "info" : idea.mode === "hybrid" ? "accent" : "neutral"}>
                 {idea.mode === "online" ? "Online" : idea.mode === "local" ? "Local" : "Hybrid"}

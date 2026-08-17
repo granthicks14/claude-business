@@ -15,6 +15,8 @@ import {
   LinkButton,
   ScoreRing,
 } from "@/components/ui";
+import { AdvancedOnly } from "@/components/teach";
+import { DIFFICULTY_LABEL, assessFeasibility, difficultyBand } from "@/lib/engine";
 import { currency } from "@/lib/finance";
 import { LEVEL_VALUE } from "@/lib/scoring";
 import { actions, useAppState } from "@/lib/store";
@@ -62,6 +64,71 @@ function Compare() {
       </div>
     );
   }
+
+  const plainRows: { label: string; hint?: string; value: (i: BusinessIdea) => RowValue }[] = [
+    {
+      label: "Can you start it?",
+      hint: "Age, money, time, skills, equipment and location combined",
+      value: (i) => {
+        const f = assessFeasibility(i, state.profile);
+        const display = f.overall === "ok" ? "Yes" : f.overall === "warn" ? "With some sorting out" : "Not yet";
+        return { display, ratio: f.overall === "ok" ? 1 : f.overall === "warn" ? 0.5 : 0.1, better: "high" };
+      },
+    },
+    {
+      label: "How hard is it?",
+      value: (i) => {
+        const band = difficultyBand(i, state.profile);
+        const order = { "very-easy": 1, easy: 0.8, moderate: 0.55, hard: 0.3, advanced: 0.1 };
+        return { display: DIFFICULTY_LABEL[band], ratio: order[band], better: "high" };
+      },
+    },
+    {
+      label: "Fits your age?",
+      hint: "Whether anything about this needs an adult or a rule checked",
+      value: (i) => {
+        const f = assessFeasibility(i, state.profile);
+        const check = f.checks.find((c) => c.id === "age");
+        const display = !check || check.status === "ok" ? "No problem" : "Check first";
+        return { display, ratio: check?.status === "ok" ? 1 : 0.5, better: "high" };
+      },
+    },
+    {
+      label: "Fits your time?",
+      value: (i) => {
+        const f = assessFeasibility(i, state.profile);
+        const check = f.checks.find((c) => c.id === "time");
+        const display = check?.status === "ok" ? "Comfortably" : check?.status === "warn" ? "Just about" : "Not really";
+        return { display, ratio: check?.status === "ok" ? 1 : check?.status === "warn" ? 0.5 : 0.1, better: "high" };
+      },
+    },
+    {
+      label: "Fits your skills?",
+      value: (i) => {
+        const f = assessFeasibility(i, state.profile);
+        const check = f.checks.find((c) => c.id === "skills");
+        const display = check?.status === "ok" ? "Uses them" : check?.status === "warn" ? "Learnable" : "Missing one";
+        return { display, ratio: check?.status === "ok" ? 1 : check?.status === "warn" ? 0.5 : 0.1, better: "high" };
+      },
+    },
+    {
+      label: "Costs least to start",
+      value: (i) => ({
+        display: currency(i.startupCost),
+        ratio: 1 - Math.min(1, i.startupCost / Math.max(1, maxOf(ideas, (x) => x.startupCost))),
+        better: "low",
+      }),
+    },
+    {
+      label: "Money soonest",
+      hint: "Estimated days to a first paying customer",
+      value: (i) => ({
+        display: `~${i.speedToFirstRevenueDays} days`,
+        ratio: 1 - Math.min(1, i.speedToFirstRevenueDays / Math.max(1, maxOf(ideas, (x) => x.speedToFirstRevenueDays))),
+        better: "low",
+      }),
+    },
+  ];
 
   const rows: { label: string; hint?: string; value: (i: BusinessIdea) => RowValue }[] = [
     {
@@ -157,6 +224,9 @@ function Compare() {
         }
       />
 
+      <ComparisonTable ideas={ideas} rows={plainRows} caption="Which of these fits you best" />
+
+      <AdvancedOnly summary="The full metric comparison — eleven scored dimensions">
       <Card className="overflow-x-auto">
         <table className="w-full min-w-max text-sm">
           <caption className="sr-only">Comparison of selected business ideas</caption>
@@ -214,6 +284,7 @@ function Compare() {
           </tbody>
         </table>
       </Card>
+      </AdvancedOnly>
 
       <EstimateNote>
         Costs, timelines and revenue ranges are illustrative estimates generated from your profile — useful for
@@ -284,6 +355,65 @@ function Compare() {
         )}
       </Card>
     </div>
+  );
+}
+
+function ComparisonTable({
+  ideas,
+  rows,
+  caption,
+}: {
+  ideas: BusinessIdea[];
+  rows: { label: string; hint?: string; value: (i: BusinessIdea) => RowValue }[];
+  caption: string;
+}) {
+  return (
+    <Card className="overflow-x-auto">
+      <table className="w-full min-w-max text-sm">
+        <caption className="sr-only">{caption}</caption>
+        <thead>
+          <tr className="border-b border-border">
+            <th scope="col" className="text-left font-medium text-xs uppercase tracking-wide text-faint px-4 py-3 sticky left-0 bg-surface z-10">
+              Question
+            </th>
+            {ideas.map((idea) => (
+              <th key={idea.id} scope="col" className="text-left px-4 py-3 min-w-44 align-top">
+                <Link href={`/ideas/${idea.id}`} className="font-semibold hover:text-accent-text block truncate max-w-48">
+                  {idea.name}
+                </Link>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label} className="border-b border-border last:border-0">
+              <th scope="row" className="text-left font-medium px-4 py-3 align-top sticky left-0 bg-surface z-10">
+                <span className="block">{row.label}</span>
+                {row.hint && <span className="block text-[11px] text-faint font-normal mt-0.5 max-w-40">{row.hint}</span>}
+              </th>
+              {ideas.map((idea) => {
+                const v = row.value(idea);
+                return (
+                  <td key={idea.id} className="px-4 py-3 align-top">
+                    <div className="font-medium">{v.display}</div>
+                    <div className="h-1 rounded-full bg-surface-2 overflow-hidden mt-1.5 max-w-32">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.max(4, v.ratio * 100)}%`,
+                          background: v.ratio >= 0.7 ? "var(--good)" : v.ratio >= 0.4 ? "var(--warn)" : "var(--bad)",
+                        }}
+                      />
+                    </div>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </Card>
   );
 }
 
