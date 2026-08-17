@@ -1,4 +1,5 @@
 import type { BusinessPreference, FounderProfile } from "../types";
+import { ageContext } from "./knowledge/age";
 import { GENERAL_INDUSTRY, INDUSTRIES } from "./knowledge/industries";
 import { detectCapabilities, detectEquipment } from "./knowledge/skills";
 import type { FounderSignals, Industry, ModelKind } from "./types";
@@ -101,14 +102,28 @@ export function analyseFounder(profile: FounderProfile): FounderSignals {
 
   const avoid = [...clauses(profile.wontDo), ...profile.constraints.map((c) => c.toLowerCase())];
 
+  const age = ageContext(profile.ageBand);
+
+  // Age never overrides what someone told us — if a 15-year-old says they have
+  // 20 hours, that's their answer. It only fills in what they didn't say, and
+  // only downward: a school week is a real constraint on a stated 40 hours.
+  const statedHours = Math.max(1, profile.hoursPerWeek || 10);
+  const hours =
+    age.likelyHoursCeiling !== null && statedHours > age.likelyHoursCeiling * 1.8
+      ? age.likelyHoursCeiling
+      : statedHours;
+
   return {
+    age,
     capabilities,
     industries: industries.slice(0, 6),
     budget: Math.max(0, profile.startingBudget),
     monthlyBudget: Math.max(0, profile.monthlyBudget),
-    hours: Math.max(1, profile.hoursPerWeek || 10),
+    hours,
     location: profile.location.trim(),
-    hasTransport: profile.hasTransportation,
+    // Someone too young to drive can't rely on a vehicle even if the household
+    // has one, so transport is the conjunction of both facts.
+    hasTransport: profile.hasTransportation && age.likelyDrives,
     followers: profile.followers,
     audience: profile.followers >= 500 || profile.audience.trim().length > 3,
     equipment: detectEquipment(profile.equipment),

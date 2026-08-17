@@ -7,6 +7,8 @@
  * a user as "AI" — see lib/engine/index.ts for the labelling rules.
  */
 
+import type { AgeContext } from "./knowledge/age";
+
 export type ModelKind =
   | "service"
   | "productized-service"
@@ -158,6 +160,8 @@ export interface Channel {
 
 /** The engine's view of a founder, derived from the stored profile. */
 export interface FounderSignals {
+  /** Practical circumstances implied by age. Never a permission check. */
+  age: AgeContext;
   capabilities: Set<string>;
   industries: { industry: Industry; strength: number; reason: string }[];
   budget: number;

@@ -24,6 +24,47 @@ export interface Evidence {
 /* Founder profile                                                            */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Age is collected as a band, never a birthdate — the app only needs enough
+ * resolution to know which practical constraints apply, and a precise date of
+ * birth would be personal data it has no use for.
+ *
+ * "unspecified" is a real, supported answer: someone who skips the question
+ * gets recommendations with no age assumptions applied, not a blocked app.
+ */
+export type AgeBand =
+  | "unspecified"
+  | "under-13"
+  | "13"
+  | "14"
+  | "15"
+  | "16"
+  | "17"
+  | "18"
+  | "19"
+  | "20-24"
+  | "25-34"
+  | "35-44"
+  | "45-54"
+  | "55+";
+
+export const AGE_BANDS: { id: AgeBand; label: string }[] = [
+  { id: "under-13", label: "Under 13" },
+  { id: "13", label: "13" },
+  { id: "14", label: "14" },
+  { id: "15", label: "15" },
+  { id: "16", label: "16" },
+  { id: "17", label: "17" },
+  { id: "18", label: "18" },
+  { id: "19", label: "19" },
+  { id: "20-24", label: "20–24" },
+  { id: "25-34", label: "25–34" },
+  { id: "35-44", label: "35–44" },
+  { id: "45-54", label: "45–54" },
+  { id: "55+", label: "55+" },
+  { id: "unspecified", label: "Rather not say" },
+];
+
 export type RiskTolerance = "low" | "medium" | "high";
 export type PayoffStyle = "fast" | "balanced" | "moonshot";
 export type Commitment = "side" | "fulltime" | "undecided";
@@ -47,6 +88,9 @@ export type BusinessPreference =
 
 export interface FounderProfile {
   name: string;
+
+  /** Band, not a birthdate. Drives practicality, never permission. */
+  ageBand: AgeBand;
 
   // Personal
   interests: string[];
@@ -567,6 +611,13 @@ export interface SelectedBusiness {
 /** Which system answers generation requests. */
 export type Intelligence = "engine" | "ai";
 
+/**
+ * How much the interface explains. Beginner is the default for new users: it
+ * leads with plain language, defines terms inline and shows one step at a time.
+ * Advanced surfaces the full metric set for people who already know the words.
+ */
+export type ExperienceMode = "beginner" | "advanced";
+
 export interface AppState {
   version: number;
   settings: {
@@ -576,6 +627,8 @@ export interface AppState {
      * money per request and falls back to the engine when unavailable.
      */
     intelligence: Intelligence;
+    /** Defaults to "beginner". Controls how much the UI explains. */
+    experienceMode: ExperienceMode;
   };
   profile: FounderProfile;
   ideas: BusinessIdea[];

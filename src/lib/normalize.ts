@@ -1,3 +1,4 @@
+import { AGE_BANDS } from "./types";
 import type { BusinessPreference, Commitment, FounderProfile, PayoffStyle, RiskTolerance } from "./types";
 
 /**
@@ -36,6 +37,7 @@ function oneOf<T extends string>(v: unknown, allowed: readonly T[], fallback: T)
   return typeof v === "string" && (allowed as readonly string[]).includes(v) ? (v as T) : fallback;
 }
 
+const AGE_BAND_IDS = AGE_BANDS.map((a) => a.id);
 const RISKS = ["low", "medium", "high"] as const satisfies readonly RiskTolerance[];
 const PAYOFFS = ["fast", "balanced", "moonshot"] as const satisfies readonly PayoffStyle[];
 const COMMITMENTS = ["side", "fulltime", "undecided"] as const satisfies readonly Commitment[];
@@ -49,6 +51,7 @@ export function coerceProfile(input: unknown): FounderProfile {
   const p = (input ?? {}) as Record<string, unknown>;
   return {
     name: s(p.name, 100),
+    ageBand: oneOf(p.ageBand, AGE_BAND_IDS, "unspecified"),
     interests: arr(p.interests),
     hobbies: arr(p.hobbies),
     skills: arr(p.skills),

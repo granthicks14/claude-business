@@ -1,5 +1,6 @@
 import { computeScore } from "../scoring";
 import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type Level, type ScoreDimension } from "../types";
+import { ratePracticality, type Practicality } from "./knowledge/age";
 import { INDUSTRIES } from "./knowledge/industries";
 import { BUSINESS_MODELS } from "./knowledge/models";
 import { capabilityLabel } from "./knowledge/skills";
@@ -67,6 +68,18 @@ function modelIsPossible(model: BusinessModel, s: FounderSignals, blocks: Return
   if (model.kind === "local-service" && blocks.noDriving && !s.location) return false;
   if (model.kind === "software" && blocks.noCode) return false;
   if (model.channels.includes("short-video") && model.kind === "content" && blocks.noCamera && !s.capabilities.has("writing")) return false;
+
+  // Age filters only at the extreme: something rated flatly impractical is a
+  // wrong answer for this founder. Everything softer becomes a note and a
+  // ranking adjustment, so a younger founder still sees the full range with
+  // the real requirements attached rather than a shortened list.
+  const rating = ratePracticality(model.kind, s.age, {
+    startupCost: model.startupCost[0],
+    requiresInventory: model.requiresInventory,
+    requiresLocation: model.requiresLocation,
+  });
+  if (rating.practicality === "not-practical") return false;
+
   return true;
 }
 
@@ -131,6 +144,31 @@ function scoreCandidate(c: Omit<Candidate, "fit" | "notes">, s: FounderSignals, 
   // Risk appetite.
   if (s.risk === "low") fit += (100 - model.difficulty) / 8 - cost / 60;
   if (s.risk === "high") fit += model.scalability / 12;
+
+  // Age, combined with everything else rather than applied on its own.
+  if (s.age.minor) {
+    const rating = ratePracticality(model.kind, s.age, {
+      startupCost: model.startupCost[0],
+      requiresInventory: model.requiresInventory,
+      requiresLocation: model.requiresLocation,
+    });
+    // Things that need an adult on the paperwork still appear — they just
+    // shouldn't outrank something the founder can start on their own today.
+    if (rating.practicality === "needs-adult") fit -= 16;
+    if (rating.practicality === "verify-rules") fit -= 8;
+
+    // What actually works at this age: near-zero cost, fast first payment,
+    // and customers reachable without a car.
+    if (cost <= 50) {
+      fit += 14;
+      notes.push("costs almost nothing to start, which matters most at your age");
+    }
+    if (model.timeToRevenueDays <= 21) fit += 10;
+    if (model.requiresInventory) fit -= 12;
+    if (model.mode === "local" && !s.age.likelyDrives) fit -= 10;
+    // Skill-for-hire beats anything requiring capital or standing.
+    if (model.startupCost[1] <= 100 && (model.kind === "service" || model.kind === "productized-service")) fit += 8;
+  }
 
   // Angle bias — this is what makes batches genuinely different from each other.
   switch (angle) {

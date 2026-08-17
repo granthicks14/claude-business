@@ -20,6 +20,7 @@ import {
 } from "@/components/ui";
 import { actions, useAppState } from "@/lib/store";
 import {
+  AGE_BANDS,
   PREFERENCE_LABEL,
   type BusinessPreference,
   type Commitment,
@@ -51,6 +52,13 @@ interface Step {
 }
 
 const STEPS: Step[] = [
+  {
+    id: "about",
+    title: "First, a bit about you",
+    subtitle: "Age changes what's practical to start — not what you're allowed to do. You can skip it.",
+    isComplete: () => true,
+    incompleteHint: "",
+  },
   {
     id: "you",
     title: "What are you good at?",
@@ -182,6 +190,7 @@ function Onboarding() {
       <p className="text-muted mt-2 leading-relaxed">{current.subtitle}</p>
 
       <Card className="p-5 sm:p-6 mt-6 space-y-6 animate-in" key={current.id}>
+        {current.id === "about" && <StepAbout draft={draft} set={set} />}
         {current.id === "you" && <StepYou draft={draft} set={set} />}
         {current.id === "interests" && <StepInterests draft={draft} set={set} />}
         {current.id === "resources" && <StepResources draft={draft} set={set} />}
@@ -217,6 +226,58 @@ function Onboarding() {
 }
 
 type StepProps = { draft: FounderProfile; set: (patch: Partial<FounderProfile>) => void };
+
+function StepAbout({ draft, set }: StepProps) {
+  return (
+    <>
+      <Field label="What should we call you?" hint="Optional. Only used to address you in the app.">
+        <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Your first name" />
+      </Field>
+
+      <Field
+        label="How old are you?"
+        hint="We ask for a range, never a date of birth. It changes which businesses are practical for you — a 15-year-old and a 40-year-old have genuinely different options, and pretending otherwise gives you advice you can't use."
+      >
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Your age">
+          {AGE_BANDS.map((band) => {
+            const active = draft.ageBand === band.id;
+            return (
+              <button
+                key={band.id}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => set({ ageBand: band.id })}
+                className={`min-h-11 px-4 rounded-xl border text-sm font-medium transition-all ${
+                  active
+                    ? "border-accent bg-accent-soft text-accent-text"
+                    : "border-border bg-surface hover:border-accent-border hover:bg-surface-2"
+                }`}
+              >
+                {band.label}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+
+      <div className="rounded-xl border border-border bg-surface-2 p-4">
+        <p className="text-sm font-medium">Why this matters, and what it doesn&apos;t do</p>
+        <ul className="text-sm text-muted mt-2 space-y-1.5 leading-relaxed">
+          <li>
+            It <span className="text-fg font-medium">never</span> tells you you&apos;re too young to start a business.
+          </li>
+          <li>
+            It does flag when something would need a parent or guardian on an account, or when a platform may have an
+            age requirement worth checking.
+          </li>
+          <li>It prioritises things you can genuinely start — low cost, no car needed, paid quickly.</li>
+          <li>Skip it and nothing here applies. You&apos;ll still get real recommendations.</li>
+        </ul>
+      </div>
+    </>
+  );
+}
 
 function StepYou({ draft, set }: StepProps) {
   return (

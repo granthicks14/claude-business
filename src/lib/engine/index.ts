@@ -169,3 +169,29 @@ export function runEngineTask(task: string, req: EngineRequest): unknown {
 
 export { generateIdeas, generatePivots, resolveContext };
 export { answer as coachAnswer, detectIntent } from "./coach";
+
+/**
+ * Instant local analysis.
+ *
+ * These are pure functions over an idea and the current profile, fast enough to
+ * run during render, so they aren't routed through the task system — there is
+ * no request to make, nothing to wait for, and no "Generate" button to press.
+ * The plain-English explanation of a business should simply be there.
+ */
+export { explainBusiness } from "./generators/explain";
+export type { Explainer, FlowStep, MoneyStep, DayPlan } from "./generators/explain";
+export { buildToolkit } from "./generators/toolkit";
+export type { Toolkit, ToolkitJob, ToolChoice } from "./generators/toolkit";
+export {
+  assessFeasibility,
+  costBreakdown,
+  requirements,
+  difficultyBand,
+  DIFFICULTY_LABEL,
+  DIFFICULTY_BLURB,
+} from "./feasibility";
+export type { Feasibility, Check, CheckStatus, CostBreakdown, Requirements, DifficultyBand } from "./feasibility";
+export { ageContext, PRACTICALITY_LABEL, PRACTICALITY_TONE, AGE_LEGAL_NOTE, AGE_HONESTY_NOTE } from "./knowledge/age";
+export type { AgeContext, Practicality } from "./knowledge/age";
+export { COST_LABEL, PLATFORM_DISCLAIMER, CATEGORY_LABEL as PLATFORM_CATEGORY_LABEL } from "./knowledge/platforms";
+export type { Platform, CostLabel } from "./knowledge/platforms";

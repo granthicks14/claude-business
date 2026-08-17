@@ -26,6 +26,7 @@ import { rescore } from "@/lib/scoring";
 import { actions, snapshot, useAppState } from "@/lib/store";
 import {
   PREFERENCE_LABEL,
+  AGE_BANDS,
   type BusinessPreference,
   type Commitment,
   type FounderProfile,
@@ -45,7 +46,7 @@ export default function SettingsPage() {
 }
 
 function Settings() {
-  const [tab, setTab] = useState<"profile" | "ai" | "data">("profile");
+  const [tab, setTab] = useState<"profile" | "mode" | "ai" | "data">("profile");
 
   return (
     <div className="space-y-6">
@@ -56,12 +57,14 @@ function Settings() {
         onChange={(id) => setTab(id as typeof tab)}
         tabs={[
           { id: "profile", label: "Founder profile" },
+          { id: "mode", label: "How much to explain" },
           { id: "ai", label: "Intelligence" },
           { id: "data", label: "Your data" },
         ]}
       />
 
       {tab === "profile" && <ProfileEditor />}
+      {tab === "mode" && <ExperienceSetting />}
       {tab === "ai" && <AISetup />}
       {tab === "data" && <DataSettings />}
     </div>
@@ -113,6 +116,33 @@ function ProfileEditor() {
         <div className="grid gap-5">
           <Field label="Your name" htmlFor="p-name">
             <Input id="p-name" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Optional" />
+          </Field>
+
+          <Field
+            label="Your age"
+            hint="A range, never a date of birth. It decides what's practical — never what you're allowed to do."
+          >
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Your age">
+              {AGE_BANDS.map((band) => {
+                const active = draft.ageBand === band.id;
+                return (
+                  <button
+                    key={band.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={active}
+                    onClick={() => set({ ageBand: band.id })}
+                    className={`min-h-11 px-3.5 rounded-xl border text-sm font-medium transition-all ${
+                      active
+                        ? "border-accent bg-accent-soft text-accent-text"
+                        : "border-border bg-surface hover:border-accent-border hover:bg-surface-2"
+                    }`}
+                  >
+                    {band.label}
+                  </button>
+                );
+              })}
+            </div>
           </Field>
 
           <Field label="Skills" htmlFor="p-skills">
@@ -266,6 +296,88 @@ function ProfileEditor() {
 }
 
 /* ------------------------------------------------------------------- AI setup */
+
+const MODES = [
+  {
+    id: "beginner" as const,
+    title: "Beginner",
+    tagline: "I'm new to this. Explain things.",
+    points: [
+      "Plain language, with business words defined where they appear",
+      "The short version first, with detail behind a tap",
+      "One step at a time, and why each step matters",
+      "Fewer numbers on screen at once",
+    ],
+  },
+  {
+    id: "advanced" as const,
+    title: "Advanced",
+    tagline: "I've done this before. Show me everything.",
+    points: [
+      "Full metrics and score breakdowns visible by default",
+      "Nothing collapsed behind a summary",
+      "Financial and market detail up front",
+      "Assumes you know the terminology",
+    ],
+  },
+];
+
+function ExperienceSetting() {
+  const mode = useAppState((s) => s.settings.experienceMode);
+  const toast = useToast();
+
+  return (
+    <Card className="p-5">
+      <SectionHeader
+        title="How much should the app explain?"
+        description="This changes how much detail is on screen at once. It never changes the recommendations themselves — the same engine runs either way, and you can switch any time."
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {MODES.map((m) => {
+          const active = mode === m.id;
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                actions.setExperienceMode(m.id);
+                toast(`Switched to ${m.title} mode`, "good");
+              }}
+              aria-pressed={active}
+              className={`text-left rounded-xl border p-4 transition-all ${
+                active
+                  ? "border-accent bg-accent-soft"
+                  : "border-border bg-surface hover:border-accent-border hover:bg-surface-2"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold">{m.title}</span>
+                {active && <Badge tone="accent">Active</Badge>}
+              </div>
+              <p className="text-sm text-muted mt-1">{m.tagline}</p>
+              <ul className="mt-3 space-y-1.5">
+                {m.points.map((p) => (
+                  <li key={p} className="text-[13px] text-muted flex gap-2 leading-relaxed">
+                    <span className="text-accent shrink-0" aria-hidden="true">
+                      →
+                    </span>
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-faint mt-4 leading-relaxed">
+        New here? Start on Beginner. There&apos;s nothing hidden from you — everything Advanced shows is one tap away
+        in Beginner too.
+      </p>
+    </Card>
+  );
+}
 
 function AISetup() {
   const { status, loading } = useAIStatus();

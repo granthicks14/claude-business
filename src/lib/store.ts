@@ -26,6 +26,7 @@ export const STATE_VERSION = 1;
 export function emptyProfile(): FounderProfile {
   return {
     name: "",
+    ageBand: "unspecified",
     interests: [],
     hobbies: [],
     skills: [],
@@ -81,7 +82,7 @@ export function defaultMoneyInputs(): MoneyModelInputs {
 export function emptyState(): AppState {
   return {
     version: STATE_VERSION,
-    settings: { intelligence: "engine" },
+    settings: { intelligence: "engine", experienceMode: "beginner" },
     profile: emptyProfile(),
     ideas: [],
     businesses: [],
@@ -384,6 +385,10 @@ export const actions = {
 
   setIntelligence(intelligence: AppState["settings"]["intelligence"]) {
     update((s) => ({ ...s, settings: { ...s.settings, intelligence } }));
+  },
+
+  setExperienceMode(experienceMode: AppState["settings"]["experienceMode"]) {
+    update((s) => ({ ...s, settings: { ...s.settings, experienceMode } }));
   },
 
   addNicheReport(report: AppState["niches"][number]) {
