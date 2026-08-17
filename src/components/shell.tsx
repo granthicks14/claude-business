@@ -51,6 +51,7 @@ function useNav(): NavGroup[] {
           { href: "/business", label: "My business", icon: "building" },
           { href: "/business/identity", label: "Business details", icon: "doc" },
           { href: "/business/build", label: "Make things", icon: "bolt" },
+          { href: "/business/website", label: "Website", icon: "compass" },
           { href: "/business/launch", label: "Launch checklist", icon: "check" },
           { href: "/validation", label: "Validation", icon: "flask" },
           { href: "/plan", label: "Plan", icon: "doc" },
@@ -58,6 +59,7 @@ function useNav(): NavGroup[] {
           { href: "/marketing", label: "Marketing", icon: "megaphone" },
           { href: "/sales", label: "Sales", icon: "handshake" },
           { href: "/practice", label: "Practise", icon: "flask" },
+          { href: "/business/spend", label: "What to pay for", icon: "scales" },
           { href: "/money", label: "Money", icon: "money" },
         ],
       });

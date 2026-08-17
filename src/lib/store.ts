@@ -186,6 +186,7 @@ function migrate(raw: unknown): AppState {
       expenses: b.expenses ?? [],
       radar: b.radar ?? [],
       prompts: b.prompts ?? [],
+        websiteVersions: b.websiteVersions ?? [],
       money: { ...defaultMoneyInputs(), ...(b.money ?? {}) },
     })),
   };
@@ -431,6 +432,43 @@ export const actions = {
           ? { ...b, identity: { ...emptyIdentity(), ...b.identity, ...patch, updatedAt: Date.now() } }
           : b,
       ),
+    }));
+  },
+
+  saveWebsiteVersion(
+    businessId: ID,
+    version: { mode: "quick" | "detailed"; siteType: string; text: string; request: string; changes: string[] },
+  ) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) => {
+        if (b.id !== businessId) return b;
+        const existing = b.websiteVersions ?? [];
+        // Version numbers keep counting up even after old ones are trimmed, so
+        // "Version 9" always means the ninth thing the user generated.
+        const number = (existing[0]?.number ?? 0) + 1;
+        return {
+          ...b,
+          websiteVersions: [
+            { id: newId("wv"), number, ...version, createdAt: Date.now() },
+            ...existing,
+          ].slice(0, 10),
+        };
+      }),
+    }));
+  },
+
+  setWebsiteSettings(businessId: ID, settings: NonNullable<SelectedBusiness["websiteSettings"]>) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) => (b.id === businessId ? { ...b, websiteSettings: settings } : b)),
+    }));
+  },
+
+  setWebsiteLive(businessId: ID, live: boolean) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) => (b.id === businessId ? { ...b, websiteLive: live } : b)),
     }));
   },
 

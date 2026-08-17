@@ -615,6 +615,20 @@ export interface BusinessIdentity {
   updatedAt: number;
 }
 
+export interface WebsiteVersion {
+  id: ID;
+  /** 1-based, shown to the user as "Version 3". */
+  number: number;
+  mode: "quick" | "detailed";
+  siteType: string;
+  text: string;
+  /** What the user asked for, verbatim. Empty on the first version. */
+  request: string;
+  /** What actually changed versus the previous version. */
+  changes: string[];
+  createdAt: number;
+}
+
 export interface SelectedBusiness {
   id: ID;
   ideaId: ID;
@@ -652,6 +666,25 @@ export interface SelectedBusiness {
   identity?: BusinessIdentity;
   /** Prompts the user has generated, kept so they can be recopied. */
   prompts?: { id: ID; kind: string; label: string; text: string; createdAt: number }[];
+  /**
+   * Website prompt versions, newest first. Kept separate from `prompts` because
+   * these are a numbered history the user restores from, not a saved-items list.
+   */
+  websiteVersions?: WebsiteVersion[];
+  /** Style and site-type choices, so the page reopens where it was left. */
+  websiteSettings?: {
+    siteType: string;
+    style: {
+      personality: string;
+      visual: string;
+      colours: string;
+      typography: string;
+      copyTone: string;
+      extras: string[];
+    };
+  };
+  /** Set when the user says the site is live. Feeds Launch Readiness. */
+  websiteLive?: boolean;
 }
 
 /** Which system answers generation requests. */

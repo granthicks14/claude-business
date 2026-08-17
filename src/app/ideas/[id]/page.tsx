@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import {
   CanIDoThis,
@@ -39,7 +39,7 @@ import {
 import { DecisionCard, FitScoreCard, ImprovementsCard } from "@/components/fit-score";
 import { ConfusedHelper, QuickActions, QuickAnswer } from "@/components/quick-answer";
 import { DIFFICULTY_LABEL, assessEvidence, decide } from "@/lib/engine";
-import { computeFit } from "@/lib/fit";
+import { BAND_LABEL, FACTOR_LABEL, computeFit } from "@/lib/fit";
 import { useBusinessAnalysis } from "@/lib/explain";
 import { currency } from "@/lib/finance";
 import { download, ideaToMarkdown, slugify } from "@/lib/export";
@@ -220,17 +220,14 @@ function IdeaDetail() {
             Open my business
           </Button>
         ) : (
-          <Button
-            variant="primary"
-            icon={<Icon.building />}
-            onClick={() => {
+          <BuildThisButton
+            idea={idea}
+            onBuild={() => {
               actions.selectBusiness(idea);
               toast("This is now your active business", "good");
               router.push("/business");
             }}
-          >
-            Build this one
-          </Button>
+          />
         )}
         <Button onClick={() => actions.toggleCompare(idea.id)} icon={<Icon.scales className="size-4" />}>
           {inCompare ? "In comparison" : "Compare"}
@@ -565,5 +562,72 @@ function Figure({ label, value, note }: { label: string; value: string; note?: s
       <div className="font-semibold tabular-nums mt-0.5">{value}</div>
       {note && <p className="text-[11px] text-muted mt-0.5 leading-snug">{note}</p>}
     </div>
+  );
+}
+
+/**
+ * Choosing a business the engine rates poorly.
+ *
+ * Never blocked, and deliberately so: the score is computed from a profile the
+ * user wrote in five minutes, and they know things about their own situation
+ * that the profile never captured. The app's job is to say what it sees and
+ * then step aside — a recommendation engine that refuses to be overruled is
+ * just a wall.
+ */
+function BuildThisButton({ idea, onBuild }: { idea: BusinessIdea; onBuild: () => void }) {
+  const profile = useAppState((s) => s.profile);
+  const fit = useMemo(() => computeFit(idea, profile, { withImprovements: false }), [idea, profile]);
+  const [confirming, setConfirming] = useState(false);
+
+  const weak = fit.band === "poor" || fit.band === "possible";
+  if (!weak) {
+    return (
+      <Button variant="primary" icon={<Icon.building />} onClick={onBuild}>
+        Build this one
+      </Button>
+    );
+  }
+
+  // The two factors dragging it down, so the warning is specific rather than
+  // "this scored low".
+  const worst = [...fit.factors].sort((a, b) => a.score - b.score).slice(0, 2);
+
+  return (
+    <>
+      <Button variant="primary" icon={<Icon.building />} onClick={() => setConfirming(true)}>
+        Build this one
+      </Button>
+
+      <Dialog open={confirming} onClose={() => setConfirming(false)} title="This isn't your strongest match">
+        <p className="text-sm leading-relaxed">
+          It scores <strong>{fit.score}</strong> against your profile, which puts it in the{" "}
+          <strong>{BAND_LABEL[fit.band].toLowerCase()}</strong> band. Mostly because of these:
+        </p>
+        <ul className="mt-3 space-y-2">
+          {worst.map((f) => (
+            <li key={f.factor} className="text-[13px] rounded-lg bg-surface-2 p-3">
+              <span className="font-medium">{FACTOR_LABEL[f.factor]}</span>
+              <span className="text-muted"> — {f.score}/100.</span>
+              <span className="block text-muted leading-relaxed mt-0.5">{f.reason}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-[13px] text-muted leading-relaxed mt-3">
+          That score comes from a profile you filled in quickly, and you know things about your own situation it
+          doesn&apos;t. If you have a reason to think this works, that reason is better evidence than the number.
+        </p>
+        <div className="flex flex-wrap gap-2 mt-5">
+          <Button variant="primary" onClick={onBuild}>
+            Start it anyway
+          </Button>
+          <LinkButton href="/profile" variant="secondary">
+            Fix my profile first
+          </LinkButton>
+          <Button variant="ghost" onClick={() => setConfirming(false)}>
+            Keep looking
+          </Button>
+        </div>
+      </Dialog>
+    </>
   );
 }

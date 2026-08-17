@@ -408,6 +408,23 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           done={!!business.prompts?.length}
         />
         <ShortcutCard
+          href="/business/website"
+          icon={<Icon.compass className="size-5 text-accent" />}
+          title="Website"
+          description={
+            business.websiteLive
+              ? "Live. Regenerate the brief any time you change your offer."
+              : "Writes the brief for a website builder, from the business you've already defined."
+          }
+          done={!!business.websiteLive}
+        />
+        <ShortcutCard
+          href="/business/spend"
+          icon={<Icon.scales className="size-5 text-accent" />}
+          title="What's worth paying for"
+          description="The free route, the better route, and what the difference actually buys you."
+        />
+        <ShortcutCard
           href="/plan"
           icon={<Icon.doc className="size-5 text-accent" />}
           title="Business plan"

@@ -140,9 +140,9 @@ export function assessReadiness(business: SelectedBusiness | null): Readiness {
     {
       id: "website",
       label: "A page you can send someone",
-      done: !!id?.websiteUrl?.trim() || !!business.website,
+      done: !!business.websiteLive || !!id?.websiteUrl?.trim() || !!business.website,
       why: "Not needed on day one. Useful once people start asking for a link.",
-      href: "/business/build?kind=website",
+      href: "/business/website",
       essential: false,
     },
     {

@@ -13,6 +13,11 @@ API key must never break a feature. Before adding a dependency, check whether
 existing code, a browser API, `localStorage`, CSS or deterministic logic can do
 it instead.
 
+This applies to *the app*, never to *the user's business*. Recommending only
+free tools would be a worse recommendation dressed up as a principle: where a
+paid tool materially helps, say so, alongside the free route and what choosing
+it costs. See `lib/spend.ts`.
+
 **2. It must stay deployable on Vercel.** Zero-config Next.js detection — there
 is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 `public/`. Don't add them. Run `npm run build` after changes.
@@ -38,11 +43,22 @@ src/lib/engine/         The Business Intelligence Engine — all local, all free
 src/lib/fit.ts          Business Fit Score (does this suit me?).
 src/lib/launch.ts       Launch Readiness (is this business prepared?).
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
+src/lib/hostinger.ts    Website brief + the consistency lock.
+src/lib/spend.ts        What's worth paying for, and when.
 src/lib/ai/             Optional provider adapters. server-only.
 ```
 
 The workspace lives under `/business`: the dashboard, `/identity` (business
-details wizard), `/build` (prompt builder), `/launch` (readiness checklist).
+details wizard), `/build` (prompt builder), `/website` (website brief),
+`/spend` (what to pay for), `/launch` (readiness checklist).
+
+### The consistency lock
+
+`hostinger.ts` splits the website brief into `BusinessFacts` (what the user
+chose and entered) and `StyleSpec` (how it looks). `applyStyleRequest` can only
+write to `StyleSpec` — there is no code path from "make it more premium" to a
+price or a customer. That structure *is* the guarantee; an instruction telling
+a model not to change the business would only be a hope.
 
 ### The engine
 
@@ -81,8 +97,12 @@ These are product requirements, not style preferences:
 - **Never invent a URL.** No video ids, no company pages, no specific articles.
   Use search URLs — always valid, always current. See `lib/examples.ts`.
 - **Never invent prices, age rules or platform terms.** `knowledge/platforms.ts`
-  deliberately carries no prices; it records whether a free tier exists and
-  tells the user to check the platform's own page.
+  carries no prices, and `spend.ts` uses coarse `CostBand`s ("roughly the order
+  of a streaming subscription") rather than figures. A number written here is
+  wrong within weeks and the reader can't tell; a magnitude plus a link to the
+  seller's own page stays honest.
+- **Never claim a third-party service is free.** Say what *this app* does for
+  free and what the service charges for, separately and in that order.
 - **Never invent evidence.** Only user-entered facts count as validation.
 - **Never fill a gap with a plausible fact.** Generated prompts and documents
   emit `[A VISIBLE PLACEHOLDER]` for anything the user hasn't supplied, so the
@@ -114,3 +134,5 @@ These are product requirements, not style preferences:
   `prefers-reduced-motion` block disables all of it; don't work around it.
 - Never glow or colour a low score red as an alarm — a low score early on is
   normal, and the copy says so.
+- A low score never blocks a choice. Say what's weak, then get out of the way:
+  the profile was written in five minutes and the user knows more than it does.
