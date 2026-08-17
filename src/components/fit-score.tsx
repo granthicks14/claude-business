@@ -1,0 +1,215 @@
+"use client";
+
+import { Explain, Why } from "@/components/teach";
+import { Badge, Card, Meter, ScoreRing, SectionHeader } from "@/components/ui";
+import { BAND_LABEL, FACTOR_HELP, FACTOR_LABEL, FIT_DISCLAIMER, type FitResult } from "@/lib/fit";
+import type { Decision, EvidenceReport } from "@/lib/engine";
+import { VALIDATION_BLURB, VALIDATION_LABEL, VALIDATION_TONE, VERDICT_LABEL } from "@/lib/engine";
+
+/**
+ * The score, its reasoning, and the two things a number alone can't tell you:
+ * how confident it is, and whether anyone actually wants the business.
+ */
+
+const CONFIDENCE_TONE = { low: "warn", medium: "accent", high: "good" } as const;
+const BAND_TONE = { best: "good", good: "accent", possible: "neutral", poor: "warn" } as const;
+
+export function FitScoreCard({ fit }: { fit: FitResult }) {
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-1.5">
+            <h2 className="font-semibold">
+              Business Fit Score
+              <Why>
+                This rates the match between this business and you — your money, hours, skills, reach and age. It
+                deliberately isn&apos;t a rating of the business in the abstract: something with a huge ceiling that
+                you can&apos;t start is a bad recommendation for you, however good it looks on paper.
+              </Why>
+            </h2>
+            <Badge tone={BAND_TONE[fit.band]}>{BAND_LABEL[fit.band]}</Badge>
+            <Badge tone={CONFIDENCE_TONE[fit.confidence]}>
+              {fit.confidence === "high" ? "High" : fit.confidence === "medium" ? "Medium" : "Low"} confidence
+            </Badge>
+          </div>
+          <p className="text-sm leading-relaxed">{fit.explanation}</p>
+          <p className="text-[13px] text-muted mt-2 leading-relaxed">{fit.confidenceReason}</p>
+        </div>
+        <ScoreRing score={fit.score} size={76} />
+      </div>
+
+      {fit.capped && (
+        <div className="mt-4 rounded-lg border border-warn/30 bg-warn-soft p-3.5">
+          <p className="text-sm leading-relaxed">
+            <span className="font-medium">This score is capped.</span> Something practical is in the way, and a good
+            business you can&apos;t start isn&apos;t a good business for you yet. Fix the blocker and the score moves.
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 mt-5 pt-4 border-t border-border">
+        {fit.factors.map((f) => (
+          <div key={f.factor}>
+            <Meter
+              label={
+                <Explain short={FACTOR_HELP[f.factor]}>{FACTOR_LABEL[f.factor]}</Explain>
+              }
+              value={f.score}
+              hint={f.reason}
+            />
+            {f.weight === 0 && (
+              <p className="text-[11px] text-faint mt-1">Not counted — we don&apos;t know your age.</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <p className="text-xs text-faint mt-4 pt-3 border-t border-border leading-relaxed">{FIT_DISCLAIMER}</p>
+    </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
+export function ImprovementsCard({ fit }: { fit: FitResult }) {
+  if (!fit.improvements.length) return null;
+
+  return (
+    <Card className="p-5">
+      <SectionHeader
+        title="What would improve this score?"
+        description="Each number is the score recomputed against that change — not an estimate."
+      />
+      <ul className="grid gap-2">
+        {fit.improvements.map((i) => (
+          <li key={i.change} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-border px-3.5 py-3">
+            <span className="font-semibold tabular-nums text-good shrink-0">+{i.delta}</span>
+            <span className="text-sm font-medium">{i.change}</span>
+            <span className="w-full text-[13px] text-muted leading-relaxed">{i.how}</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-faint mt-3 leading-relaxed">
+        These change your circumstances, not the business. If none of them are realistic right now, that&apos;s
+        useful information too — it may mean a different business suits you better today.
+      </p>
+    </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
+const VERDICT_TONE = { yes: "good", maybe: "accent", "not-yet": "warn", no: "warn" } as const;
+const VERDICT_MARK = { yes: "✓", maybe: "?", "not-yet": "!", no: "✕" };
+
+export function DecisionCard({ decision, evidence }: { decision: Decision; evidence: EvidenceReport }) {
+  return (
+    <Card className="p-5">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden="true"
+          className={`shrink-0 size-9 rounded-full grid place-items-center font-bold ${
+            decision.verdict === "yes"
+              ? "bg-good-soft text-good"
+              : decision.verdict === "maybe"
+                ? "bg-accent-soft text-accent-text"
+                : "bg-warn-soft text-warn"
+          }`}
+        >
+          {VERDICT_MARK[decision.verdict]}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="font-semibold text-lg">Should you actually do this?</h2>
+            <Badge tone={VERDICT_TONE[decision.verdict]}>{VERDICT_LABEL[decision.verdict]}</Badge>
+          </div>
+          <p className="text-[15px] mt-1.5 leading-relaxed">{decision.headline}</p>
+        </div>
+      </div>
+
+      <ul className="mt-4 space-y-2">
+        {decision.reasons.map((r, i) => (
+          <li key={i} className="text-sm flex gap-2.5 leading-relaxed">
+            <span className="text-accent shrink-0" aria-hidden="true">→</span>
+            <span className="text-muted">{r}</span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="text-sm mt-4 pt-3 border-t border-border leading-relaxed">
+        <span className="text-xs uppercase tracking-wide text-faint font-medium">What would change this · </span>
+        {decision.whatWouldChangeThis}
+      </p>
+
+      <div className="mt-4 pt-4 border-t border-border">
+        <div className="flex flex-wrap items-center gap-2 mb-1.5">
+          <h3 className="font-semibold text-sm">
+            Has anyone said they want it?
+            <Why>
+              This is deliberately separate from the fit score. Fit says whether the business suits you; validation
+              says whether anyone will pay. A business can score 90 for fit and be completely untested — and that
+              combination is exactly where people spend money too early.
+            </Why>
+          </h3>
+          <Badge tone={VALIDATION_TONE[evidence.status]}>{VALIDATION_LABEL[evidence.status]}</Badge>
+        </div>
+        <p className="text-sm text-muted leading-relaxed">{VALIDATION_BLURB[evidence.status]}</p>
+      </div>
+    </Card>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+
+export function EvidenceCard({ evidence }: { evidence: EvidenceReport }) {
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-center gap-2 mb-1">
+        <h2 className="font-semibold">What you&apos;ve actually proven</h2>
+        <Badge tone={VALIDATION_TONE[evidence.status]}>{VALIDATION_LABEL[evidence.status]}</Badge>
+      </div>
+      <p className="text-sm text-muted leading-relaxed">{evidence.reading}</p>
+
+      {evidence.spendWarning && (
+        <div className="mt-4 rounded-lg border border-warn/30 bg-warn-soft p-3.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-warn mb-1">Before you spend anything</p>
+          <p className="text-sm leading-relaxed">{evidence.spendWarning}</p>
+        </div>
+      )}
+
+      <div className="grid gap-2 sm:grid-cols-2 mt-4">
+        {evidence.counts.map((c) => (
+          <div key={c.id} className="rounded-lg bg-surface-2 px-3.5 py-3 min-w-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-faint font-medium">{c.label}</span>
+              <span className="font-semibold tabular-nums">{c.id === "revenue" ? `$${c.count}` : c.count}</span>
+            </div>
+            <p className="text-[12px] text-muted mt-1 leading-relaxed">{c.note}</p>
+          </div>
+        ))}
+      </div>
+
+      {evidence.diagnosis && (
+        <div className="mt-4 rounded-xl border border-accent-border bg-accent-soft/40 p-4">
+          <p className="text-sm font-semibold text-accent-text mb-1">What this pattern usually means</p>
+          <p className="text-sm leading-relaxed">{evidence.diagnosis.problem}</p>
+          <p className="text-sm mt-2 pt-2 border-t border-accent-border/60 leading-relaxed">
+            <span className="text-xs uppercase tracking-wide text-faint font-medium">What to do · </span>
+            {evidence.diagnosis.fix}
+          </p>
+        </div>
+      )}
+
+      <p className="text-sm mt-4 pt-3 border-t border-border leading-relaxed">
+        <span className="text-xs uppercase tracking-wide text-faint font-medium">Next evidence to get · </span>
+        {evidence.nextEvidence}
+      </p>
+
+      <p className="text-xs text-faint mt-3 leading-relaxed">
+        Only things you record yourself count here. The app can&apos;t know whether a real person said yes, so it
+        never guesses — which is what makes this number worth trusting.
+      </p>
+    </Card>
+  );
+}

@@ -36,7 +36,9 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
-import { DIFFICULTY_LABEL } from "@/lib/engine";
+import { DecisionCard, FitScoreCard, ImprovementsCard } from "@/components/fit-score";
+import { DIFFICULTY_LABEL, assessEvidence, decide } from "@/lib/engine";
+import { computeFit } from "@/lib/fit";
 import { useBusinessAnalysis } from "@/lib/explain";
 import { currency } from "@/lib/finance";
 import { download, ideaToMarkdown, slugify } from "@/lib/export";
@@ -95,7 +97,15 @@ function IdeaDetail() {
     );
   }
 
+  const existingBusiness = state.businesses.find((b) => b.ideaId === idea.id && !b.archivedAt) ?? null;
   const scoreDetail = computeScore(idea, state.profile);
+  const fit = computeFit(idea, state.profile);
+  const evidence = assessEvidence(existingBusiness, state.profile);
+  const decision = decide(
+    { score: fit.score, band: fit.band, capped: fit.capped, confidence: fit.confidence },
+    evidence,
+    analysis ? analysis.feasibility.checks.filter((c) => c.status === "blocked").map((c) => c.label.toLowerCase()) : [],
+  );
   const feasibilityBadge = analysis ? (
     <span
       className={
@@ -110,7 +120,6 @@ function IdeaDetail() {
       {analysis.feasibility.overall === "ok" ? "\u2713" : analysis.feasibility.overall === "warn" ? "!" : "\u2715"}
     </span>
   ) : undefined;
-  const existingBusiness = state.businesses.find((b) => b.ideaId === idea.id && !b.archivedAt);
   const inCompare = state.compareIds.includes(idea.id);
 
   const runPivot = async (pivot: (typeof PIVOTS)[number]) => {
@@ -254,6 +263,14 @@ function IdeaDetail() {
           { id: "honest", label: "The downsides" },
         ]}
       />
+
+      {analysis && fit && (
+        <div className="space-y-4">
+          <DecisionCard decision={decision} evidence={evidence} />
+          <FitScoreCard fit={fit} />
+          <ImprovementsCard fit={fit} />
+        </div>
+      )}
 
       {analysis && (
         <div key={tab} className="animate-in">

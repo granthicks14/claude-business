@@ -191,6 +191,25 @@ export {
   DIFFICULTY_BLURB,
 } from "./feasibility";
 export type { Feasibility, Check, CheckStatus, CostBreakdown, Requirements, DifficultyBand } from "./feasibility";
+export {
+  nextAction,
+  upcomingActions,
+  diagnoseStuck,
+  detectStage,
+  STAGE_LABEL,
+  STAGE_BLURB,
+  STAGES,
+} from "./actions";
+export type { NextAction, Stage, StuckAnalysis } from "./actions";
+export {
+  assessEvidence,
+  decide,
+  VALIDATION_LABEL,
+  VALIDATION_BLURB,
+  VALIDATION_TONE,
+  VERDICT_LABEL,
+} from "./evidence";
+export type { EvidenceReport, ValidationStatus, Verdict, Decision } from "./evidence";
 export { ageContext, PRACTICALITY_LABEL, PRACTICALITY_TONE, AGE_LEGAL_NOTE, AGE_HONESTY_NOTE } from "./knowledge/age";
 export type { AgeContext, Practicality } from "./knowledge/age";
 export { COST_LABEL, PLATFORM_DISCLAIMER, CATEGORY_LABEL as PLATFORM_CATEGORY_LABEL } from "./knowledge/platforms";

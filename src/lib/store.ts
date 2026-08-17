@@ -16,6 +16,7 @@ import type {
   BusinessIdea,
   FounderProfile,
   ID,
+  JournalEntry,
   MoneyModelInputs,
   SelectedBusiness,
 } from "./types";
@@ -389,6 +390,18 @@ export const actions = {
 
   setExperienceMode(experienceMode: AppState["settings"]["experienceMode"]) {
     update((s) => ({ ...s, settings: { ...s.settings, experienceMode } }));
+  },
+
+  addJournalEntry(entry: { type?: JournalEntry["type"]; title: string; body: string }) {
+    const full: JournalEntry = {
+      id: newId("j"),
+      type: entry.type ?? "note",
+      title: entry.title,
+      body: entry.body,
+      createdAt: Date.now(),
+    };
+    update((s) => ({ ...s, journal: [full, ...s.journal] }));
+    return full;
   },
 
   addNicheReport(report: AppState["niches"][number]) {

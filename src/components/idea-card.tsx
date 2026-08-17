@@ -1,15 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { Icon } from "./icons";
 import { Badge, Card, ScoreRing } from "./ui";
 import { currency } from "@/lib/finance";
+import { BAND_LABEL, computeFit } from "@/lib/fit";
 import { actions, useAppState } from "@/lib/store";
 import { LEVEL_LABEL, type BusinessIdea } from "@/lib/types";
 
+const BAND_TONE = { best: "good", good: "accent", possible: "neutral", poor: "warn" } as const;
+
 export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) {
   const inCompare = useAppState((s) => s.compareIds.includes(idea.id));
+  const profile = useAppState((s) => s.profile);
+  // Recomputed against the live profile rather than read off the idea, so
+  // editing your situation re-ranks the list immediately.
+  const fit = useMemo(() => computeFit(idea, profile, { withImprovements: false }), [idea, profile]);
 
   return (
     <Card as="li" className="p-4 sm:p-5 flex flex-col gap-4 transition-shadow hover:shadow-card animate-in">
@@ -23,6 +31,7 @@ export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) 
               {idea.mode === "online" ? "Online" : idea.mode === "local" ? "Local" : "Hybrid"}
             </Badge>
             <Badge>{idea.category}</Badge>
+            <Badge tone={BAND_TONE[fit.band]}>{BAND_LABEL[fit.band]}</Badge>
             {idea.favorite && (
               <Badge tone="warn">
                 <Icon.star className="size-3" /> Favourite
@@ -39,7 +48,7 @@ export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) 
         </div>
 
         <Link href={`/ideas/${idea.id}`} aria-label={`Open ${idea.name}`} className="shrink-0">
-          <ScoreRing score={idea.opportunityScore} size={54} />
+          <ScoreRing score={fit.score} size={54} sublabel="fit" />
         </Link>
       </div>
 

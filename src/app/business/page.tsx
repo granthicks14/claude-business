@@ -6,6 +6,8 @@ import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { GeneratedNote, PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { EvidenceCard } from "@/components/fit-score";
+import { NextActionCard, StageCard } from "@/components/next-action";
 import { AdvancedOnly, Explain } from "@/components/teach";
 import {
   AILoading,
@@ -25,6 +27,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { currency } from "@/lib/finance";
+import { assessEvidence } from "@/lib/engine";
 import { computeHealth } from "@/lib/health";
 import { actions, useAppState } from "@/lib/store";
 import type { HealthReport, RadarItem, SelectedBusiness, Task } from "@/lib/types";
@@ -113,6 +116,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
   const router = useRouter();
   const toast = useToast();
   const health = useMemo(() => computeHealth(business), [business]);
+  const evidence = useMemo(() => assessEvidence(business, state.profile), [business, state.profile]);
   const advice = useAITask<Omit<HealthReport, "score" | "generatedAt">>("health");
   const radar = useAITask<{ items: Omit<RadarItem, "id" | "createdAt">[] }>("radar");
   const [archiving, setArchiving] = useState(false);
@@ -171,16 +175,25 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         }
       />
 
+      {/* The single most important thing on the page: one instruction, not a
+          list. Everything else is context for it. */}
+      <NextActionCard />
+
+      <StageCard />
+
+      <EvidenceCard evidence={evidence} />
+
       {/* Four questions, answered in words. In beginner mode this is the whole
           top of the page; the metric grids below collapse behind a summary. */}
       <AtAGlance business={business} health={health} monthRevenue={monthRevenue} customerCount={customers.length} />
 
-      {/* What should I do today — the most important thing on the page. */}
-      <Card className="p-5 border-accent-border bg-accent-soft/40">
+      {/* The 90-day plan's next few tasks. Secondary to the action engine
+          above, which decides what actually matters right now. */}
+      <Card className="p-5">
         <div className="flex items-start gap-3">
           <Icon.bolt className="size-5 text-accent shrink-0 mt-0.5" />
           <div className="min-w-0 flex-1">
-            <h2 className="font-semibold">What to do next</h2>
+            <h2 className="font-semibold">From your 90-day plan</h2>
             {nextTasks.length > 0 ? (
               <>
                 <ul className="mt-3 space-y-2">

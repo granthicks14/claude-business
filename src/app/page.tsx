@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { Icon } from "@/components/icons";
+import { NextActionCard, StageCard } from "@/components/next-action";
 import { Badge, Card, LinkButton, ScoreRing } from "@/components/ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import { useAIStatus } from "@/lib/useAI";
@@ -34,12 +35,66 @@ const PROOF = [
   },
 ];
 
+function QuickLink({
+  href,
+  icon,
+  title,
+  detail,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4 hover:border-accent-border hover:bg-surface-2 transition-colors min-h-16"
+    >
+      <span className="shrink-0 mt-0.5 text-accent">{icon}</span>
+      <span className="min-w-0">
+        <span className="block font-medium text-sm">{title}</span>
+        <span className="block text-[13px] text-muted mt-0.5 leading-relaxed">{detail}</span>
+      </span>
+    </Link>
+  );
+}
+
 export default function HomePage() {
   const ready = useStoreReady();
   const state = useAppState((s) => s);
   const { status } = useAIStatus();
   const business = activeBusiness(state);
   const hasProfile = state.profile.completedOnboarding;
+
+  // Someone who has already started doesn't need the pitch — they need the
+  // next step. The marketing page is for first-time visitors.
+  if (ready && hasProfile) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+            {state.profile.name ? `Welcome back, ${state.profile.name}.` : "Welcome back."}
+          </h1>
+          <p className="text-muted mt-1.5 leading-relaxed">
+            {business
+              ? `You're building ${business.idea.name}.`
+              : "You haven't picked a business yet — that's the first thing below."}
+          </p>
+        </div>
+
+        <NextActionCard />
+        <StageCard />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <QuickLink href="/ideas" icon={<Icon.spark className="size-4" />} title="My ideas" detail={`${state.ideas.length} scored against your profile`} />
+          <QuickLink href="/coach" icon={<Icon.chat className="size-4" />} title="Ask your mentor" detail="Free, works without an API key" />
+          <QuickLink href="/learn" icon={<Icon.book className="size-4" />} title="Learn the words" detail="Business terms, explained simply" />
+          <QuickLink href={business ? "/money" : "/discover"} icon={<Icon.money className="size-4" />} title={business ? "Run the numbers" : "Explore ideas"} detail={business ? "Price, customers, what you keep" : "Browse by category"} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-14 sm:space-y-20">
