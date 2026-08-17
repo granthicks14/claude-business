@@ -95,26 +95,28 @@ profiles cannot receive the same set.
 
 ```
 src/lib/engine/
-  knowledge/industries.ts   18 markets · 74 customer segments · 90 problems
+  knowledge/industries.ts   18 markets · 74 segments · 90 problems, cross-linked
   knowledge/models.ts       22 business models with real economics
   knowledge/skills.ts       free-text skills → capability matching
   knowledge/channels.ts     15 marketing channels with cost and prerequisites
   knowledge/age.ts          practicality by age — never permission
   knowledge/platforms.ts    platforms by job, with no invented pricing
+  match.ts                  profile → signals, and constraint extraction
+  ideas.ts                  combinatorial generation, filtering, scoring, pivots
   feasibility.ts            can-you-start checks, cost breakdown, difficulty
-  generators/explain.ts     the plain-English explanation of a business
-  generators/toolkit.ts     the per-business tool stack
   actions.ts                stage detection and the next-action decision engine
   evidence.ts               validation status, evidence, and the should-I verdict
   practice.ts               customer rehearsal, mistakes, checkpoints
-../fit.ts                   the Business Fit Score
-../learn.ts                 lessons and video search links
-../examples.ts              see-it-in-action searches, never invented URLs
-../profile-fields.ts        the profile as data, shared by page and scoring
-  match.ts                  profile → signals, and constraint extraction
-  ideas.ts                  combinatorial generation, filtering, scoring, pivots
-  generators/               plan · research · execution · growth · advice
   coach.ts                  25 business intents, answered from live state
+  generators/explain.ts     the plain-English explanation of a business
+  generators/toolkit.ts     the per-business tool stack
+  generators/               plan · research · execution · growth · advice
+
+src/lib/
+  fit.ts                    the Business Fit Score, weights and sensitivity
+  learn.ts                  lessons and video search links
+  examples.ts               see-it-in-action searches, never invented URLs
+  profile-fields.ts         the profile as data, shared by page and scoring
 ```
 
 Cost and revenue estimates are bounded by arithmetic rather than optimism:
