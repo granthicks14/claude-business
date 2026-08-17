@@ -104,6 +104,11 @@ src/lib/engine/
   feasibility.ts            can-you-start checks, cost breakdown, difficulty
   generators/explain.ts     the plain-English explanation of a business
   generators/toolkit.ts     the per-business tool stack
+  actions.ts                stage detection and the next-action decision engine
+  evidence.ts               validation status, evidence, and the should-I verdict
+  practice.ts               customer rehearsal, mistakes, checkpoints
+../fit.ts                   the Business Fit Score
+../learn.ts                 lessons and video search links
   match.ts                  profile → signals, and constraint extraction
   ideas.ts                  combinatorial generation, filtering, scoring, pivots
   generators/               plan · research · execution · growth · advice
@@ -164,10 +169,22 @@ once. Nothing is ever hidden — the collapse is a summary, not a lock.
 
 **Decide — why this one?**
 
-- **Opportunity score, 0–100.** Ten dimensions, each with its reasoning
-  attached, then re-weighted locally against the current profile. Budget
-  headroom, weekly hours, stated preferences and refusals are applied as
-  deterministic adjustments, and every adjustment is shown with its reason.
+- **Business Fit Score, 0–100.** Ten normalised factors — personal fit,
+  affordability, time, skills, customer access, demand, profit, difficulty,
+  scalability and age practicality — each with its reasoning attached. It rates
+  the *match between the business and you*, not the business in the abstract:
+  the five "can you actually do this" factors carry roughly 60% of the weight,
+  upside carries about 13%, and a realism cap stops a high-ceiling business
+  outranking a startable one. Weights live in one exported object
+  (`SCORING_WEIGHTS`) rather than being scattered through the code.
+- **Confidence, not false precision.** A score built from three answers is
+  labelled low confidence and says which missing answers would sharpen it.
+- **What would improve this score.** Each suggestion is the score genuinely
+  recomputed against that change, not an estimated delta.
+- **Validation status, kept separate.** A business can score 90 for fit and be
+  completely untested — and that combination is exactly where people spend money
+  too early, so the two are never merged into one number. Only facts you record
+  yourself count as evidence; the app cannot know whether a real person said yes.
 - **Find my best business.** The same ideas sorted ten ways — best overall,
   fastest to money, cheapest, most scalable, best local, best side hustle — for
   someone who doesn't want to evaluate anything themselves.
@@ -195,7 +212,26 @@ brand direction, website copy and SEO, plus a product builder with a
 script, fulfilment and retention. The app picks which of those two you need from
 what you're selling.
 
-**Run — what do I do today?**
+**Act — what do I do today?**
+
+- **"What should I do right now?"** A decision engine, not a task list. One
+  instruction at a time, ordered by dependency — prerequisites before the things
+  that need them, evidence before spending, selling before polishing — with the
+  reasoning attached so you learn to make the call yourself. Plus **I'm stuck**,
+  **make this easier** and **give me another way**.
+- **Stage tracking** derived from what you actually recorded (people contacted,
+  money received), never from what you generated. Reading a plan isn't progress.
+- **Practice with a customer.** The five moments that lose beginners the sale —
+  the price question, "can you do it cheaper", "why you", "I'll think about it" —
+  with feedback and a model answer. Honest about being pattern matching rather
+  than pretending to understand your reply.
+- **Common mistakes and checkpoints** before spending, launching, raising prices
+  or scaling.
+- **Learn how** on any task: what you're learning, why, what to practise and what
+  success looks like, with free video links that are always *searches* — a
+  fabricated video URL looks real and wastes your time.
+
+**Run — track it**
 
 - **Command centre** with live business-health scoring across eight dimensions,
   computed from what you've actually recorded, plus the top three things to fix.
@@ -299,6 +335,8 @@ npm run dev        # development server
 npm run build      # production build (type-checks)
 npm start          # serve the production build
 npm run typecheck  # types only
+npm run test:scoring   # 22 scoring calibration tests
+npm run check:deploy   # 18 deployment checks, ending in a yes/no
 ```
 
 ---

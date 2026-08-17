@@ -145,7 +145,9 @@ export function Why({ children }: { children: ReactNode }) {
           setOpen((o) => !o);
         }}
         aria-expanded={open}
-        className="ml-1.5 px-1.5 py-0.5 rounded-md border border-border text-[11px] font-medium text-muted hover:text-accent-text hover:border-accent-border transition-colors align-middle"
+        // min-h-8 keeps this a real tap target (WCAG 2.5.8 wants 24px; this is
+        // 32) while the negative margins stop it stretching the line it sits in.
+        className="ml-1.5 -my-1 px-2 min-h-8 inline-flex items-center rounded-md border border-border text-[11px] font-medium text-muted hover:text-accent-text hover:border-accent-border transition-colors align-middle"
       >
         Why?
       </button>

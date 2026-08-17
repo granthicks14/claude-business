@@ -54,6 +54,7 @@ function useNav(): NavGroup[] {
           { href: "/tasks", label: "Tasks", icon: "check", badge: openTasks || undefined },
           { href: "/marketing", label: "Marketing", icon: "megaphone" },
           { href: "/sales", label: "Sales", icon: "handshake" },
+          { href: "/practice", label: "Practise", icon: "flask" },
           { href: "/money", label: "Money", icon: "money" },
         ],
       });

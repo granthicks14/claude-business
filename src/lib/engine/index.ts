@@ -210,6 +210,16 @@ export {
   VERDICT_LABEL,
 } from "./evidence";
 export type { EvidenceReport, ValidationStatus, Verdict, Decision } from "./evidence";
+export {
+  practiceContext,
+  gradeAnswer,
+  customerLine,
+  turnTests,
+  turnCount,
+  MISTAKES,
+  CHECKPOINTS,
+} from "./practice";
+export type { Feedback, PracticeContext, Mistake, Checkpoint } from "./practice";
 export { ageContext, PRACTICALITY_LABEL, PRACTICALITY_TONE, AGE_LEGAL_NOTE, AGE_HONESTY_NOTE } from "./knowledge/age";
 export type { AgeContext, Practicality } from "./knowledge/age";
 export { COST_LABEL, PLATFORM_DISCLAIMER, CATEGORY_LABEL as PLATFORM_CATEGORY_LABEL } from "./knowledge/platforms";
