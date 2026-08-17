@@ -573,6 +573,48 @@ export interface RadarItem {
 }
 
 /** The workspace for one business the user is actively building. */
+/**
+ * The business's own identity, kept separate from the founder's personal
+ * profile.
+ *
+ * The personal profile answers "who are you and what suits you" and drives
+ * scoring. This answers "what is the business called and how do customers
+ * reach it" and drives generated documents and AI prompts. Mixing them would
+ * mean a business name affecting a fit score, and an age band appearing in a
+ * website prompt.
+ *
+ * Every field is optional. Nothing here is required to explore an idea — it is
+ * only collected when the user asks for something that genuinely needs it.
+ */
+export interface BusinessIdentity {
+  name: string;
+  tagline: string;
+  description: string;
+  /** Contact — collected only when generating something that needs it. */
+  ownerName: string;
+  email: string;
+  phone: string;
+  /** Where you work, or the area you serve. Not a street address. */
+  serviceArea: string;
+  hours: string;
+  services: { name: string; description: string; price: string }[];
+  bookingMethod: string;
+  socials: { label: string; url: string }[];
+  websiteUrl: string;
+  brandStyle: string;
+  colors: string;
+  logoNotes: string;
+  photoNotes: string;
+  /** Free-text notes about examples of your work. */
+  portfolioNotes: string;
+  faqs: { question: string; answer: string }[];
+  offers: string;
+  testimonials: { quote: string; who: string }[];
+  callToAction: string;
+  extraNotes: string;
+  updatedAt: number;
+}
+
 export interface SelectedBusiness {
   id: ID;
   ideaId: ID;
@@ -606,6 +648,10 @@ export interface SelectedBusiness {
   money: MoneyModelInputs;
   health?: HealthReport;
   radar: RadarItem[];
+  /** The business's own details. Undefined until the user fills any of it in. */
+  identity?: BusinessIdentity;
+  /** Prompts the user has generated, kept so they can be recopied. */
+  prompts?: { id: ID; kind: string; label: string; text: string; createdAt: number }[];
 }
 
 /** Which system answers generation requests. */

@@ -138,15 +138,18 @@ export function SectionHeader({
   description,
   action,
   level = 2,
+  className = "",
 }: {
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
   level?: 1 | 2 | 3;
+  /** For page-level headers, which need top spacing the in-Card default doesn't. */
+  className?: string;
 }) {
   const Tag = `h${level}` as "h1" | "h2" | "h3";
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+    <div className={`flex flex-wrap items-start justify-between gap-3 mb-4 ${className}`}>
       <div className="min-w-0">
         <Tag
           className={

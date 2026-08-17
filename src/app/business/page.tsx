@@ -29,6 +29,7 @@ import {
 import { currency } from "@/lib/finance";
 import { assessEvidence } from "@/lib/engine";
 import { computeHealth } from "@/lib/health";
+import { READINESS_LABEL, assessReadiness } from "@/lib/launch";
 import { actions, useAppState } from "@/lib/store";
 import type { HealthReport, RadarItem, SelectedBusiness, Task } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
@@ -379,7 +380,31 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         )}
       </Card>
 
+      <LaunchReadinessCard business={business} />
+
       <div className="grid gap-3 sm:grid-cols-2">
+        <ShortcutCard
+          href="/business/identity"
+          icon={<Icon.doc className="size-5 text-accent" />}
+          title="Business details"
+          description={
+            business.identity?.name
+              ? `Saved as “${business.identity.name}”. Everything the app writes for you uses these.`
+              : "Name, offer, price, contact. Fill this in once and every document builds itself from it."
+          }
+          done={!!business.identity?.name}
+        />
+        <ShortcutCard
+          href="/business/build"
+          icon={<Icon.bolt className="size-5 text-accent" />}
+          title="Make things"
+          description={
+            business.prompts?.length
+              ? `${business.prompts.length} saved brief${business.prompts.length === 1 ? "" : "s"}. Build a website, logo, FAQ or outreach message.`
+              : "Detailed briefs for a website, logo, posts or emails — paste into any AI tool, free."
+          }
+          done={!!business.prompts?.length}
+        />
         <ShortcutCard
           href="/plan"
           icon={<Icon.doc className="size-5 text-accent" />}
@@ -534,6 +559,52 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         </div>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Launch readiness on the dashboard, kept visibly distinct from the health and
+ * fit numbers above it. Same reason as everywhere else: "suits me" and "ready to
+ * open" are different questions, and a reader who sees one number assumes it
+ * answers both.
+ */
+function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
+  const readiness = useMemo(() => assessReadiness(business), [business]);
+
+  return (
+    <Card className="p-5">
+      <SectionHeader
+        title="Launch readiness"
+        description="Whether the business is prepared — separate from whether it suits you. Every tick is something you've actually recorded."
+        action={
+          <LinkButton href="/business/launch" size="sm">
+            Full checklist
+          </LinkButton>
+        }
+      />
+      <div className="flex flex-wrap items-center gap-5">
+        <ScoreRing score={readiness.score} size={80} label={READINESS_LABEL[readiness.verdict]} />
+        <div className="flex-1 min-w-[13rem]">
+          <p className="text-[13px] leading-relaxed">{readiness.headline}</p>
+          {readiness.nextGap && (
+            <p className="text-[13px] text-muted leading-relaxed mt-2">
+              Biggest gap:{" "}
+              <Link href={readiness.nextGap.href} className="text-accent-text hover:underline">
+                {readiness.nextGap.label.toLowerCase()}
+              </Link>
+              .
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-1.5">
+        {readiness.items.map((item) => (
+          <Badge key={item.id} tone={item.done ? "good" : item.essential ? "warn" : "neutral"}>
+            {item.done ? "✓" : item.essential ? "!" : "·"} {item.label}
+          </Badge>
+        ))}
+      </div>
+    </Card>
   );
 }
 

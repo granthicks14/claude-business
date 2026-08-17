@@ -14,6 +14,7 @@ import { useCallback, useRef, useSyncExternalStore } from "react";
 import type {
   AppState,
   BusinessIdea,
+  BusinessIdentity,
   FounderProfile,
   ID,
   JournalEntry,
@@ -64,6 +65,34 @@ export function emptyProfile(): FounderProfile {
     constraints: [],
     updatedAt: Date.now(),
     completedOnboarding: false,
+  };
+}
+
+export function emptyIdentity(): BusinessIdentity {
+  return {
+    name: "",
+    tagline: "",
+    description: "",
+    ownerName: "",
+    email: "",
+    phone: "",
+    serviceArea: "",
+    hours: "",
+    services: [],
+    bookingMethod: "",
+    socials: [],
+    websiteUrl: "",
+    brandStyle: "",
+    colors: "",
+    logoNotes: "",
+    photoNotes: "",
+    portfolioNotes: "",
+    faqs: [],
+    offers: "",
+    testimonials: [],
+    callToAction: "",
+    extraNotes: "",
+    updatedAt: Date.now(),
   };
 }
 
@@ -156,6 +185,7 @@ function migrate(raw: unknown): AppState {
       revenue: b.revenue ?? [],
       expenses: b.expenses ?? [],
       radar: b.radar ?? [],
+      prompts: b.prompts ?? [],
       money: { ...defaultMoneyInputs(), ...(b.money ?? {}) },
     })),
   };
@@ -390,6 +420,37 @@ export const actions = {
 
   setExperienceMode(experienceMode: AppState["settings"]["experienceMode"]) {
     update((s) => ({ ...s, settings: { ...s.settings, experienceMode } }));
+  },
+
+  /** Merge-patch the business's own identity. Creates it on first write. */
+  updateIdentity(businessId: ID, patch: Partial<BusinessIdentity>) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) =>
+        b.id === businessId
+          ? { ...b, identity: { ...emptyIdentity(), ...b.identity, ...patch, updatedAt: Date.now() } }
+          : b,
+      ),
+    }));
+  },
+
+  savePrompt(businessId: ID, prompt: { kind: string; label: string; text: string }) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) =>
+        b.id === businessId
+          ? {
+              ...b,
+              // Newest first, and capped — these are large strings in
+              // localStorage and the old ones stop being useful.
+              prompts: [
+                { id: newId("prompt"), ...prompt, createdAt: Date.now() },
+                ...(b.prompts ?? []),
+              ].slice(0, 12),
+            }
+          : b,
+      ),
+    }));
   },
 
   addJournalEntry(entry: { type?: JournalEntry["type"]; title: string; body: string }) {

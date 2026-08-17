@@ -49,6 +49,9 @@ function useNav(): NavGroup[] {
         title: "Build",
         items: [
           { href: "/business", label: "My business", icon: "building" },
+          { href: "/business/identity", label: "Business details", icon: "doc" },
+          { href: "/business/build", label: "Make things", icon: "bolt" },
+          { href: "/business/launch", label: "Launch checklist", icon: "check" },
           { href: "/validation", label: "Validation", icon: "flask" },
           { href: "/plan", label: "Plan", icon: "doc" },
           { href: "/tasks", label: "Tasks", icon: "check", badge: openTasks || undefined },
