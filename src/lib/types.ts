@@ -685,6 +685,12 @@ export interface SelectedBusiness {
   };
   /** Set when the user says the site is live. Feeds Launch Readiness. */
   websiteLive?: boolean;
+  /**
+   * Recommendations the user accepted, by field id. Kept separate from
+   * `identity` because these are website copy choices, not business facts —
+   * accepting a headline shouldn't rewrite what the business is.
+   */
+  websiteAccepted?: Record<string, string>;
 }
 
 /** Which system answers generation requests. */

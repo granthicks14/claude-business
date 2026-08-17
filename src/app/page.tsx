@@ -103,7 +103,7 @@ export default function HomePage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <QuickLink href="/ideas" icon={<Icon.spark className="size-4" />} title="My ideas" detail={`${state.ideas.length} scored against your profile`} />
           <QuickLink href="/coach" icon={<Icon.chat className="size-4" />} title="Ask your mentor" detail="Free, works without an API key" />
-          <QuickLink href="/learn" icon={<Icon.book className="size-4" />} title="Learn the words" detail="Business terms, explained simply" />
+          <QuickLink href="/opportunity" icon={<Icon.money className="size-4" />} title="Best opportunity near me" detail="Rank ideas against your area" />
           <QuickLink href={business ? "/money" : "/discover"} icon={<Icon.money className="size-4" />} title={business ? "Run the numbers" : "Explore ideas"} detail={business ? "Price, customers, what you keep" : "Browse by category"} />
         </div>
       </div>
@@ -167,6 +167,29 @@ export default function HomePage() {
               </Link>
               .
             </p>
+          )}
+
+          {ready && !hasProfile && (
+            <div className="mt-6 max-w-2xl animate-in" style={{ animationDelay: "120ms" }}>
+              <p className="text-xs uppercase tracking-wide text-faint font-medium mb-2">
+                Don&apos;t know what business you want?
+              </p>
+              <Link
+                href="/opportunity"
+                className="hover-lift group flex items-start gap-3 rounded-xl border border-border bg-surface p-4 min-h-16"
+              >
+                <span className="shrink-0 mt-0.5 grid place-items-center size-8 rounded-lg bg-accent-soft text-accent transition-transform duration-200 group-hover:scale-110">
+                  <Icon.money className="size-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-medium text-sm">Find the best opportunity where I live</span>
+                  <span className="block text-[13px] text-muted mt-0.5 leading-relaxed">
+                    Describe your town, answer four questions, and skip the profile entirely. For when you mostly care
+                    what could actually make money.
+                  </span>
+                </span>
+              </Link>
+            </div>
           )}
 
           {ready && (

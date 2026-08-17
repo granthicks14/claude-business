@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Icon } from "./icons";
@@ -28,7 +29,12 @@ export function Ready({ children }: { children: ReactNode }) {
 
 export function RequireProfile({ children }: { children: ReactNode }) {
   const done = useAppState((s) => s.profile.completedOnboarding);
-  if (!done) {
+  // Someone who arrived through the opportunity finder never filled in a
+  // profile, but they do have ideas. Blocking them here would be the app
+  // insisting on the questionnaire it just let them skip.
+  const hasWork = useAppState((s) => s.ideas.length > 0 || s.businesses.length > 0);
+
+  if (!done && !hasWork) {
     return (
       <Card>
         <EmptyState
@@ -44,7 +50,24 @@ export function RequireProfile({ children }: { children: ReactNode }) {
       </Card>
     );
   }
-  return <>{children}</>;
+
+  return (
+    <>
+      {!done && (
+        <Card className="p-4 mb-4">
+          <p className="text-[13px] leading-relaxed">
+            You skipped the founder profile, so anything scored against{" "}
+            <em>you</em> — skills, time, budget — is showing a neutral 50 rather than a real number.{" "}
+            <Link href="/onboarding" className="text-accent-text hover:underline">
+              Fill it in
+            </Link>{" "}
+            and everything recalculates. Nothing you&apos;ve done is lost.
+          </p>
+        </Card>
+      )}
+      {children}
+    </>
+  );
 }
 
 /** Renders children with the active business, or explains how to get one. */

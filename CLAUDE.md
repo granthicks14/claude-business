@@ -44,13 +44,26 @@ src/lib/fit.ts          Business Fit Score (does this suit me?).
 src/lib/launch.ts       Launch Readiness (is this business prepared?).
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
+src/lib/website-plan.ts Website copy recommendations, readiness, critique.
+src/lib/opportunity.ts  "Best opportunity near me" — no profile required.
 src/lib/spend.ts        What's worth paying for, and when.
 src/lib/ai/             Optional provider adapters. server-only.
 ```
 
 The workspace lives under `/business`: the dashboard, `/identity` (business
-details wizard), `/build` (prompt builder), `/website` (website brief),
-`/spend` (what to pay for), `/launch` (readiness checklist).
+details wizard), `/build` (prompt builder), `/website` (website builder),
+`/spend` (what to pay for), `/launch` (readiness checklist). `/opportunity` is a
+second front door for people who don't know what business they want.
+
+### Never show an empty box
+
+`website-plan.ts` drafts every open-ended field — headline, description, CTA,
+FAQ, SEO, brand — with a reason, a confidence and genuinely different
+alternatives. Reacting to a draft is a much easier job than producing one, and
+it's the difference between a beginner finishing a page and abandoning it. High
+and medium confidence recommendations can be accepted in one click; low
+confidence ones are left for the user, because pre-accepting them would be the
+app pretending to know something.
 
 ### The consistency lock
 
@@ -104,6 +117,10 @@ These are product requirements, not style preferences:
 - **Never claim a third-party service is free.** Say what *this app* does for
   free and what the service charges for, separately and in that order.
 - **Never invent evidence.** Only user-entered facts count as validation.
+- **Never invent local data.** The opportunity finder has no data source, so it
+  reasons only from what the user described and labels its output a "Business
+  Builder analysis score". A fabricated median income would look authoritative
+  and be fiction — the worst combination available.
 - **Never fill a gap with a plausible fact.** Generated prompts and documents
   emit `[A VISIBLE PLACEHOLDER]` for anything the user hasn't supplied, so the
   gap is obvious rather than quietly invented.

@@ -465,6 +465,36 @@ export const actions = {
     }));
   },
 
+  acceptRecommendation(businessId: ID, field: string, value: string) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) =>
+        b.id === businessId ? { ...b, websiteAccepted: { ...b.websiteAccepted, [field]: value } } : b,
+      ),
+    }));
+  },
+
+  rejectRecommendation(businessId: ID, field: string) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) => {
+        if (b.id !== businessId) return b;
+        const next = { ...b.websiteAccepted };
+        delete next[field];
+        return { ...b, websiteAccepted: next };
+      }),
+    }));
+  },
+
+  acceptAllRecommendations(businessId: ID, values: Record<string, string>) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) =>
+        b.id === businessId ? { ...b, websiteAccepted: { ...b.websiteAccepted, ...values } } : b,
+      ),
+    }));
+  },
+
   setWebsiteLive(businessId: ID, live: boolean) {
     update((s) => ({
       ...s,

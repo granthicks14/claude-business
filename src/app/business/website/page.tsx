@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { SignArt } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
+import { RecommendationCard } from "@/components/recommendation";
 import {
   Badge,
   Button,
@@ -14,6 +15,7 @@ import {
   Hi,
   Input,
   LinkButton,
+  ScoreRing,
   SectionHeader,
   Select,
   useToast,
@@ -34,19 +36,28 @@ import {
   type StyleSpec,
 } from "@/lib/hostinger";
 import { actions, useAppState } from "@/lib/store";
+import {
+  TONE_LABEL,
+  auditConsistency,
+  buildWebsitePlan,
+  critiqueWebsite,
+  websiteReadiness,
+  type Tone,
+} from "@/lib/website-plan";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
- * The website workflow.
+ * The website builder.
  *
- * The order is deliberate: understand what the site is for, see the facts it
- * will be built from, fix what's missing, read the prompt, adjust the *design*,
- * then hand off. The user should never reach a "copy" button without having
- * seen what they're copying.
+ * The organising principle: the user should never face an empty box. The app
+ * already knows the business, the customer, the offer and the price, so it
+ * drafts everything first and the user reacts. Reacting to a draft is a far
+ * easier job than producing one, and it is the difference between a beginner
+ * finishing this page and abandoning it.
  *
- * The consistency lock lives in `lib/hostinger.ts`: a change request can only
- * write to the style object, so no phrasing of "make it more premium" can reach
- * the price, the customer or the offer.
+ * Order: see what's missing, take the recommendations, look at it, hear what a
+ * first-time visitor would think, then hand off. The prompt comes last because
+ * it's an export, not the point.
  */
 
 export default function WebsitePage() {
@@ -66,19 +77,44 @@ function Website({ business }: { business: SelectedBusiness }) {
   const suggested = analysis ? suggestSiteType(analysis, business) : "business";
   const [siteType, setSiteType] = useState<SiteType>((saved?.siteType as SiteType) ?? suggested);
   const [style, setStyle] = useState<StyleSpec>(saved?.style ?? defaultStyle(business));
+  const [tone, setTone] = useState<Tone>("friendly");
   const [mode, setMode] = useState<PromptMode>("quick");
   const [request, setRequest] = useState("");
   const [lastChanges, setLastChanges] = useState<string[]>([]);
   const [warning, setWarning] = useState<string | null>(null);
+  const [showPrompt, setShowPrompt] = useState(true);
 
+  const accepted = business.websiteAccepted ?? {};
+  const plan = useMemo(
+    () => (analysis ? buildWebsitePlan(business, analysis, tone) : null),
+    [business, analysis, tone],
+  );
+  const readiness = useMemo(() => websiteReadiness(business), [business]);
+  const critique = useMemo(() => (analysis ? critiqueWebsite(business, analysis) : []), [business, analysis]);
+  const conflicts = useMemo(() => auditConsistency(business, accepted), [business, accepted]);
   const facts = useMemo(() => (analysis ? collectFacts(business, analysis) : null), [business, analysis]);
   const prompt = useMemo(
     () => (facts ? buildHostingerPrompt(mode, facts, style, siteType) : null),
     [facts, style, siteType, mode],
   );
 
-  const versions = business.websiteVersions ?? [];
   const spec = siteTypeSpec(siteType);
+  const versions = business.websiteVersions ?? [];
+
+  // Only auto-fill what the app is actually confident about. Pre-accepting a
+  // low-confidence draft would be the app pretending to know something.
+  const autofillable = (plan?.recommendations ?? []).filter(
+    (r) => r.confidence !== "low" && accepted[r.id] === undefined,
+  );
+
+  const acceptAll = () => {
+    if (!autofillable.length) return;
+    actions.acceptAllRecommendations(
+      business.id,
+      Object.fromEntries(autofillable.map((r) => [r.id, r.value])),
+    );
+    toast(`${autofillable.length} recommendations added — change any of them below`);
+  };
 
   const applyRequest = () => {
     if (!request.trim()) return;
@@ -87,7 +123,7 @@ function Website({ business }: { business: SelectedBusiness }) {
     if (result.changes.length === 0) {
       if (!result.businessChangeAttempted) {
         setWarning(
-          "That didn't match anything the design engine recognises. Try words like darker, simpler, more premium, more modern, playful, professional, shorter — or add a booking page, FAQ or gallery.",
+          "That didn't match anything the design engine recognises. Try darker, simpler, more premium, more modern, playful, professional or shorter — or add a booking page, FAQ or gallery.",
         );
       }
       return;
@@ -98,36 +134,165 @@ function Website({ business }: { business: SelectedBusiness }) {
     setRequest("");
   };
 
-  const saveVersion = () => {
-    if (!prompt) return;
-    actions.saveWebsiteVersion(business.id, {
-      mode,
-      siteType,
-      text: prompt.text,
-      request: lastChanges.length ? request || lastChanges.join(", ") : "",
-      changes: lastChanges,
-    });
-    actions.setWebsiteSettings(business.id, { siteType, style });
-    toast("Saved as a new version");
-  };
-
   return (
     <div className="max-w-3xl">
       <PageHero
         title="Build your website"
         art={<SignArt className="w-full" />}
-        description="This page writes the brief. You paste it into a website builder, which does the building. Everything here is free — it's text, assembled from what you've already told the app."
+        description="You shouldn't have to work out what to write. The app already knows your business, so it drafts everything — you accept, change or replace it."
       />
 
-      <Card className="p-4 flex items-start gap-2.5">
-        <Icon.bolt className="size-4 text-warn shrink-0 mt-0.5" />
-        <p className="text-[13px] leading-relaxed text-muted">{WEBSITE_TIMING}</p>
+      {/* The one button that matters */}
+      <Card className="p-5">
+        <div className="flex flex-wrap items-center gap-5">
+          <ScoreRing score={readiness.score} size={76} label="Ready" glow />
+          <div className="flex-1 min-w-[14rem]">
+            <p className="text-[15px] font-medium">{readiness.headline}</p>
+            {readiness.blocking.length > 0 && (
+              <ul className="mt-2 space-y-1">
+                {readiness.blocking.slice(0, 3).map((b) => (
+                  <li key={b.id} className="text-[13px] flex items-start gap-2">
+                    <span className="size-1.5 rounded-full bg-warn shrink-0 mt-1.5" />
+                    <span>
+                      <Link href={b.href} className="text-accent-text hover:underline">
+                        {b.label}
+                      </Link>{" "}
+                      <span className="text-muted">— {b.fix}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-2">
+          <Button variant="primary" onClick={acceptAll} disabled={autofillable.length === 0} icon={<Icon.bolt className="size-4" />}>
+            {autofillable.length === 0
+              ? "All recommendations added"
+              : `Write my whole website plan (${autofillable.length})`}
+          </Button>
+          {readiness.blocking.length > 0 && (
+            <LinkButton href="/business/identity" variant="secondary">
+              Fill in what&apos;s missing
+            </LinkButton>
+          )}
+        </div>
+        <p className="text-xs text-faint leading-relaxed mt-2.5">
+          This fills in every field the app is confident about. Nothing is final — each one can be changed or removed
+          below, and anything the app is unsure about is left for you.
+        </p>
       </Card>
 
-      {/* 1 — what kind of site */}
+      {/* Conflicts are the one thing that must never ship silently. */}
+      {conflicts.length > 0 && (
+        <Card className="p-4 mt-4 border-warn/40">
+          <div className="flex items-start gap-2.5">
+            <Icon.bolt className="size-4 text-warn shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <h2 className="font-medium text-[15px]">We found a conflict</h2>
+              {conflicts.map((c) => (
+                <div key={c.field} className="mt-2 text-[13px] leading-relaxed">
+                  <p>
+                    <strong>{c.field}.</strong> Your business details say{" "}
+                    <Hi tone="warn">{c.inProfile}</Hi>, your website would say <Hi tone="warn">{c.onWebsite}</Hi>.
+                  </p>
+                  <p className="text-muted mt-0.5">{c.note}</p>
+                </div>
+              ))}
+              <div className="mt-3">
+                <LinkButton href="/business/identity" size="sm">
+                  Fix in business details
+                </LinkButton>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Tone */}
       <SectionHeader
-        title="1. What kind of site this should be"
-        description="Chosen from your business model. Change it if you disagree — you know the business better than the engine does."
+        title="How should it sound?"
+        description="Changing this rewrites every recommendation below. Try a couple — it's quicker than deciding in the abstract."
+        className="mt-6"
+      />
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Tone">
+        {(Object.keys(TONE_LABEL) as Tone[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTone(t)}
+            aria-pressed={tone === t}
+            className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
+              tone === t
+                ? "border-accent bg-accent-soft text-accent-text"
+                : "border-border bg-surface text-muted hover:bg-surface-2"
+            }`}
+          >
+            {TONE_LABEL[t]}
+          </button>
+        ))}
+      </div>
+
+      {/* Recommendations */}
+      <SectionHeader
+        title="Your website copy"
+        description="Every one of these is a draft built from your business. Use it, change it, or pick a different option."
+        className="mt-6"
+      />
+      <div className="space-y-3">
+        {plan?.recommendations.map((rec, i) => (
+          <RecommendationCard
+            key={rec.id}
+            rec={rec}
+            accepted={accepted[rec.id]}
+            onAccept={(v) => actions.acceptRecommendation(business.id, rec.id, v)}
+            onReject={() => actions.rejectRecommendation(business.id, rec.id)}
+            delay={i * 45}
+          />
+        ))}
+      </div>
+
+      {/* The facts underneath the copy */}
+      <SectionHeader
+        title="What your website will say about the business"
+        description="The copy above is wording. This is the business underneath it — if something here is wrong, the website will be wrong in the same way."
+        className="mt-6"
+      />
+      {facts && (
+        <Card className="p-4">
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            <Fact label="Business" value={facts.name} missing="No name yet" />
+            <Fact label="Customer" value={facts.customer} />
+            <Fact label="What it does" value={facts.what} />
+            <Fact
+              label="What's for sale"
+              value={
+                facts.services.length
+                  ? facts.services.map((s) => `${s.name}${s.price ? ` — ${s.price}` : ""}`).join(", ")
+                  : null
+              }
+              missing="Nothing priced yet"
+            />
+            <Fact label="Where" value={facts.serviceArea} missing="Not set" />
+            <Fact
+              label="Contact"
+              value={facts.contactEmail ?? facts.contactPhone ?? facts.bookingMethod}
+              missing="No way to reach you"
+            />
+          </dl>
+          <div className="mt-4 pt-4 border-t border-border">
+            <LinkButton href="/business/identity" size="sm">
+              Edit the business details
+            </LinkButton>
+          </div>
+        </Card>
+      )}
+
+      {/* Structure */}
+      <SectionHeader
+        title="What pages you need"
+        description="Chosen from your business model. Most people need fewer pages than they think."
         className="mt-6"
       />
       <Card className="p-4">
@@ -148,132 +313,91 @@ function Website({ business }: { business: SelectedBusiness }) {
               </option>
             ))}
           </Select>
-          {siteType === suggested && <Badge tone="accent">Suggested for this business</Badge>}
+          {siteType === suggested && <Badge tone="accent">Recommended</Badge>}
         </div>
         <p className="text-[13px] text-muted leading-relaxed mt-3">{spec.why}</p>
+        <p className="text-xs uppercase tracking-wide text-faint font-medium mt-3 pt-3 border-t border-border">
+          {spec.pages.length} page{spec.pages.length === 1 ? "" : "s"}, and no more
+        </p>
+        <ul className="mt-2 space-y-1.5">
+          {spec.pages.map((p) => (
+            <li key={p.name} className="text-[13px] flex gap-2">
+              <span className="font-medium shrink-0 w-20">{p.name}</span>
+              <span className="text-muted">{p.purpose}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-xs uppercase tracking-wide text-faint font-medium mb-2">
-            {spec.pages.length} page{spec.pages.length === 1 ? "" : "s"}, and no more
-          </p>
-          <ul className="space-y-1.5">
-            {spec.pages.map((p) => (
-              <li key={p.name} className="text-[13px] flex gap-2">
-                <span className="font-medium shrink-0 w-20">{p.name}</span>
-                <span className="text-muted">{p.purpose}</span>
+      {/* Homepage plan + preview */}
+      <SectionHeader
+        title="What the homepage looks like"
+        description="Section by section, with what goes in each. This is a plan, not a rendered site."
+        className="mt-6"
+      />
+      <Preview
+        business={business}
+        headline={accepted["headline"] ?? plan?.recommendations.find((r) => r.id === "headline")?.value ?? ""}
+        sub={accepted["subheadline"] ?? plan?.recommendations.find((r) => r.id === "subheadline")?.value ?? ""}
+        cta={accepted["cta"] ?? plan?.recommendations.find((r) => r.id === "cta")?.value ?? ""}
+      />
+      <Card className="p-4 mt-3">
+        <ol className="space-y-2.5">
+          {plan?.homepage.map((s, i) => (
+            <li key={s.section} className="flex gap-3">
+              <span className="shrink-0 size-6 rounded-full bg-surface-2 text-xs font-medium grid place-items-center">
+                {i + 1}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium">{s.section}</p>
+                <p className="text-[13px] text-muted leading-relaxed mt-0.5">{s.purpose}</p>
+                <p className="text-[13px] leading-relaxed mt-1">{s.content}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Card>
+
+      <SectionHeader title="What photos to use" description="Your own work beats any stock photo, even taken on a phone." className="mt-6" />
+      <Card className="p-4">
+        <ul className="space-y-2">
+          {plan?.imageBrief.map((img) => (
+            <li key={img.where} className="text-[13px] flex gap-2">
+              <span className="font-medium shrink-0 w-24">{img.where}</span>
+              <span className="text-muted leading-relaxed">{img.what}</span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      {/* Critique */}
+      {critique.length > 0 && (
+        <>
+          <SectionHeader
+            title="What a first-time visitor would think"
+            description="The three things most worth fixing. Not a list of thirty — that's a list nobody acts on."
+            className="mt-6"
+          />
+          <ul className="space-y-2">
+            {critique.map((c, i) => (
+              <li key={c.area}>
+                <Card className="p-3.5" delay={i * 60}>
+                  <p className="text-xs uppercase tracking-wide text-faint font-medium">{c.area}</p>
+                  <p className="text-sm mt-1 leading-relaxed">{c.problem}</p>
+                  <p className="text-[13px] text-muted leading-relaxed mt-1.5">
+                    <span className="font-medium text-text">Fix:</span> {c.fix}
+                  </p>
+                </Card>
               </li>
             ))}
           </ul>
-        </div>
-      </Card>
-
-      {/* 2 — what the site will say */}
-      <SectionHeader
-        title="2. What your website will say"
-        description="Read this before generating anything. If something here is wrong, the website will be wrong in the same way."
-        className="mt-6"
-      />
-      {facts && (
-        <Card className="p-4">
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            <Fact label="Business" value={facts.name} missing="No name yet" />
-            <Fact label="Customer" value={facts.customer} />
-            <Fact label="What it does" value={facts.what} />
-            <Fact
-              label="What's for sale"
-              value={facts.services.length ? facts.services.map((s) => `${s.name}${s.price ? ` — ${s.price}` : ""}`).join(", ") : null}
-              missing="Nothing priced yet"
-            />
-            <Fact label="Where" value={facts.serviceArea} missing="Not set" />
-            <Fact
-              label="Contact"
-              value={facts.contactEmail ?? facts.contactPhone ?? facts.bookingMethod}
-              missing="No way to reach you"
-            />
-            <Fact label="Main action" value={facts.callToAction} missing="Not decided" />
-            <Fact label="Style" value={style.personality} />
-          </dl>
-
-          {facts.missing.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-[13px] leading-relaxed">
-                <Hi tone="warn">{facts.missing.length} thing{facts.missing.length === 1 ? "" : "s"} missing.</Hi> The
-                prompt will mark {facts.missing.length === 1 ? "it" : "them"} clearly rather than inventing anything, so
-                you can still generate a site — it just won&apos;t be finished.
-              </p>
-              <ul className="mt-2 space-y-1">
-                {facts.missing.map((m) => (
-                  <li key={m} className="text-[13px] flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-warn shrink-0" />
-                    {m}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="mt-4 flex flex-wrap gap-2">
-            <LinkButton href="/business/identity" size="sm">
-              Edit these details
-            </LinkButton>
-          </div>
-        </Card>
+        </>
       )}
 
-      {/* 3 — the prompt */}
+      {/* Style change */}
       <SectionHeader
-        title="3. Your prompt"
-        description="Short version for the builder's own description box. Long version for the editor afterwards, or for any AI tool that takes the lot."
-        className="mt-6"
-      />
-      <div className="flex gap-2 mb-3" role="group" aria-label="Prompt length">
-        {(["quick", "detailed"] as PromptMode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            aria-pressed={mode === m}
-            className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
-              mode === m
-                ? "border-accent bg-accent-soft text-accent-text"
-                : "border-border bg-surface text-muted hover:bg-surface-2"
-            }`}
-          >
-            {m === "quick" ? "Short — for the builder" : "Detailed — full specification"}
-          </button>
-        ))}
-      </div>
-
-      {prompt && (
-        <Card className="p-0 overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <div className="grid gap-2 sm:grid-cols-2">
-              <Field label="Brand name" value={prompt.brandName} />
-              <Field label="Website type" value={prompt.siteType} />
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-border bg-surface-2">
-            <p className="text-xs text-muted">
-              {prompt.characters.toLocaleString()} characters
-              {mode === "quick" && prompt.characters <= 1000 && " · fits a short description field"}
-            </p>
-            <div className="flex gap-2">
-              <CopyButton text={prompt.text} label="Copy" />
-              <Button size="sm" variant="ghost" onClick={saveVersion}>
-                Save version
-              </Button>
-            </div>
-          </div>
-          <pre className="max-h-80 overflow-auto p-4 text-[12.5px] leading-relaxed whitespace-pre-wrap font-mono text-muted">
-            {prompt.text}
-          </pre>
-        </Card>
-      )}
-
-      {/* 4 — change the design, never the business */}
-      <SectionHeader
-        title="4. Change how it looks"
-        description="Type what you want different. This only ever changes the design, the layout and the tone of the writing."
+        title="Change how it looks"
+        description="This only ever changes design, layout and tone — never your prices, customer or offer."
         className="mt-6"
       />
       <Card className="p-4">
@@ -291,26 +415,21 @@ function Website({ business }: { business: SelectedBusiness }) {
             Apply
           </Button>
         </div>
-
         <div className="flex flex-wrap gap-1.5 mt-2.5">
-          {["More modern", "More premium", "Darker", "Simpler", "More playful", "Add a booking page", "Shorter copy"].map(
-            (s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setRequest(s.toLowerCase())}
-                className="min-h-8 px-2.5 rounded-lg border border-border bg-surface text-xs text-muted hover:bg-surface-2 hover:text-text transition-colors"
-              >
-                {s}
-              </button>
-            ),
-          )}
+          {["More modern", "More premium", "Darker", "Simpler", "More playful", "Add a booking page"].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setRequest(s.toLowerCase())}
+              className="min-h-8 px-2.5 rounded-lg border border-border bg-surface text-xs text-muted hover:bg-surface-2 hover:text-text transition-colors"
+            >
+              {s}
+            </button>
+          ))}
         </div>
-
         {warning && (
           <p className="text-[13px] leading-relaxed mt-3 rounded-lg bg-warn-soft border border-warn/30 p-3">{warning}</p>
         )}
-
         {lastChanges.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-xs uppercase tracking-wide text-faint font-medium">What changed</p>
@@ -323,17 +442,16 @@ function Website({ business }: { business: SelectedBusiness }) {
               ))}
             </ul>
             <p className="text-xs text-faint leading-relaxed mt-2.5">
-              Your business, customer, prices, service area and name are unchanged — design requests can&apos;t reach
-              them.
+              Your business, customer, prices, area and name are unchanged — design requests can&apos;t reach them.
             </p>
           </div>
         )}
       </Card>
 
-      {/* 5 — hand off */}
+      {/* Hand off */}
       <SectionHeader
-        title="5. Build it"
-        description="Paste the prompt into a builder. The app's job ends here — it prepares the brief, it doesn't publish the site."
+        title="Build it"
+        description="The app prepares the brief. A website builder does the building."
         className="mt-6"
       />
       <Card className="p-4">
@@ -354,21 +472,73 @@ function Website({ business }: { business: SelectedBusiness }) {
           </a>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-border grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg bg-surface-2 border border-border-strong p-3">
-            <p className="text-xs uppercase tracking-wide font-medium text-faint">What Hostinger costs</p>
-            <p className="text-[13px] leading-relaxed mt-1">{HOSTINGER.cost}</p>
-          </div>
-          <div className="rounded-lg bg-good-soft border border-good/30 p-3">
-            <p className="text-xs uppercase tracking-wide font-medium text-good">Free in this app</p>
-            <p className="text-[13px] leading-relaxed mt-1">{HOSTINGER.free}</p>
-          </div>
+        <div className="mt-4 pt-4 border-t border-border grid gap-3 sm:grid-cols-3">
+          <CostBox label="What Hostinger costs" text={HOSTINGER.cost} />
+          <CostBox
+            label="What a domain costs"
+            text="A domain name is a separate yearly cost, and prices vary a lot by the ending you choose. Check before you commit to a name."
+          />
+          <CostBox label="Free in this app" text={HOSTINGER.free} good />
         </div>
-
         <p className="text-xs text-faint leading-relaxed mt-3">
           Any builder works — the prompt is plain text. Hostinger is suggested because its AI builder asks for exactly
           the things this page produces.
         </p>
+
+        <div className="mt-4 pt-4 border-t border-border">
+          <Button variant="ghost" onClick={() => setShowPrompt((v) => !v)} aria-expanded={showPrompt}>
+            {showPrompt ? "Hide the prompt" : "Show the prompt"}
+          </Button>
+        </div>
+
+        {showPrompt && prompt && (
+          <div className="mt-3">
+            <div className="flex flex-wrap gap-2 mb-2" role="group" aria-label="Prompt length">
+              {(["quick", "detailed"] as PromptMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  aria-pressed={mode === m}
+                  className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
+                    mode === m
+                      ? "border-accent bg-accent-soft text-accent-text"
+                      : "border-border bg-surface text-muted hover:bg-surface-2"
+                  }`}
+                >
+                  {m === "quick" ? "Short — for the builder" : "Detailed — full specification"}
+                </button>
+              ))}
+            </div>
+            <div className="rounded-lg border border-border overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 border-b border-border bg-surface-2">
+                <p className="text-xs text-muted">{prompt.characters.toLocaleString()} characters</p>
+                <div className="flex gap-2">
+                  <CopyButton text={prompt.text} label="Copy prompt" />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      actions.saveWebsiteVersion(business.id, {
+                        mode,
+                        siteType,
+                        text: prompt.text,
+                        request: lastChanges.length ? request || lastChanges.join(", ") : "",
+                        changes: lastChanges,
+                      });
+                      toast("Saved as a new version");
+                    }}
+                  >
+                    Save version
+                  </Button>
+                </div>
+              </div>
+              <pre className="max-h-72 overflow-auto p-3 text-[12.5px] leading-relaxed whitespace-pre-wrap font-mono text-muted">
+                {prompt.text}
+              </pre>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4 pt-4 border-t border-border flex flex-wrap items-center gap-3">
           <Button
@@ -392,13 +562,14 @@ function Website({ business }: { business: SelectedBusiness }) {
         </div>
       </Card>
 
+      <Card className="p-4 mt-4 flex items-start gap-2.5">
+        <Icon.bolt className="size-4 text-warn shrink-0 mt-0.5" />
+        <p className="text-[13px] leading-relaxed text-muted">{WEBSITE_TIMING}</p>
+      </Card>
+
       {versions.length > 0 && (
         <>
-          <SectionHeader
-            title="Your versions"
-            description="Every prompt you've saved, newest first. Kept on this device."
-            className="mt-6"
-          />
+          <SectionHeader title="Your versions" description="Kept on this device, newest first." className="mt-6" />
           <ul className="space-y-2">
             {versions.map((v, i) => (
               <li key={v.id}>
@@ -413,9 +584,7 @@ function Website({ business }: { business: SelectedBusiness }) {
                         </span>
                       </p>
                       {v.request && <p className="text-[13px] text-muted mt-0.5">You asked: “{v.request}”</p>}
-                      {v.changes.length > 0 && (
-                        <p className="text-[13px] text-muted mt-1">Changed: {v.changes.join(", ")}</p>
-                      )}
+                      {v.changes.length > 0 && <p className="text-[13px] text-muted mt-1">Changed: {v.changes.join(", ")}</p>}
                     </div>
                     <CopyButton text={v.text} />
                   </div>
@@ -429,6 +598,108 @@ function Website({ business }: { business: SelectedBusiness }) {
   );
 }
 
+function CostBox({ label, text, good }: { label: string; text: string; good?: boolean }) {
+  return (
+    <div className={`rounded-lg p-3 ${good ? "bg-good-soft border border-good/30" : "bg-surface-2 border border-border-strong"}`}>
+      <p className={`text-xs uppercase tracking-wide font-medium ${good ? "text-good" : "text-faint"}`}>{label}</p>
+      <p className="text-[13px] leading-relaxed mt-1">{text}</p>
+    </div>
+  );
+}
+
+/**
+ * A rough visual of the planned homepage.
+ *
+ * Deliberately a wireframe rather than a rendered site: showing a polished
+ * mock-up would imply the finished site will look like this, which it won't —
+ * the builder decides that. A wireframe communicates layout and hierarchy
+ * without making a promise the app can't keep.
+ */
+function Preview({
+  business,
+  headline,
+  sub,
+  cta,
+}: {
+  business: SelectedBusiness;
+  headline: string;
+  sub: string;
+  cta: string;
+}) {
+  const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
+  const name = business.identity?.name?.trim() || "Your business";
+  const services = (business.identity?.services ?? []).filter((s) => s.name.trim());
+
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <p className="text-xs uppercase tracking-wide text-faint font-medium">Rough layout</p>
+        <div className="flex gap-1.5" role="group" aria-label="Preview size">
+          {(["desktop", "mobile"] as const).map((d) => (
+            <button
+              key={d}
+              type="button"
+              onClick={() => setDevice(d)}
+              aria-pressed={device === d}
+              className={`min-h-8 px-2.5 rounded-lg text-xs font-medium border transition-colors ${
+                device === d ? "border-accent bg-accent-soft text-accent-text" : "border-border text-muted hover:bg-surface-2"
+              }`}
+            >
+              {d === "desktop" ? "Desktop" : "Phone"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-surface-2 rounded-xl p-3 overflow-hidden">
+        <div
+          className={`mx-auto bg-surface rounded-lg border border-border overflow-hidden transition-all duration-300 ${
+            device === "mobile" ? "max-w-[280px]" : "max-w-full"
+          }`}
+        >
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
+            <span className="text-[11px] font-semibold truncate">{name}</span>
+            <span className="hidden sm:flex gap-2 text-[10px] text-faint">
+              <span>Services</span>
+              <span>About</span>
+              <span>Contact</span>
+            </span>
+          </div>
+          <div className="px-3 py-5 text-center">
+            <p className={`font-semibold leading-tight ${device === "mobile" ? "text-[13px]" : "text-base"}`}>
+              {headline || "Your headline goes here"}
+            </p>
+            <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{sub || "And the line underneath it"}</p>
+            <span className="inline-block mt-3 px-3 py-1.5 rounded-lg bg-accent text-white dark:text-[oklch(15%_0.02_265)] text-[11px] font-semibold">
+              {cta || "Your button"}
+            </span>
+          </div>
+          <div className="border-t border-border px-3 py-3">
+            <div className={`grid gap-2 ${device === "mobile" ? "grid-cols-1" : "grid-cols-3"}`}>
+              {(services.length ? services.slice(0, 3) : [{ name: "Service one", price: "" }, { name: "Service two", price: "" }, { name: "Service three", price: "" }]).map(
+                (s, i) => (
+                  <div key={i} className="rounded border border-border p-2">
+                    <p className="text-[10px] font-medium truncate">{s.name}</p>
+                    <p className="text-[10px] text-faint mt-0.5">{s.price || "price"}</p>
+                  </div>
+                ),
+              )}
+            </div>
+          </div>
+          <div className="border-t border-border px-3 py-2 text-center">
+            <span className="text-[10px] text-faint">{business.identity?.email?.trim() || "your contact details"}</span>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-xs text-faint leading-relaxed mt-2.5">
+        A rough layout, not a preview of the finished site — the builder decides the actual design. This shows what goes
+        where and in what order.
+      </p>
+    </Card>
+  );
+}
+
 function Fact({ label, value, missing }: { label: string; value: string | null; missing?: string }) {
   return (
     <div className="min-w-0">
@@ -436,15 +707,6 @@ function Fact({ label, value, missing }: { label: string; value: string | null; 
       <dd className={`text-[13px] mt-0.5 leading-relaxed ${value ? "" : "text-warn"}`}>
         {value ?? missing ?? "Not set"}
       </dd>
-    </div>
-  );
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0">
-      <p className="text-xs uppercase tracking-wide text-faint font-medium">{label}</p>
-      <p className="text-sm mt-0.5 truncate">{value}</p>
     </div>
   );
 }

@@ -35,6 +35,7 @@ function useNav(): NavGroup[] {
           { href: "/ideas", label: "Ideas", icon: "spark", badge: state.ideas.length || undefined },
           { href: "/best", label: "Find my best", icon: "target" },
           { href: "/discover", label: "Explore", icon: "compass" },
+          { href: "/opportunity", label: "Best opportunity", icon: "money" },
         ],
       },
     ];
