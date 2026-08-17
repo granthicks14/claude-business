@@ -111,6 +111,8 @@ export interface FitImprovement {
   change: string;
   delta: number;
   how: string;
+  /** Where to go and actually make this change. Never advice with no button. */
+  href: string;
 }
 
 export interface FitResult {
@@ -458,12 +460,13 @@ function assessConfidence(profile: FounderProfile): { confidence: Confidence; co
  * estimating a delta, so the numbers shown are the numbers you'd get.
  */
 function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUncapped: number): FitImprovement[] {
-  const candidates: { change: string; how: string; patch: Partial<FounderProfile> }[] = [];
+  const candidates: { change: string; how: string; href: string; patch: Partial<FounderProfile> }[] = [];
 
   if (profile.hoursPerWeek < 20) {
     candidates.push({
       change: `If you had ${profile.hoursPerWeek + 10} hours a week`,
       how: "Even two evenings and one weekend morning is a real change at this stage.",
+      href: "/profile#hours",
       patch: { hoursPerWeek: profile.hoursPerWeek + 10 },
     });
   }
@@ -472,6 +475,7 @@ function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUnc
     candidates.push({
       change: `If you had ${fmt(next)} to start`,
       how: "Saved, earned from something simpler first, or borrowed from someone who'd get it back.",
+      href: "/profile#budget",
       patch: { startingBudget: next },
     });
   }
@@ -479,6 +483,7 @@ function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUnc
     candidates.push({
       change: "If you had transport",
       how: "A car, a lift you can rely on, or a bike for a tighter radius.",
+      href: "/profile#transport",
       patch: { hasTransportation: true },
     });
   }
@@ -486,6 +491,7 @@ function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUnc
     candidates.push({
       change: "If you told us where you are",
       how: "Just a town or city. It changes which customers are reachable.",
+      href: "/profile#location",
       patch: { location: "your town" },
     });
   }
@@ -493,6 +499,7 @@ function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUnc
     candidates.push({
       change: "If you told us your age",
       how: "A range, not a birthdate. It only affects what's practical.",
+      href: "/profile#age",
       patch: { ageBand: "25-34" },
     });
   }
@@ -505,6 +512,7 @@ function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUnc
     candidates.push({
       change: `If you learned ${learnable.replace("-", " ")}`,
       how: "The Learn section has a starting point for this, and it's free.",
+      href: `/learn/how?topic=${encodeURIComponent(learnable.replace("-", " "))}`,
       patch: { skills: [...profile.skills, learnable.replace("-", " ")] },
     });
   }
@@ -517,11 +525,101 @@ function improvementsFor(idea: BusinessIdea, profile: FounderProfile, currentUnc
       // one to go and change.
       const after = computeFit(idea, { ...profile, ...c.patch }, { withImprovements: false });
       const delta = after.uncappedScore - currentUncapped;
-      return { change: c.change, delta, how: c.how };
+      return { change: c.change, delta, how: c.how, href: c.href };
     })
     .filter((c) => c.delta > 0)
     .sort((a, b) => b.delta - a.delta)
     .slice(0, 4);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Per-factor improvement paths                                               */
+/* -------------------------------------------------------------------------- */
+
+export interface FactorAction {
+  label: string;
+  /** Deliberately a range, never an exact promise. */
+  estimate: string;
+  /** Where this actually takes the user. */
+  href: string;
+  kind: "profile" | "learn" | "act";
+}
+
+/**
+ * What a user can actually do about a weak factor.
+ *
+ * Estimates are stated as ranges and labelled as estimates, because the real
+ * delta depends on every other factor — promising "+10" and delivering +3 is
+ * how a score loses credibility.
+ */
+export function actionsForFactor(factor: FitFactor, idea: BusinessIdea, profile: FounderProfile): FactorAction[] {
+  const ctx = resolveContext(idea, profile);
+  const missing = ctx.model.needs.filter((n) => !ctx.signals.capabilities.has(n));
+  const helps = ctx.model.helps.filter((h) => !ctx.signals.capabilities.has(h));
+  const gap = missing[0] ?? helps[0];
+
+  switch (factor) {
+    case "affordability":
+      return [
+        { label: "Update your budget", estimate: "Large, if the number changes much", href: "/profile#budget", kind: "profile" },
+        { label: "See the cheaper way to start this", estimate: "Often removes the problem entirely", href: "#money", kind: "act" },
+      ];
+    case "timeFit":
+      return [
+        { label: "Update your available hours", estimate: "Large, if you have more than you said", href: "/profile#hours", kind: "profile" },
+        { label: "Find something that fits smaller hours", estimate: "Varies by idea", href: "/ideas", kind: "act" },
+      ];
+    case "skillFit":
+      return [
+        { label: "Add skills you already have", estimate: "Estimated +5 to +15 if we missed something", href: "/profile#skills", kind: "profile" },
+        ...(gap
+          ? [{
+              label: `Learn ${gap.replace("-", " ")}`,
+              estimate: "Estimated +5 to +12 once it's on your profile",
+              href: `/learn/how?topic=${encodeURIComponent(gap.replace("-", " "))}`,
+              kind: "learn" as const,
+            }]
+          : []),
+        { label: "Describe your experience", estimate: "Raises confidence more than score", href: "/profile#experience", kind: "profile" },
+      ];
+    case "customerAccess":
+      return [
+        { label: "Add where you are", estimate: "Estimated +5 to +15 for local businesses", href: "/profile#location", kind: "profile" },
+        { label: "Update transportation", estimate: "Estimated +5 to +10 for local work", href: "/profile#transport", kind: "profile" },
+        { label: "Learn how to find these customers", estimate: "No score change — makes it doable", href: `/learn/how?topic=${encodeURIComponent(`how to find ${ctx.segment.label}`)}`, kind: "learn" },
+      ];
+    case "personalFit":
+      return [
+        { label: "Add your interests", estimate: "Estimated +5 to +20", href: "/profile#interests", kind: "profile" },
+        { label: "Set the kinds of business you want", estimate: "Estimated +10 to +25 when they match", href: "/profile#preferences", kind: "profile" },
+      ];
+    case "agePracticality":
+      return [
+        { label: "Set your age", estimate: "Changes what's shown, not just the number", href: "/profile#age", kind: "profile" },
+        { label: "Check what needs an adult", estimate: "No score change — avoids a dead end", href: "#can", kind: "act" },
+      ];
+    case "profitPotential":
+      return [
+        { label: "Set your income goal", estimate: "Scored against your goal, not in the abstract", href: "/profile#incomeGoal", kind: "profile" },
+        { label: "Model the numbers yourself", estimate: "No score change — shows what's realistic", href: "/money", kind: "act" },
+      ];
+    case "difficulty":
+      return [
+        { label: "Add skills you already have", estimate: "Estimated +5 to +10", href: "/profile#skills", kind: "profile" },
+        { label: "Learn the hardest part first", estimate: "Estimated +5 to +10 once added", href: `/learn/how?topic=${encodeURIComponent(gap ? gap.replace("-", " ") : ctx.model.label.toLowerCase())}`, kind: "learn" },
+      ];
+    case "demand":
+      return [
+        { label: "Test whether people actually want it", estimate: "No score change — this is the real answer", href: "/validation", kind: "act" },
+        { label: "Talk to five potential customers", estimate: "Evidence beats any score", href: "/practice", kind: "act" },
+      ];
+    case "scalability":
+      return [
+        { label: "Say whether you want something scalable", estimate: "Changes how heavily this is weighted", href: "/profile#preferences", kind: "profile" },
+      ];
+    default:
+      return [];
+  }
 }
 
 /** The disclaimer shown next to every fit score. */

@@ -29,6 +29,8 @@ import type { BusinessIdea, FounderProfile } from "./types";
  * change when the person changes.
  */
 export interface BusinessAnalysis {
+  /** The model kind behind this idea, for anything that needs to branch on it. */
+  modelKind: string;
   explainer: Explainer;
   feasibility: Feasibility;
   cost: CostBreakdown;
@@ -42,6 +44,7 @@ export function useBusinessAnalysis(idea: BusinessIdea | null, profile: FounderP
     if (!idea) return null;
     const ctx = resolveContext(idea, profile);
     return {
+      modelKind: ctx.model.kind,
       explainer: explainBusiness(ctx, idea),
       feasibility: assessFeasibility(idea, profile),
       cost: costBreakdown(idea, profile),

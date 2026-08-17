@@ -37,6 +37,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { DecisionCard, FitScoreCard, ImprovementsCard } from "@/components/fit-score";
+import { ConfusedHelper, QuickActions, QuickAnswer } from "@/components/quick-answer";
 import { DIFFICULTY_LABEL, assessEvidence, decide } from "@/lib/engine";
 import { computeFit } from "@/lib/fit";
 import { useBusinessAnalysis } from "@/lib/explain";
@@ -74,6 +75,8 @@ function IdeaDetail() {
 
   const { generate, loading, stage, error, clearError } = useIdeaGeneration();
   const [tab, setTab] = useState<"what" | "how" | "can" | "money" | "do" | "tools" | "honest">("what");
+  // Quick Answer is the default. Deep Dive is one tap away, never the landing.
+  const [deepDive, setDeepDive] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [newName, setNewName] = useState("");
   const [pivotOpen, setPivotOpen] = useState(false);
@@ -243,13 +246,24 @@ function IdeaDetail() {
         </Button>
       </div>
 
+      <QuickActions
+        ideaId={idea.id}
+        onJump={(t) => {
+          setDeepDive(true);
+          setTab(t as typeof tab);
+        }}
+      />
+
+      {deepDive && (
       <Card className="p-5">
         <h2 className="font-semibold mb-2 flex items-center gap-2">
           <Icon.target className="size-4 text-accent" /> Why this fits you
         </h2>
         <p className="text-sm leading-relaxed">{idea.whyThisFitsYou}</p>
       </Card>
+      )}
 
+      {deepDive && (
       <Tabs
         active={tab}
         onChange={(id) => setTab(id as typeof tab)}
@@ -263,16 +277,36 @@ function IdeaDetail() {
           { id: "honest", label: "The downsides" },
         ]}
       />
+      )}
 
-      {analysis && fit && (
-        <div className="space-y-4">
+      {analysis && !deepDive && (
+        <div className="space-y-4 animate-in">
+          <QuickAnswer idea={idea} analysis={analysis} onDeepDive={() => setDeepDive(true)} />
+          <Card className="p-5">
+            <h2 className="font-semibold mb-2 flex items-center gap-2">
+              <Icon.target className="size-4 text-accent" /> Why this one fits you
+            </h2>
+            <p className="text-sm leading-relaxed">{idea.whyThisFitsYou}</p>
+          </Card>
+          <ConfusedHelper analysis={analysis} />
+        </div>
+      )}
+
+      {analysis && fit && deepDive && (
+        <div className="space-y-4 animate-in">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm text-muted">The full analysis.</p>
+            <Button size="sm" onClick={() => setDeepDive(false)}>
+              Back to the short version
+            </Button>
+          </div>
           <DecisionCard decision={decision} evidence={evidence} />
-          <FitScoreCard fit={fit} />
+          <FitScoreCard fit={fit} idea={idea} profile={state.profile} />
           <ImprovementsCard fit={fit} />
         </div>
       )}
 
-      {analysis && (
+      {analysis && deepDive && (
         <div key={tab} className="animate-in">
           {tab === "what" && <WhatIsIt analysis={analysis} />}
           {tab === "how" && <HowItWorks analysis={analysis} />}
@@ -284,6 +318,7 @@ function IdeaDetail() {
         </div>
       )}
 
+      {deepDive && (
       <AdvancedOnly summary="The full breakdown — scores, estimates and raw detail">
       <div className="space-y-4">
 
@@ -395,6 +430,7 @@ function IdeaDetail() {
 
       </div>
       </AdvancedOnly>
+      )}
 
       <Card className="p-5">
         <h2 className="font-semibold mb-3">Your notes</h2>

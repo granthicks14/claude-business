@@ -61,6 +61,7 @@ function useNav(): NavGroup[] {
     }
 
     const track: NavItem[] = [
+      { href: "/profile", label: "My profile", icon: "target" },
       { href: "/coach", label: "Coach", icon: "chat" },
       { href: "/learn", label: "Learn the words", icon: "book" },
       { href: "/journal", label: "Journal", icon: "doc" },

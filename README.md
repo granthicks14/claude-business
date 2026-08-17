@@ -109,6 +109,8 @@ src/lib/engine/
   practice.ts               customer rehearsal, mistakes, checkpoints
 ../fit.ts                   the Business Fit Score
 ../learn.ts                 lessons and video search links
+../examples.ts              see-it-in-action searches, never invented URLs
+../profile-fields.ts        the profile as data, shared by page and scoring
   match.ts                  profile → signals, and constraint extraction
   ideas.ts                  combinatorial generation, filtering, scoring, pivots
   generators/               plan · research · execution · growth · advice
@@ -143,7 +145,15 @@ models say plainly that they earn close to nothing for months.
 
 **Understand — how does this actually make money?**
 
-Every idea opens with the plain-English version before any score: what it is in
+Every business opens on **Quick Answer**, not a report: what it is, what you do,
+who pays, why, how you get paid, what it costs, the money in one line of
+arithmetic, and your first step — all in the first card. **Deep Dive** is one tap
+away for the score, risks, toolkit and validation, and it is never the landing.
+There's a **this doesn't make sense** helper that explains the one confusing
+part rather than repeating everything, and **see it in action** links built as
+real searches, so nothing is a URL we invented.
+
+Behind the Quick Answer, the full explanation covers: what it is in
 one sentence, how the business works as a step-by-step loop, who pays you and
 why, how the money moves through one sale with the arithmetic visible and
 editable, what you need, what it costs itemised with a cheaper path, your first
@@ -166,6 +176,16 @@ platform-dependency warning where the business leans on one company.
 **Beginner and advanced modes.** Beginner is the default: plain language, terms
 defined where they appear, detail one tap away. Advanced shows everything at
 once. Nothing is ever hidden — the collapse is a summary, not a lock.
+
+**My profile — one place, always editable**
+
+Every onboarding answer lives at `/profile`, editable one field at a time, and
+each field is anchor-addressable (`/profile#skills`) so anything in the app can
+send you to the exact control rather than to a settings page you then search.
+Saving recomputes every score immediately and reports what actually moved —
+which ideas rose, which fell, which became realistic that weren't. A profile
+that doesn't visibly change the recommendations is decoration, and people
+correctly stop trusting it.
 
 **Decide — why this one?**
 

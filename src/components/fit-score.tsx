@@ -1,8 +1,21 @@
 "use client";
 
-import { Explain, Why } from "@/components/teach";
-import { Badge, Card, Meter, ScoreRing, SectionHeader } from "@/components/ui";
-import { BAND_LABEL, FACTOR_HELP, FACTOR_LABEL, FIT_DISCLAIMER, type FitResult } from "@/lib/fit";
+import Link from "next/link";
+import { useState } from "react";
+
+import { Why } from "@/components/teach";
+import { Badge, Button, Card, Meter, ScoreRing, SectionHeader } from "@/components/ui";
+import {
+  BAND_LABEL,
+  FACTOR_HELP,
+  FACTOR_LABEL,
+  FIT_DISCLAIMER,
+  actionsForFactor,
+  type FitFactor,
+  type FitResult,
+} from "@/lib/fit";
+import { FACTOR_FIELDS, fieldById } from "@/lib/profile-fields";
+import type { BusinessIdea, FounderProfile } from "@/lib/types";
 import type { Decision, EvidenceReport } from "@/lib/engine";
 import { VALIDATION_BLURB, VALIDATION_LABEL, VALIDATION_TONE, VERDICT_LABEL } from "@/lib/engine";
 
@@ -14,7 +27,17 @@ import { VALIDATION_BLURB, VALIDATION_LABEL, VALIDATION_TONE, VERDICT_LABEL } fr
 const CONFIDENCE_TONE = { low: "warn", medium: "accent", high: "good" } as const;
 const BAND_TONE = { best: "good", good: "accent", possible: "neutral", poor: "warn" } as const;
 
-export function FitScoreCard({ fit }: { fit: FitResult }) {
+export function FitScoreCard({
+  fit,
+  idea,
+  profile,
+}: {
+  fit: FitResult;
+  idea: BusinessIdea;
+  profile: FounderProfile;
+}) {
+  const [open, setOpen] = useState<FitFactor | null>(null);
+
   return (
     <Card className="p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -48,25 +71,114 @@ export function FitScoreCard({ fit }: { fit: FitResult }) {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 mt-5 pt-4 border-t border-border">
+      <p className="text-xs text-faint mt-5 pt-4 border-t border-border mb-2">
+        Tap any factor to see why it scored that, and what would change it.
+      </p>
+
+      <div className="grid gap-2 sm:grid-cols-2">
         {fit.factors.map((f) => (
-          <div key={f.factor}>
-            <Meter
-              label={
-                <Explain short={FACTOR_HELP[f.factor]}>{FACTOR_LABEL[f.factor]}</Explain>
-              }
-              value={f.score}
-              hint={f.reason}
-            />
+          <button
+            key={f.factor}
+            type="button"
+            onClick={() => setOpen(open === f.factor ? null : f.factor)}
+            aria-expanded={open === f.factor}
+            className={`text-left rounded-xl border p-3 transition-colors min-h-16 ${
+              open === f.factor
+                ? "border-accent bg-accent-soft/50"
+                : "border-border hover:border-accent-border hover:bg-surface-2"
+            }`}
+          >
+            <Meter label={FACTOR_LABEL[f.factor]} value={f.score} hint={f.reason} />
             {f.weight === 0 && (
-              <p className="text-[11px] text-faint mt-1">Not counted — we don&apos;t know your age.</p>
+              <span className="block text-[11px] text-faint mt-1">Not counted — we don&apos;t know your age.</span>
             )}
-          </div>
+          </button>
         ))}
       </div>
 
+      {open && <FactorDetail factor={open} fit={fit} idea={idea} profile={profile} onClose={() => setOpen(null)} />}
+
       <p className="text-xs text-faint mt-4 pt-3 border-t border-border leading-relaxed">{FIT_DISCLAIMER}</p>
     </Card>
+  );
+}
+
+/**
+ * The panel behind a factor. Its job is to end in an action — a number with an
+ * explanation and no button is where most score UIs stop being useful.
+ */
+function FactorDetail({
+  factor,
+  fit,
+  idea,
+  profile,
+  onClose,
+}: {
+  factor: FitFactor;
+  fit: FitResult;
+  idea: BusinessIdea;
+  profile: FounderProfile;
+  onClose: () => void;
+}) {
+  const f = fit.factors.find((x) => x.factor === factor)!;
+  const actions = actionsForFactor(factor, idea, profile);
+  const fields = FACTOR_FIELDS[factor] ?? [];
+
+  return (
+    <div className="mt-3 rounded-xl border border-accent-border bg-accent-soft/30 p-4 animate-in">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold">{FACTOR_LABEL[factor]}</h3>
+          <p className="text-2xl font-semibold tabular-nums mt-0.5">
+            {f.score}
+            <span className="text-sm text-muted font-normal">/100</span>
+          </p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          Close
+        </Button>
+      </div>
+
+      <p className="text-sm mt-2 leading-relaxed">
+        <span className="text-xs uppercase tracking-wide text-faint font-medium">Why · </span>
+        {f.reason}
+      </p>
+      <p className="text-[13px] text-muted mt-2 leading-relaxed">{FACTOR_HELP[factor]}</p>
+
+      {fields.length > 0 && (
+        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+          <span className="text-xs uppercase tracking-wide text-faint font-medium">Driven by · </span>
+          {fields.map((id) => fieldById(id)?.label ?? id).join(", ")} in your profile.
+        </p>
+      )}
+
+      {actions.length > 0 && (
+        <>
+          <h4 className="font-semibold text-sm mt-4 mb-2">What would change this</h4>
+          <div className="grid gap-2">
+            {actions.map((a) => (
+              <Link
+                key={a.href + a.label}
+                href={a.href}
+                className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-3 hover:border-accent-border hover:bg-surface-2 transition-colors min-h-12"
+              >
+                <span className="shrink-0 mt-0.5 text-accent" aria-hidden="true">
+                  {a.kind === "learn" ? "\u{1F4D6}" : a.kind === "profile" ? "\u270E" : "\u2192"}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{a.label}</span>
+                  <span className="block text-[12px] text-muted mt-0.5">{a.estimate}</span>
+                </span>
+              </Link>
+            ))}
+          </div>
+          <p className="text-xs text-faint mt-3 leading-relaxed">
+            Estimates, not promises. The real change depends on every other factor too — the score is recomputed
+            properly the moment you save.
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -82,13 +194,24 @@ export function ImprovementsCard({ fit }: { fit: FitResult }) {
         description="Each number is the score recomputed against that change — not an estimate."
       />
       <ul className="grid gap-2">
-        {fit.improvements.map((i) => (
-          <li key={i.change} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-border px-3.5 py-3">
-            <span className="font-semibold tabular-nums text-good shrink-0">+{i.delta}</span>
-            <span className="text-sm font-medium">{i.change}</span>
-            <span className="w-full text-[13px] text-muted leading-relaxed">{i.how}</span>
-          </li>
-        ))}
+        {fit.improvements.map((i) => {
+          // Every suggestion ends somewhere you can act. Advice with no button
+          // is where score UIs usually stop being useful.
+          const href = i.href;
+          return (
+            <li key={i.change}>
+              <Link
+                href={href}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-lg border border-border px-3.5 py-3 hover:border-accent-border hover:bg-surface-2 transition-colors"
+              >
+                <span className="font-semibold tabular-nums text-good shrink-0">+{i.delta}</span>
+                <span className="text-sm font-medium flex-1 min-w-0">{i.change}</span>
+                <span className="text-xs text-accent-text shrink-0">Change this →</span>
+                <span className="w-full text-[13px] text-muted leading-relaxed">{i.how}</span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
       <p className="text-xs text-faint mt-3 leading-relaxed">
         These change your circumstances, not the business. If none of them are realistic right now, that&apos;s
