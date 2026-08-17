@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { PageHero, Ready, RequireBusiness } from "@/components/page";
+import { ToolboxArt } from "@/components/art";
 import {
   Badge,
   Button,
@@ -75,29 +76,30 @@ function Builder({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader
+      <PageHero
         title="Build something for your business"
+        art={<ToolboxArt className="w-full" />}
         description="Pick what you need. The app writes a detailed brief from your business details, you paste it into any AI tool, and you get back something usable. No account and no key needed here — this page only writes text."
       />
 
       {/* Step 1 — what do you want */}
         <SectionHeader title="1. What do you want to make?" className="mt-6" />
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {PROMPT_SPECS.map((s) => {
+      <ul className="grid gap-2 sm:grid-cols-2 items-stretch">
+        {PROMPT_SPECS.map((s, i) => {
           const gaps = missingFor(s, business.identity).length;
           const active = kind === s.kind;
           return (
-            <li key={s.kind}>
+            <li key={s.kind} className="animate-stagger h-full" style={{ ["--d"]: `${i * 45}ms` } as React.CSSProperties}>
               <button
                 type="button"
                 onClick={() => {
                   setKind(s.kind);
                 }}
                 aria-pressed={active}
-                className={`w-full text-left rounded-xl border p-3.5 min-h-16 transition-colors ${
+                className={`hover-lift h-full w-full text-left rounded-xl border p-3.5 min-h-16 ${
                   active
-                    ? "border-accent bg-accent-soft"
-                    : "border-border bg-surface hover:border-accent-border hover:bg-surface-2"
+                    ? "border-accent bg-accent-soft ring-1 ring-accent/25"
+                    : "border-border bg-surface hover:bg-surface-2"
                 }`}
               >
                 <span className="flex items-center justify-between gap-2">

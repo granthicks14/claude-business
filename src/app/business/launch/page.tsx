@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { PageHero, Ready, RequireBusiness } from "@/components/page";
+import { ChecklistArt } from "@/components/art";
 import { Explain } from "@/components/teach";
-import { Badge, Card, LinkButton, ScoreRing, SectionHeader } from "@/components/ui";
+import { Badge, Card, Hi, LinkButton, ScoreRing, SectionHeader } from "@/components/ui";
 import { computeFit } from "@/lib/fit";
 import { READINESS_LABEL, assessReadiness } from "@/lib/launch";
 import { useAppState } from "@/lib/store";
@@ -39,8 +40,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader
+      <PageHero
         title="Are you ready to launch?"
+        art={<ChecklistArt className="w-full" />}
         description="A checklist of things that either exist or don't. Nothing here is a guess — each line is ticked because you've actually recorded it."
       />
 
@@ -48,7 +50,7 @@ function Launch({ business }: { business: SelectedBusiness }) {
         <div className="flex flex-wrap items-center gap-5">
           {/* "0 Ready" reads as a contradiction, so the ring is labelled neutrally
               and the verdict sits beside it as words. */}
-          <ScoreRing score={readiness.score} size={92} label="Readiness" />
+          <ScoreRing score={readiness.score} size={92} label="Readiness" glow />
           <div className="flex-1 min-w-[14rem]">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-medium">{READINESS_LABEL[readiness.verdict]}</h2>
@@ -79,7 +81,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
         <h2 className="font-medium text-[15px]">Two different questions</h2>
         <div className="grid gap-3 sm:grid-cols-2 mt-3">
           <div className="rounded-lg bg-surface-2 p-3">
-            <p className="text-xs uppercase tracking-wide text-faint font-medium">Business fit — {fit.score}</p>
+            <p className="text-xs uppercase tracking-wide text-faint font-medium">
+              Business fit — <Hi tone="mark">{fit.score}</Hi>
+            </p>
             <p className="text-[13px] leading-relaxed mt-1">
               Does this business suit <em>you</em> — your budget, hours, skills and situation. Changing your{" "}
               <Link href="/profile" className="text-accent-text hover:underline">
@@ -89,7 +93,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
             </p>
           </div>
           <div className="rounded-lg bg-surface-2 p-3">
-            <p className="text-xs uppercase tracking-wide text-faint font-medium">Launch readiness — {readiness.score}</p>
+            <p className="text-xs uppercase tracking-wide text-faint font-medium">
+              Launch readiness — <Hi tone="mark">{readiness.score}</Hi>
+            </p>
             <p className="text-[13px] leading-relaxed mt-1">
               Is the <em>business</em> prepared. Only doing the work moves this. A high fit score with a low readiness
               score means a good idea you haven&apos;t built yet.
@@ -107,9 +113,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
         className="mt-6"
       />
       <ul className="space-y-2">
-        {essentials.map((item) => (
+        {essentials.map((item, i) => (
           <li key={item.id}>
-            <ChecklistRow item={item} />
+            <ChecklistRow item={item} delay={i * 60} />
           </li>
         ))}
       </ul>
@@ -120,9 +126,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
         className="mt-6"
       />
       <ul className="space-y-2">
-        {extras.map((item) => (
+        {extras.map((item, i) => (
           <li key={item.id}>
-            <ChecklistRow item={item} />
+            <ChecklistRow item={item} delay={i * 60} />
           </li>
         ))}
       </ul>
@@ -141,9 +147,15 @@ function Launch({ business }: { business: SelectedBusiness }) {
   );
 }
 
-function ChecklistRow({ item }: { item: ReturnType<typeof assessReadiness>["items"][number] }) {
+function ChecklistRow({
+  item,
+  delay,
+}: {
+  item: ReturnType<typeof assessReadiness>["items"][number];
+  delay: number;
+}) {
   return (
-    <Card className="p-3.5">
+    <Card className="p-3.5" delay={delay} interactive={!item.done}>
       <div className="flex items-start gap-3">
         <span
           className={`shrink-0 mt-0.5 size-5 rounded-full grid place-items-center border ${
@@ -162,9 +174,9 @@ function ChecklistRow({ item }: { item: ReturnType<typeof assessReadiness>["item
         {!item.done && (
           <Link
             href={item.href}
-            className="shrink-0 text-[13px] text-accent-text hover:underline min-h-11 flex items-center"
+            className="shrink-0 text-[13px] text-accent-text hover:underline min-h-11 flex items-center gap-1"
           >
-            Do it
+            Do it <span aria-hidden>→</span>
           </Link>
         )}
       </div>

@@ -125,12 +125,110 @@ export function Card({
   children,
   className = "",
   as: Tag = "div",
+  interactive,
+  /** Entrance delay in ms, for staggering a list. */
+  delay,
 }: {
   children: ReactNode;
   className?: string;
   as?: "div" | "section" | "article" | "li";
+  /** Adds the hover lift. Only for cards that lead somewhere when clicked. */
+  interactive?: boolean;
+  delay?: number;
 }) {
-  return <Tag className={`card ${className}`}>{children}</Tag>;
+  return (
+    <Tag
+      className={`card ${interactive ? "hover-lift" : ""} ${delay !== undefined ? "animate-stagger" : ""} ${className}`}
+      style={delay !== undefined ? ({ ["--d"]: `${delay}ms` } as React.CSSProperties) : undefined}
+    >
+      {children}
+    </Tag>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Emphasis                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Colour on the word that carries the meaning.
+ *
+ * Deliberately a component rather than a utility class in the markup: it keeps
+ * the emphasis vocabulary small. Four tones, each meaning one thing, so a
+ * coloured word is always a signal and never decoration:
+ *
+ *   accent — the subject of the sentence
+ *   good   — something the reader has achieved or can rely on
+ *   warn   — something needing attention, but not a failure
+ *   mark   — the single most important figure on the page
+ */
+export function Hi({
+  children,
+  tone = "accent",
+}: {
+  children: ReactNode;
+  tone?: "accent" | "good" | "warn" | "mark";
+}) {
+  const cls =
+    tone === "good" ? "hl-good" : tone === "warn" ? "hl-warn" : tone === "mark" ? "hl-mark" : "hl";
+  return <strong className={cls}>{children}</strong>;
+}
+
+/**
+ * A number that animates up to its value.
+ *
+ * `tabular-nums` matters more than it looks: without it the digits change width
+ * mid-count and the surrounding text jitters.
+ */
+export function CountUp({
+  value,
+  duration = 750,
+  className = "",
+  format = (n: number) => String(Math.round(n)),
+}: {
+  value: number;
+  duration?: number;
+  className?: string;
+  format?: (n: number) => string;
+}) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(value);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    // First paint shows the real value. Animating from zero on mount would make
+    // every reload look like progress the user didn't just make.
+    if (!mounted.current) {
+      mounted.current = true;
+      from.current = value;
+      setShown(value);
+      return;
+    }
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(value);
+      from.current = value;
+      return;
+    }
+
+    const start = performance.now();
+    const origin = from.current;
+    let raf = 0;
+
+    const tick = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      // Same easing curve as the rings and meters, so a card animates as a unit.
+      const eased = 1 - Math.pow(1 - t, 3);
+      setShown(origin + (value - origin) * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else from.current = value;
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value, duration]);
+
+  return <span className={`tabular-nums ${className}`}>{format(shown)}</span>;
 }
 
 export function SectionHeader({
@@ -539,11 +637,16 @@ export function ScoreRing({
   size = 68,
   label,
   sublabel,
+  glow,
 }: {
   score: number;
   size?: number;
   label?: string;
   sublabel?: string;
+  /** A soft halo in the score's colour, for the one hero ring on a page.
+      Suppressed on a low score: a red halo reads as an error, and a low score
+      early on is normal rather than wrong. */
+  glow?: boolean;
 }) {
   const radius = (size - 7) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -553,7 +656,14 @@ export function ScoreRing({
   return (
     <div className="inline-flex items-center gap-3">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
+        {glow && tone !== "bad" && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 rounded-full"
+            style={{ background: color, filter: "blur(18px)", opacity: 0.22 }}
+          />
+        )}
+        <svg width={size} height={size} className="relative -rotate-90" aria-hidden="true">
           <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth="5" />
           <circle
             cx={size / 2}
@@ -569,10 +679,10 @@ export function ScoreRing({
           />
         </svg>
         <span
-          className="absolute inset-0 grid place-items-center font-semibold tabular-nums"
+          className="absolute inset-0 grid place-items-center font-semibold"
           style={{ fontSize: size / 3.2 }}
         >
-          {Math.round(score)}
+          <CountUp value={Math.max(0, Math.min(100, score))} />
         </span>
       </div>
       {(label || sublabel) && (
@@ -613,7 +723,9 @@ export function Meter({
     <div>
       <div className="flex items-baseline justify-between gap-3 mb-1">
         <span className="text-[13px] font-medium truncate">{label}</span>
-        <span className="text-[13px] tabular-nums text-muted shrink-0">{Math.round(value)}</span>
+        <span className="text-[13px] text-muted shrink-0">
+          <CountUp value={value} />
+        </span>
       </div>
       <div
         className="h-1.5 rounded-full bg-surface-2 overflow-hidden"

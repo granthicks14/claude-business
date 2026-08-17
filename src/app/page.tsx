@@ -4,7 +4,8 @@ import Link from "next/link";
 
 import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
-import { Badge, Card, LinkButton, ScoreRing } from "@/components/ui";
+import { IdeasArt, ShopArt } from "@/components/art";
+import { Badge, Card, Hi, LinkButton, ScoreRing } from "@/components/ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import { useAIStatus } from "@/lib/useAI";
 
@@ -49,9 +50,11 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="flex items-start gap-3 rounded-xl border border-border bg-surface p-4 hover:border-accent-border hover:bg-surface-2 transition-colors min-h-16"
+      className="hover-lift group flex items-start gap-3 rounded-xl border border-border bg-surface p-4 hover:bg-surface-2 min-h-16"
     >
-      <span className="shrink-0 mt-0.5 text-accent">{icon}</span>
+      <span className="shrink-0 mt-0.5 grid place-items-center size-8 rounded-lg bg-accent-soft text-accent transition-transform duration-200 group-hover:scale-110">
+        {icon}
+      </span>
       <span className="min-w-0">
         <span className="block font-medium text-sm">{title}</span>
         <span className="block text-[13px] text-muted mt-0.5 leading-relaxed">{detail}</span>
@@ -72,15 +75,26 @@ export default function HomePage() {
   if (ready && hasProfile) {
     return (
       <div className="space-y-5">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-            {state.profile.name ? `Welcome back, ${state.profile.name}.` : "Welcome back."}
-          </h1>
-          <p className="text-muted mt-1.5 leading-relaxed">
-            {business
-              ? `You're building ${business.idea.name}.`
-              : "You haven't picked a business yet — that's the first thing below."}
-          </p>
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-5 py-6 sm:px-7 sm:py-7 aurora animate-in">
+          <div className="relative z-[1] flex items-center gap-6">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+                {state.profile.name ? `Welcome back, ${state.profile.name}.` : "Welcome back."}
+              </h1>
+              <p className="text-muted mt-1.5 leading-relaxed">
+                {business ? (
+                  <>
+                    You&apos;re building <Hi>{business.idea.name}</Hi>.
+                  </>
+                ) : (
+                  "You haven't picked a business yet — that's the first thing below."
+                )}
+              </p>
+            </div>
+            <div className="hidden sm:block shrink-0 w-32 text-muted/70">
+              {business ? <ShopArt className="w-full" /> : <IdeasArt className="w-full" />}
+            </div>
+          </div>
         </div>
 
         <NextActionCard />
@@ -98,11 +112,12 @@ export default function HomePage() {
 
   return (
     <div className="space-y-14 sm:space-y-20">
-      <section className="relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-6 pb-2">
+      <section className="relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-6 pb-2 overflow-hidden aurora">
         <div className="absolute inset-0 grid-fade opacity-[0.55] pointer-events-none" aria-hidden="true" />
-        <div className="relative max-w-3xl">
+        <div className="relative z-[1] grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-center">
+          <div className="max-w-3xl">
           <Badge tone="accent" className="mb-5">
-            <span className="size-1.5 rounded-full bg-accent" aria-hidden="true" />
+            <span className="size-1.5 rounded-full bg-accent animate-[pulse-dot_2.4s_ease-in-out_infinite]" aria-hidden="true" />
             Personal AI startup partner
           </Badge>
 
@@ -111,8 +126,8 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-4 text-base sm:text-lg text-muted max-w-2xl leading-relaxed">
-            Tell it what you&apos;re good at, what you have, and what you want — and discover businesses you can
-            actually build.
+            Tell it what you&apos;re good at, what you have, and what you want — and discover businesses you can{" "}
+            <Hi>actually build</Hi>.
           </p>
 
           {ready && (
@@ -155,8 +170,10 @@ export default function HomePage() {
           )}
 
           {ready && (
-            <div className="mt-6 rounded-xl border border-good/30 bg-good-soft px-4 py-3 max-w-2xl">
-              <p className="text-sm font-medium">Works with no account, no API key and no cost</p>
+            <div className="mt-6 rounded-xl border border-good/30 bg-good-soft px-4 py-3 max-w-2xl animate-in" style={{ animationDelay: "160ms" }}>
+              <p className="text-sm font-medium">
+                Works with <Hi tone="good">no account, no API key and no cost</Hi>
+              </p>
               <p className="text-sm text-muted mt-1">
                 Everything runs on a built-in Business Intelligence Engine in your own browser — ideas, scoring,
                 validation, plans, marketing, money and the coach.{" "}
@@ -170,6 +187,13 @@ export default function HomePage() {
               </p>
             </div>
           )}
+          </div>
+
+          {/* Drawn here as SVG, not fetched: there is no public/ directory and a
+              remote image would be a required network dependency. */}
+          <div className="hidden lg:block text-muted/70 animate-in" style={{ animationDelay: "220ms" }}>
+            <ShopArt className="w-full" label="A small shop with its lights on" />
+          </div>
         </div>
       </section>
 

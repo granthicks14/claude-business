@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { PageHero, Ready, RequireBusiness } from "@/components/page";
+import { SignArt } from "@/components/art";
 import { Explain } from "@/components/teach";
-import { Badge, Button, Card, Field, Input, LinkButton, Textarea, useToast } from "@/components/ui";
+import { Badge, Button, Card, CountUp, Field, Hi, Input, LinkButton, Textarea, useToast } from "@/components/ui";
 import { assessReadiness } from "@/lib/launch";
 import { actions, emptyIdentity } from "@/lib/store";
 import type { BusinessIdentity, SelectedBusiness } from "@/lib/types";
@@ -119,15 +120,19 @@ function Wizard({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="max-w-3xl">
-      <PageHeader
+      <PageHero
         title="Your business details"
+        art={<SignArt className="w-full" />}
         description="Fill this in once and every document, prompt and page the app builds for you uses it. Skip anything you haven't decided — blanks turn into questions later, not into made-up answers."
       />
 
       <Card className="p-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex-1 min-w-[12rem]">
           <p className="text-sm font-medium">
-            {totalFilled} of {totalFields} details filled in
+            <Hi>
+              <CountUp value={totalFilled} />
+            </Hi>{" "}
+            of {totalFields} details filled in
           </p>
           <p className="text-[13px] text-muted leading-relaxed mt-0.5">
             {readiness.essentialsDone === readiness.essentialsTotal
@@ -147,7 +152,7 @@ function Wizard({ business }: { business: SelectedBusiness }) {
           const isOpen = open === step.id;
           const count = filledIn(draft, step);
           return (
-            <Card key={step.id} className="overflow-hidden">
+            <Card key={step.id} className="overflow-hidden" delay={i * 60}>
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? ("" as StepId) : step.id)}
@@ -166,8 +171,8 @@ function Wizard({ business }: { business: SelectedBusiness }) {
                   </span>
                   <span className="block text-[13px] text-muted leading-relaxed mt-1">{step.why}</span>
                 </span>
-                <Icon.spark
-                  className={`shrink-0 size-4 text-faint transition-transform ${isOpen ? "rotate-45" : ""}`}
+                <Icon.chevron
+                  className={`shrink-0 size-4 text-faint transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
                 />
               </button>
 

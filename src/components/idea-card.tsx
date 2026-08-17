@@ -12,7 +12,7 @@ import { LEVEL_LABEL, type BusinessIdea } from "@/lib/types";
 
 const BAND_TONE = { best: "good", good: "accent", possible: "neutral", poor: "warn" } as const;
 
-export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) {
+export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: number; index?: number }) {
   const inCompare = useAppState((s) => s.compareIds.includes(idea.id));
   const profile = useAppState((s) => s.profile);
   // Recomputed against the live profile rather than read off the idea, so
@@ -20,7 +20,13 @@ export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) 
   const fit = useMemo(() => computeFit(idea, profile, { withImprovements: false }), [idea, profile]);
 
   return (
-    <Card as="li" className="p-4 sm:p-5 flex flex-col gap-4 transition-shadow hover:shadow-card animate-in">
+    <Card
+      as="li"
+      className="p-4 sm:p-5 flex flex-col gap-4"
+      interactive
+      // Capped so a long list doesn't leave the last card waiting seconds.
+      delay={index !== undefined ? Math.min(index, 8) * 55 : 0}
+    >
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
@@ -53,7 +59,7 @@ export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) 
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-[13px] pt-3 border-t border-border">
-        <Metric label="Start cost" value={currency(idea.startupCost)} />
+        <Metric label="Start cost" value={currency(idea.startupCost)} emphasis />
         <Metric label="First $" value={`~${idea.speedToFirstRevenueDays}d`} />
         <Metric label="Difficulty" value={LEVEL_LABEL[idea.difficulty]} />
         <Metric
@@ -90,13 +96,24 @@ export function IdeaCard({ idea, rank }: { idea: BusinessIdea; rank?: number }) 
   );
 }
 
-function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Metric({
+  label,
+  value,
+  hint,
+  emphasis,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  /** For the one figure that decides whether someone reads further. */
+  emphasis?: boolean;
+}) {
   return (
     <div className="min-w-0">
       <div className="text-[11px] uppercase tracking-wide text-faint font-medium" title={hint}>
         {label}
       </div>
-      <div className="font-medium tabular-nums truncate">{value}</div>
+      <div className={`font-medium tabular-nums truncate ${emphasis ? "text-accent-text" : ""}`}>{value}</div>
     </div>
   );
 }

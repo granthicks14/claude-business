@@ -93,6 +93,40 @@ export function PageHeader({
 }
 
 /**
+ * A page header with an illustration.
+ *
+ * Used where a page opens a distinct piece of work and a picture helps the
+ * reader place it before reading a word. The art is decorative and hidden on
+ * small screens, where the space is better spent on the text.
+ */
+export function PageHero({
+  title,
+  description,
+  art,
+  action,
+}: {
+  title: string;
+  description?: ReactNode;
+  /** An illustration from `components/art`. Rendered without a label — the
+      heading beside it already says what the page is. */
+  art?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-5 py-5 sm:px-6 sm:py-6 mb-5 aurora animate-in">
+      <div className="relative z-[1] flex items-center gap-6">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{title}</h1>
+          {description && <p className="text-sm text-muted mt-2 leading-relaxed max-w-2xl">{description}</p>}
+          {action && <div className="mt-4 flex flex-wrap gap-2">{action}</div>}
+        </div>
+        {art && <div className="hidden md:block shrink-0 w-40 lg:w-52 text-muted/70">{art}</div>}
+      </div>
+    </div>
+  );
+}
+
+/**
  * The standard wrapper for anything AI-generated: one generate action, staged
  * loading, an error with retry, and a regenerate control once content exists.
  * Content is cached in local state, so revisiting never re-spends tokens.

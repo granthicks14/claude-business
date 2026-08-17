@@ -251,7 +251,7 @@ function Ideas() {
           ) : (
             <ul className="grid gap-3">
               {visible.map((idea, i) => (
-                <IdeaCard key={idea.id} idea={idea} rank={sort === "score" ? i + 1 : undefined} />
+                <IdeaCard key={idea.id} idea={idea} index={i} rank={sort === "score" ? i + 1 : undefined} />
               ))}
             </ul>
           )}

@@ -20,6 +20,11 @@ function Base({ children, ...props }: SVGProps<SVGSVGElement> & { children: Reac
 }
 
 export const Icon = {
+  chevron: (p: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  ),
   home: (p: SVGProps<SVGSVGElement>) => (
     <Base {...p}>
       <path d="M3 10.5 12 3l9 7.5" />

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { GeneratedNote, PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { GeneratedNote, PageHero, Ready, RequireBusiness } from "@/components/page";
 import { EvidenceCard } from "@/components/fit-score";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { AdvancedOnly, Explain } from "@/components/teach";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui";
 import { currency } from "@/lib/finance";
 import { assessEvidence } from "@/lib/engine";
+import { ShopArt } from "@/components/art";
 import { computeHealth } from "@/lib/health";
 import { READINESS_LABEL, assessReadiness } from "@/lib/launch";
 import { actions, useAppState } from "@/lib/store";
@@ -155,9 +156,10 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title={business.idea.name}
         description={business.idea.oneLiner}
+        art={<ShopArt className="w-full" />}
         action={
           liveBusinesses.length > 1 ? (
             <Select
@@ -583,7 +585,7 @@ function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
         }
       />
       <div className="flex flex-wrap items-center gap-5">
-        <ScoreRing score={readiness.score} size={80} label={READINESS_LABEL[readiness.verdict]} />
+        <ScoreRing score={readiness.score} size={80} label={READINESS_LABEL[readiness.verdict]} glow />
         <div className="flex-1 min-w-[13rem]">
           <p className="text-[13px] leading-relaxed">{readiness.headline}</p>
           {readiness.nextGap && (

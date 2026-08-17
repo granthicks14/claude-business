@@ -100,3 +100,17 @@ These are product requirements, not style preferences:
   hiding it.
 - Touch targets ≥ 32px, no horizontal overflow at 390px.
 - Reuse `components/ui.tsx` primitives before writing new ones.
+
+## Look and feel
+
+- **Colour is a signal, never decoration.** Emphasis goes through `<Hi>`, which
+  has four tones and no more: `accent` (the subject), `good` (something earned),
+  `warn` (needs attention), `mark` (the one key figure on the page).
+- **Illustrations are inline SVG** in `components/art.tsx`. There is no
+  `public/` and no CDN, so nothing is fetched. Strokes use `currentColor` and
+  details use the accent tokens, so one drawing serves both themes.
+- **Motion is short and never load-bearing.** Entrances ≤ 0.4s, draw-ins ≤ 0.7s,
+  and nothing conveys information that isn't also in the text. The global
+  `prefers-reduced-motion` block disables all of it; don't work around it.
+- Never glow or colour a low score red as an alarm — a low score early on is
+  normal, and the copy says so.
