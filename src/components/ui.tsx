@@ -222,7 +222,8 @@ export function Field({
   htmlFor,
   required,
 }: {
-  label: string;
+  /** ReactNode so a label can embed an inline <Explain> definition. */
+  label: ReactNode;
   hint?: ReactNode;
   children: ReactNode;
   htmlFor?: string;
@@ -635,7 +636,8 @@ export function Stat({
   hint,
   tone,
 }: {
-  label: string;
+  /** ReactNode so a label can embed an inline <Explain> definition. */
+  label: ReactNode;
   value: ReactNode;
   hint?: ReactNode;
   tone?: "good" | "warn" | "bad";

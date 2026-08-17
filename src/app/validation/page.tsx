@@ -27,6 +27,27 @@ import { useAIStatus, useAITask } from "@/lib/useAI";
 type RawValidation = Omit<ValidationReport, "generatedAt" | "researchMode" | "sources">;
 type RawCompetitors = { competitors: Omit<Competitor, "id">[] };
 
+/** The score, in words. Deliberately refuses to call anything "validated". */
+function plainVerdict(score: number): string {
+  if (score >= 70)
+    return "Promising. The pieces line up — there are people with this problem, and reason to think they'd pay. That still isn't proof; it means the idea is worth testing rather than worth assuming.";
+  if (score >= 50)
+    return "Mixed, which is normal at this stage. Some of it holds up and some of it is still guesswork. The gaps below are the things to go and find out.";
+  return "Uncertain. That's usually because nothing has been tested yet, not because the idea is bad — a new idea always scores like this. Evidence is what moves it.";
+}
+
+function PlainPoint({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <li className="text-sm flex gap-2 leading-relaxed">
+      <span className={ok ? "text-good shrink-0" : "text-warn shrink-0"} aria-hidden="true">
+        {ok ? "\u2713" : "!"}
+      </span>
+      <span className="sr-only">{ok ? "Good:" : "Watch out:"}</span>
+      {text}
+    </li>
+  );
+}
+
 export default function ValidationPage() {
   return (
     <Ready>
@@ -117,6 +138,49 @@ function Validation({ business }: { business: SelectedBusiness }) {
         >
           {report && (
             <div className="space-y-4">
+              {/* The number means nothing to a beginner on its own. Say what it
+                  is in words first, then show the score. */}
+              <Card className="p-5 border-accent-border bg-accent-soft/40">
+                <p className="text-xs font-semibold uppercase tracking-wide text-accent-text mb-2">
+                  Does this look like a good opportunity?
+                </p>
+                <p className="text-[15px] leading-relaxed">{plainVerdict(report.validationScore)}</p>
+                <ul className="mt-3 space-y-1.5">
+                  <PlainPoint
+                    ok={report.validationScore >= 55}
+                    text={report.validationScore >= 55 ? "There's reason to think people want this" : "Not much evidence yet that people want this"}
+                  />
+                  <PlainPoint
+                    ok={report.researchMode === "web"}
+                    text={
+                      report.researchMode === "web"
+                        ? "Some of this was checked against real sources"
+                        : "Nothing here has been independently checked — it's reasoning, not research"
+                    }
+                  />
+                  <PlainPoint
+                    ok={report.barriers.length <= 2}
+                    text={
+                      report.barriers.length <= 2
+                        ? "Nothing major stands in the way of starting"
+                        : `${report.barriers.length} things stand in the way — worth reading before you commit`
+                    }
+                  />
+                  <PlainPoint
+                    ok={report.openQuestions.length === 0}
+                    text={
+                      report.openQuestions.length === 0
+                        ? "No unanswered questions left"
+                        : `${report.openQuestions.length} ${report.openQuestions.length === 1 ? "question" : "questions"} nobody has answered yet`
+                    }
+                  />
+                </ul>
+                <p className="text-sm mt-3 pt-3 border-t border-accent-border/60 leading-relaxed">
+                  <span className="font-medium">What to do about it: </span>
+                  The tests at the bottom of this page turn the guesses into answers. Do those before spending money.
+                </p>
+              </Card>
+
               <Card className="p-5">
                 <div className="flex flex-wrap items-start gap-5 justify-between">
                   <div className="min-w-0 flex-1">

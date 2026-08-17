@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { Icon } from "@/components/icons";
 import { PageHeader, Ready, RequireBusiness } from "@/components/page";
@@ -20,6 +20,7 @@ import {
   Tabs,
   useToast,
 } from "@/components/ui";
+import { Explain } from "@/components/teach";
 import { currency, customersFromTraffic, runMoneyModel } from "@/lib/finance";
 import { actions, newId, useAppState } from "@/lib/store";
 import type { Customer, ExpenseEntry, MoneyModelInputs, RevenueEntry, SelectedBusiness } from "@/lib/types";
@@ -90,16 +91,16 @@ function Simulator({ business }: { business: SelectedBusiness }) {
           <Field label="Monthly traffic / leads" htmlFor="m-traffic" hint="Leave at 0 if you're not modelling a funnel.">
             <NumberInput id="m-traffic" value={inputs.monthlyTraffic} onChange={(monthlyTraffic) => set({ monthlyTraffic })} label="Monthly traffic" />
           </Field>
-          <Field label="Conversion rate" htmlFor="m-conv">
+          <Field label={<><Explain id="conversion-rate">Conversion rate</Explain></>} htmlFor="m-conv">
             <NumberInput id="m-conv" value={inputs.conversionRate} onChange={(conversionRate) => set({ conversionRate })} suffix="%" max={100} step={0.1} label="Conversion rate" />
           </Field>
-          <Field label="Cost to get a customer" htmlFor="m-cac" hint="Ads, samples, travel, your time if you pay for it.">
+          <Field label={<>Cost to get a <Explain id="cac">customer</Explain></>} htmlFor="m-cac" hint="Ads, samples, travel, your time if you pay for it.">
             <NumberInput id="m-cac" value={inputs.cac} onChange={(cac) => set({ cac })} prefix="$" label="Customer acquisition cost" />
           </Field>
-          <Field label="Variable cost per sale" htmlFor="m-var" hint="Materials, shipping, payment fees.">
+          <Field label={<><Explain id="variable-costs">Variable cost</Explain> per sale</>} htmlFor="m-var" hint="Materials, shipping, payment fees.">
             <NumberInput id="m-var" value={inputs.variableCostPerSale} onChange={(variableCostPerSale) => set({ variableCostPerSale })} prefix="$" label="Variable cost per sale" />
           </Field>
-          <Field label="Fixed monthly expenses" htmlFor="m-fixed" hint="Software, insurance, rent, subscriptions.">
+          <Field label={<><Explain id="fixed-costs">Fixed</Explain> monthly expenses</>} htmlFor="m-fixed" hint="Software, insurance, rent, subscriptions.">
             <NumberInput id="m-fixed" value={inputs.monthlyExpenses} onChange={(monthlyExpenses) => set({ monthlyExpenses })} prefix="$" label="Fixed monthly expenses" />
           </Field>
           <Field label="Refund / cancellation rate" htmlFor="m-refund">
@@ -142,9 +143,9 @@ function Simulator({ business }: { business: SelectedBusiness }) {
             <p className="text-xs text-muted mt-1 leading-relaxed min-h-8">{s.assumption}</p>
 
             <div className="mt-4 pt-4 border-t border-border space-y-3">
-              <Stat label="Monthly revenue" value={currency(s.monthlyRevenue)} hint={`${currency(s.annualRevenue)}/year`} />
+              <Stat label={<><Explain id="revenue">Monthly revenue</Explain></>} value={currency(s.monthlyRevenue)} hint={`${currency(s.annualRevenue)}/year`} />
               <Stat
-                label="Monthly profit"
+                label={<><Explain id="profit">Monthly profit</Explain></>}
                 value={currency(s.monthlyProfit)}
                 hint={`${currency(s.annualProfit)}/year`}
                 tone={s.monthlyProfit > 0 ? "good" : "bad"}
@@ -154,7 +155,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
             <dl className="mt-4 pt-4 border-t border-border space-y-1.5 text-[13px]">
               <Line label="Customers" value={String(Math.round(s.customers))} />
               <Line label="Gross profit" value={currency(s.grossProfit)} />
-              <Line label="Gross margin" value={`${s.grossMarginPct}%`} />
+              <Line label={<><Explain id="margin">Gross margin</Explain></>} value={`${s.grossMarginPct}%`} />
               <Line label="Acquisition spend" value={`−${currency(s.acquisitionSpend)}`} />
               <Line label="Fixed costs" value={`−${currency(s.fixedExpenses)}`} />
               {s.refundLoss > 0 && <Line label="Refunds" value={`−${currency(s.refundLoss)}`} />}
@@ -167,7 +168,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
       <div className="grid gap-3 sm:grid-cols-3">
         <Card className="p-5">
           <Stat
-            label="Break-even"
+            label={<><Explain id="break-even">Break-even</Explain></>}
             value={Number.isFinite(result.breakEvenCustomers) ? `${result.breakEvenCustomers} customers` : "Not reachable"}
             hint={
               Number.isFinite(result.breakEvenCustomers)
@@ -206,7 +207,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
   );
 }
 
-function Line({ label, value }: { label: string; value: string }) {
+function Line({ label, value }: { label: ReactNode; value: string }) {
   return (
     <div className="flex justify-between gap-3">
       <dt className="text-muted">{label}</dt>
