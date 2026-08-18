@@ -629,6 +629,106 @@ export interface WebsiteVersion {
   createdAt: number;
 }
 
+/**
+ * A competitor the founder actually looked at.
+ *
+ * Distinct from `Competitor`, which is generated output. This one carries a
+ * URL and a date because the whole value of competitor research is that a real
+ * person read a real price on a real page — and prices move, so a record
+ * without a date goes quietly wrong.
+ */
+export interface CompetitorRecord {
+  id: ID;
+  name: string;
+  url: string;
+  /** What they sell, in a sentence. */
+  offering: string;
+  /** Field-by-field comparison, used by the matrix and the gap finder. */
+  compare: Partial<Record<"price" | "targetCustomer" | "speed" | "quality" | "range" | "convenience" | "trust", string>>;
+  strengths: string[];
+  weaknesses: string[];
+  /** Real complaints, in customers' own words. Never generated. */
+  complaints: string[];
+  notes: string;
+  /** When the founder last looked. Drives staleness. */
+  checkedAt: number;
+  createdAt: number;
+}
+
+/** Bottom-up market sizing. Every input is supplied by the founder. */
+export interface MarketSizing {
+  inputs: {
+    population: number;
+    reachablePct: number;
+    wouldBuyPct: number;
+    spendPerYear: number;
+    winnablePct: number;
+  };
+  /** Where the population count came from, so it can be re-checked. */
+  source?: { what: string; url: string };
+  checkedAt: number;
+}
+
+/** Everything the founder has researched, with sources and dates. */
+export interface ResearchRecord {
+  sizing?: MarketSizing;
+  competitors: CompetitorRecord[];
+  /** How the founder positions themselves, for the comparison matrix. */
+  yours: Partial<Record<"price" | "targetCustomer" | "speed" | "quality" | "range" | "convenience" | "trust", string>>;
+  /** Answers to the research plan, each with a source and a date. */
+  findings: { taskId: string; answer: string; sourceUrl: string; checkedAt: number }[];
+}
+
+/**
+ * A snapshot of the strategy, taken when something substantial changed.
+ *
+ * Not an undo history — a record of the decisions, so a founder can see that
+ * they have changed customer three times in a month, which is itself the most
+ * important finding available to them.
+ */
+export interface StrategyVersion {
+  id: ID;
+  at: number;
+  /** Which of the six pillars moved. */
+  changed: ("customer" | "problem" | "product" | "pricing" | "model" | "positioning")[];
+  /** The values at the time, so the previous strategy can be read back. */
+  snapshot: {
+    targetCustomer: string;
+    problem: string;
+    offering: string;
+    price: number;
+    revenueModel: string;
+    positioning: string;
+  };
+  /** Why, when the founder said. */
+  reason: string;
+}
+
+/**
+ * One recorded customer conversation.
+ *
+ * Stored as answers rather than a blob of notes so the analysis can count
+ * across interviews — which is the only way a phrase in four conversations
+ * can be told apart from a phrase one person likes saying.
+ */
+export interface Interview {
+  id: ID;
+  /** Who they are, in the founder's own words. Never a real name is required. */
+  who: string;
+  /** Which customer type, when several are being tested. */
+  segment: string;
+  date: string; // yyyy-mm-dd
+  answers: { questionId: string; question: string; response: string }[];
+  /** Their exact words, kept verbatim — these end up on the website. */
+  quotes: string[];
+  objections: string[];
+  /** What actually happened, which is the part that counts as evidence. */
+  outcome: "no-interest" | "interested" | "committed" | "paid";
+  nextStep: string;
+  notes: string;
+  createdAt: number;
+}
+
 /** One recorded reading of a business's scores. See `intel/changelog.ts`. */
 export interface ScoreSnapshot {
   at: number;
@@ -719,6 +819,12 @@ export interface SelectedBusiness {
    * that produced it, rather than appearing to drift. See `intel/changelog.ts`.
    */
   scoreHistory?: ScoreSnapshot[];
+  /** Recorded customer conversations. See `customers/interviews.ts`. */
+  interviews?: Interview[];
+  /** Bottom-up market sizing inputs and competitor research. See `research/`. */
+  research?: ResearchRecord;
+  /** Substantial strategy changes, newest first. See `strategy.ts`. */
+  strategyVersions?: StrategyVersion[];
 }
 
 /** Which system answers generation requests. */

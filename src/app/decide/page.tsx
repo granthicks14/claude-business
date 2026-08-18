@@ -22,6 +22,7 @@ import {
   STATE_TONE,
   useIntel,
 } from "@/lib/intel";
+import { PILLAR_LABEL, STRATEGY_NOTE, strategyChanges, strategyPattern } from "@/lib/strategy";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -145,6 +146,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
             { id: "kill", label: "Try to kill it" },
             { id: "unknown", label: `Unknowns (${unknowns.length})` },
             { id: "panel", label: "The panel" },
+            { id: "history", label: "What you've changed" },
           ]}
           active={tab}
           onChange={setTab}
@@ -375,6 +377,8 @@ function Decide({ business }: { business: SelectedBusiness }) {
         </div>
       )}
 
+      {tab === "history" && <History business={business} />}
+
       <Card className="p-5 mt-6">
         <SectionHeader title="How to read this page" />
         <p className="text-sm text-muted leading-relaxed">{EPISTEMICS_NOTE}</p>
@@ -391,6 +395,79 @@ function Decide({ business }: { business: SelectedBusiness }) {
           for which number matters most.
         </p>
       </Card>
+    </div>
+  );
+}
+
+/* --------------------------------------------------------------- history --- */
+
+/**
+ * How often the strategy has moved.
+ *
+ * The cadence is shown above the content on purpose. A founder who has changed
+ * target customer four times in six weeks needs to see the four, not to read
+ * four reasonable-sounding explanations.
+ */
+function History({ business }: { business: SelectedBusiness }) {
+  const changes = strategyChanges(business).filter((c) => c.diffs.length);
+  const pattern = strategyPattern(business);
+
+  return (
+    <div className="space-y-4 mt-4">
+      <Card className="p-5">
+        <SectionHeader title={pattern.headline} />
+        <p className="text-sm leading-relaxed">{pattern.reading}</p>
+        {pattern.mostChanged && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Badge tone={pattern.mostChanged.times >= 3 ? "warn" : "accent"}>
+              {PILLAR_LABEL[pattern.mostChanged.pillar]} · {pattern.mostChanged.times}×
+            </Badge>
+            <span className="text-xs text-muted">the pillar that has moved most</span>
+          </div>
+        )}
+      </Card>
+
+      {changes.length === 0 ? (
+        <Card className="p-5">
+          <p className="text-sm text-muted leading-relaxed">
+            No substantial changes recorded yet. A version is taken when one of six things moves — who it&apos;s for,
+            the problem, what you sell, the price, how you make money, or how you describe it.
+          </p>
+        </Card>
+      ) : (
+        changes.map((c) => (
+          <Card key={c.version.id} className="p-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap gap-2">
+                {c.version.changed.map((p) => (
+                  <Badge key={p} tone="accent">
+                    {PILLAR_LABEL[p]}
+                  </Badge>
+                ))}
+              </div>
+              <span className="text-xs text-muted tabular-nums">
+                {new Date(c.version.at).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="mt-3 space-y-3">
+              {c.diffs.map((d) => (
+                <div key={d.pillar}>
+                  <p className="text-xs font-medium text-muted uppercase tracking-wide">{d.label}</p>
+                  <p className="text-sm text-muted line-through leading-relaxed">{d.from}</p>
+                  <p className="text-sm leading-relaxed">{d.to}</p>
+                </div>
+              ))}
+            </div>
+            {c.version.reason.trim() && (
+              <p className="text-sm text-muted mt-3 leading-relaxed">
+                <Hi tone="accent">Why:</Hi> {c.version.reason}
+              </p>
+            )}
+          </Card>
+        ))
+      )}
+
+      <p className="text-xs text-muted leading-relaxed">{STRATEGY_NOTE}</p>
     </div>
   );
 }

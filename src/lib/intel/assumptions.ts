@@ -118,10 +118,21 @@ export interface EvidenceSnapshot {
 export function snapshotEvidence(business: SelectedBusiness | null): EvidenceSnapshot {
   const customers = business?.customers ?? [];
   const revenueEntries = business?.revenue ?? [];
+  const interviews = business?.interviews ?? [];
 
   const paidCustomers = customers.filter((c) => c.status === "customer");
-  const conversations = customers.filter((c) => c.status === "conversation").length;
   const churned = customers.filter((c) => c.status === "churned").length;
+
+  /*
+   * A recorded interview is a real conversation, and the decision layer has to
+   * see it or the whole customer-research section would be a diary the rest of
+   * the app ignores. Counted alongside the customer list rather than instead of
+   * it, and an interview that ended in a commitment or a payment counts on the
+   * rung it earned rather than as a chat.
+   */
+  const interviewCommitments = interviews.filter((i) => i.outcome === "committed").length;
+  const interviewPayments = interviews.filter((i) => i.outcome === "paid").length;
+  const conversations = customers.filter((c) => c.status === "conversation").length + interviews.length;
   const revenue = revenueEntries.reduce((n, r) => n + r.amount, 0);
   const experimentsDone = (business?.experiments ?? []).filter(
     (e) => e.status === "done" && e.result.trim(),
@@ -135,16 +146,18 @@ export function snapshotEvidence(business: SelectedBusiness | null): EvidenceSna
   }
   const repeat = [...byCustomer.values()].filter((n) => n > 1).length;
 
-  const latestAt = revenueEntries.length
-    ? Math.max(...revenueEntries.map((r) => new Date(r.date).getTime()).filter(Number.isFinite))
-    : customers.length
-      ? Math.max(...customers.map((c) => c.createdAt).filter(Number.isFinite))
-      : undefined;
+  const dates = [
+    ...revenueEntries.map((r) => new Date(r.date).getTime()),
+    ...customers.map((c) => c.createdAt),
+    ...interviews.map((i) => new Date(i.date).getTime()),
+  ].filter((n) => Number.isFinite(n) && n > 0);
+  const latestAt = dates.length ? Math.max(...dates) : undefined;
 
   const observations: Observation[] = (
     [
       { kind: "repeat-payment", count: repeat, label: "Customers who bought more than once", latestAt },
-      { kind: "payment", count: paidCustomers.length, label: "People who paid", latestAt },
+      { kind: "payment", count: paidCustomers.length + interviewPayments, label: "People who paid", latestAt },
+      { kind: "booking", count: interviewCommitments, label: "People who committed to a next step", latestAt },
       { kind: "interview", count: conversations, label: "Real conversations", latestAt },
       { kind: "behaviour", count: experimentsDone, label: "Tests you completed and wrote up", latestAt },
     ] satisfies Observation[]
@@ -155,9 +168,9 @@ export function snapshotEvidence(business: SelectedBusiness | null): EvidenceSna
 
   return {
     observations,
-    contacted: customers.length,
+    contacted: customers.length + interviews.length,
     conversations,
-    paid: paidCustomers.length,
+    paid: paidCustomers.length + interviewPayments,
     repeat,
     churned,
     revenue,

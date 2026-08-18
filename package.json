@@ -9,7 +9,8 @@
     "check:deploy": "node scripts/check-deploy.mjs",
     "test:scoring": "node scripts/test-scoring.mjs",
     "test:intel": "node scripts/test-intel.mjs",
-    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs"
+    "test:research": "node scripts/test-research.mjs",
+    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs"
   },
   "repository": {
     "type": "git",

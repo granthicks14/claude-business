@@ -13,6 +13,7 @@ import { reverseEngineerGoal, scenarioSet, sensitivity, unitEconomics } from "./
 import { panel } from "./panel";
 import { weightsFor } from "./priorities";
 import { complexity, moat, opportunityCost } from "./shape";
+import { appendVersion, versionIfChanged } from "../strategy";
 
 export * from "./assumptions";
 export * from "./changelog";
@@ -151,6 +152,29 @@ export function useIntel(): IntelReport {
   const call = report.decision.call;
   const evidenceWeight = report.evidence.weight;
   const businessId = business?.id;
+
+  // Strategy versions are keyed on the six pillars rather than on the scores,
+  // because changing your target customer doesn't necessarily move a number —
+  // and that's exactly the change most worth recording.
+  const pillarKey = business
+    ? [
+        business.idea.targetCustomer,
+        business.idea.problem,
+        business.offer?.coreOffer ?? business.idea.offering,
+        business.money?.price,
+        business.idea.revenueModel,
+        business.plan?.uniqueValueProposition ?? business.identity?.tagline ?? "",
+      ].join("|")
+    : "";
+
+  useEffect(() => {
+    if (!businessId || !business) return;
+    const version = versionIfChanged(business);
+    if (version) {
+      actions.recordStrategyVersion(businessId, appendVersion(business.strategyVersions, version));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, pillarKey]);
 
   useEffect(() => {
     if (!businessId || !business) return;

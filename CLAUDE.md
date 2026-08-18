@@ -30,7 +30,8 @@ npm run build          # production build (type-checks)
 npm run typecheck      # types only
 npm run test:scoring   # 22 scoring calibration tests
 npm run test:intel     # 78 decision-layer calibration tests
-npm test               # both
+npm run test:research  # 74 customer/market/MVP calibration tests
+npm test               # all three
 npm run check:deploy   # 18 deployment checks, ends in a yes/no
 ```
 
@@ -51,6 +52,11 @@ src/lib/website-plan.ts Website copy recommendations, readiness, critique.
 src/lib/opportunity.ts  "Best opportunity near me" — no profile required.
 src/lib/intel/          The decision layer. Evidence grading, assumptions,
                         red team, verdicts, sensitivity. All deterministic.
+src/lib/customers/      Ideal customer, interview plan, interview analysis.
+src/lib/research/       Bottom-up market sizing, competitor records, gap finder.
+src/lib/mvp.ts          What to build first, and what not to build yet.
+src/lib/landing.ts      Three whole landing pages, not three headlines.
+src/lib/strategy.ts     What you've changed your mind about, and how often.
 src/lib/operations.ts   How a business runs: day, unit economics, journey.
 src/lib/spend.ts        What's worth paying for, and when.
 src/lib/ai/             Optional provider adapters. server-only.
@@ -172,6 +178,41 @@ quietly undone in the one place it matters.
 `intel/index.ts` assembles one report per state change. Pages read slices of it
 rather than recomputing, so the dashboard, the decision page and the money page
 cannot show three different answers.
+
+### Customer and market research
+
+The app cannot reach Census, industry bodies or any market-research source, so
+it does the only honest thing available: it structures the founder's own
+looking. It supplies the arithmetic, the questions, the search links and the
+grading; they supply the numbers and the sources. `research/market.ts` sizes a
+market bottom-up from five counts the founder makes themselves, and returns
+nulls rather than zeros when an input is missing — a market size of $0 reads as
+a finding.
+
+Competitors are records the founder entered, with a URL and a date, never
+generated. A generated competitor is an invented company, and the whole value
+of competitor research is that a real person read a real price on a real page.
+`findGaps` looks for where competitors *agree*, not where they're silent: a gap
+isn't "nobody offers X", it's where everyone made the same choice — and every
+gap carries a reason it might exist.
+
+`customers/interviews.ts` counts rather than interprets. A phrase is only
+reported when it appeared in more than one interview, because one person
+repeating themselves is a habit and two people using the same words is a
+finding. Interview outcomes feed `snapshotEvidence`, so a recorded commitment
+or payment moves the verdict — otherwise the research pages would be a diary
+the rest of the app ignores.
+
+### Storage: one key, deliberately
+
+State is one object under one localStorage key. That was checked rather than
+assumed: a deliberately heavy state — 50 full interviews, 20 competitor
+records, 40 strategy versions, 100 ideas — measures **0.29MB**, roughly 6% of a
+typical quota, and serialises in about a millisecond. Splitting it across keys
+would buy nothing measurable and cost a migration of data people can't get
+back. Writes are coalesced (120ms) and flushed on `pagehide`, `beforeunload`
+and visibility change, so the per-keystroke serialise cost is gone without any
+risk of losing the last write.
 
 ### Three scores, never merged
 

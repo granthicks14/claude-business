@@ -59,7 +59,7 @@ export interface Recommendation {
  * page says when nobody decided what it wanted. Every model here has a natural
  * next step and it is almost never "learn more".
  */
-const CTA_BY_MODEL: Record<string, { primary: string; why: string; alts: string[] }> = {
+export const CTA_BY_MODEL: Record<string, { primary: string; why: string; alts: string[] }> = {
   "local-service": {
     primary: "Get a free quote",
     why: "Local work is priced per job, so the natural next step is a quote rather than a purchase.",

@@ -51,6 +51,10 @@ function useNav(): NavGroup[] {
         items: [
           { href: "/business", label: "My business", icon: "building" },
           { href: "/decide", label: "Should I do this?", icon: "scales" },
+          { href: "/customers", label: "Talk to customers", icon: "chat" },
+          { href: "/research", label: "Research", icon: "search" },
+          { href: "/mvp", label: "What to build first", icon: "bolt" },
+          { href: "/landing", label: "Landing page", icon: "doc" },
           { href: "/business/identity", label: "Business details", icon: "doc" },
           { href: "/business/build", label: "Make things", icon: "bolt" },
           { href: "/business/operations", label: "How it runs", icon: "radar" },
