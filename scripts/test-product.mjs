@@ -1,0 +1,342 @@
+/**
+ * Calibration tests for the product layer: quality scoring, consistency,
+ * variants, tiered pricing, free-text intake and the worked example.
+ *
+ * The ones that matter most:
+ *   - the sample scores like a real early business, not a triumphant one,
+ *   - a contradiction only fires when both halves are actually present,
+ *   - variants are rescored honestly, including when they come out worse,
+ *   - intake never invents a customer it couldn't read.
+ *
+ * Run: node scripts/test-product.mjs
+ */
+
+import { spawnSync } from "node:child_process";
+import { writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const harness = join(process.cwd(), "scripts", ".product-harness.mts");
+
+writeFileSync(
+  harness,
+  `
+import { businessQuality, QUALITY_DIMENSIONS } from "../src/lib/quality.ts";
+import { checkConsistency, cascadeFrom } from "../src/lib/consistency.ts";
+import { ideaVariants, ANGLES } from "../src/lib/variants.ts";
+import { pricingTiers } from "../src/lib/pricing.ts";
+import { intakeFromText } from "../src/lib/intake.ts";
+import { sampleBusiness, sampleProfile, isSample, SAMPLE_BUSINESS_ID } from "../src/lib/sample.ts";
+import { snapshotEvidence, deriveLedger } from "../src/lib/intel/assumptions.ts";
+import { finalDecision } from "../src/lib/intel/decision.ts";
+import { analyseInterviews } from "../src/lib/customers/interviews.ts";
+import { generateIdeas } from "../src/lib/engine/index.ts";
+import { emptyProfile } from "../src/lib/store.ts";
+import type { FounderProfile, SelectedBusiness } from "../src/lib/types.ts";
+
+function profile(over: Partial<FounderProfile> = {}): FounderProfile {
+  return {
+    ...emptyProfile(),
+    skills: ["cleaning"], interests: ["cars"], startingBudget: 500, hoursPerWeek: 15,
+    incomeGoal: 1000, ageBand: "25-34", location: "Leeds", hasTransportation: true,
+    completedOnboarding: true, ...over,
+  };
+}
+
+const base = profile();
+const idea = generateIdeas(base, { angle: "balanced", count: 3, seed: 11 })[0];
+
+function business(over: Partial<SelectedBusiness> = {}): SelectedBusiness {
+  return {
+    id: "b1", ideaId: idea.id, idea, startedAt: Date.now(), revenueTarget: 1000,
+    competitors: [], models: [], personas: [], content: [], tasks: [], experiments: [],
+    assumptions: [], decisions: [], customers: [], revenue: [], expenses: [], radar: [],
+    money: { price: 100, customersPerMonth: 10, conversionRate: 5, monthlyTraffic: 0, cac: 10, monthlyExpenses: 200, variableCostPerSale: 20, refundRate: 0 },
+    ...over,
+  } as SelectedBusiness;
+}
+
+const results: Record<string, unknown> = {};
+
+/* ------------------------------------------------------------- quality --- */
+
+const cold = business();
+const qCold = businessQuality(cold, base);
+
+const sample = sampleBusiness();
+const qSample = businessQuality(sample, sampleProfile());
+
+results.quality = {
+  dimensions: qCold.factors.length,
+  allDimensionsPresent: QUALITY_DIMENSIONS.every((d) => qCold.factors.some((f) => f.dimension === d)),
+  everyFactorHasReason: qCold.factors.every((f) => f.reason.length > 20),
+  coldScore: qCold.score,
+  sampleScore: qSample.score,
+  sampleBeatsCold: qSample.score > qCold.score,
+  coldConfidenceLow: qCold.confidence === "low",
+  sampleConfidenceHigher: qSample.confidence !== "low",
+  hasFastestImprovement: qCold.fastestImprovement !== null,
+  improvementPointsSomewhere: (qCold.fastestImprovement?.where ?? "").startsWith("/"),
+  weaknessesSorted: qCold.weaknesses.length > 0,
+  deterministic: businessQuality(cold, base).score === qCold.score,
+  bandsMakeSense: qCold.band === "weak" || qCold.band === "early",
+};
+
+/* --------------------------------------------------------- consistency --- */
+
+/* Each rule needs both halves present, so a blank business must stay quiet. */
+const blank = business({ idea: { ...idea, targetCustomer: "", problem: "", offering: "" }, money: { ...cold.money, price: 0 } });
+
+/* Consumer customer at an enterprise price. */
+const mismatchPrice = business({
+  idea: { ...idea, targetCustomer: "Busy people and homeowners in my area" },
+  money: { ...cold.money, price: 4000 },
+});
+
+/* More customers than hours can deliver. */
+const overCapacity = business({
+  idea: { ...idea, name: "Post-construction cleaning", oneLiner: "Post construction cleaning for builders" },
+  money: { ...cold.money, customersPerMonth: 60 },
+});
+
+/* Negative contribution with acquisition spend. */
+const bleeding = business({ money: { ...cold.money, price: 20, variableCostPerSale: 30, cac: 15 } });
+
+results.consistency = {
+  blankStaysQuiet: checkConsistency(blank, base).tooEarly,
+  cleanBusinessOk: checkConsistency(cold, base).contradictions.length,
+  priceMismatchFires: checkConsistency(mismatchPrice, base).contradictions.some((c) => c.id === "consumer-price"),
+  bleedingIsBlocking: checkConsistency(bleeding, base).contradictions.some((c) => c.id === "negative-contribution" && c.severity === "blocking"),
+  everyContradictionHasFixes: checkConsistency(mismatchPrice, base).contradictions.every((c) => c.fixes.length >= 2),
+  everyContradictionNamesBoth: checkConsistency(mismatchPrice, base).contradictions.every((c) => c.between[0] && c.between[1]),
+  severitySorted: (() => {
+    const cs = checkConsistency(bleeding, profile({ startingBudget: 1 })).contradictions;
+    const rank = { blocking: 0, serious: 1, "worth-checking": 2 };
+    return cs.every((c, i, a) => i === 0 || rank[a[i - 1].severity] <= rank[c.severity]);
+  })(),
+  coherenceFallsWithProblems: checkConsistency(bleeding, base).coherence < checkConsistency(cold, base).coherence,
+};
+
+const cascade = cascadeFrom(["customer"]);
+results.cascade = {
+  customerAffectsMany: cascade.affected.length >= 5,
+  everyAffectedHasWhy: cascade.affected.every((a) => a.why.length > 20),
+  everyAffectedHasWhere: cascade.affected.every((a) => a.where.startsWith("/")),
+  dedupes: (() => {
+    const both = cascadeFrom(["customer", "problem"]);
+    return new Set(both.affected.map((a) => a.id)).size === both.affected.length;
+  })(),
+  emptyIsQuiet: cascadeFrom([]).affected.length === 0 && cascadeFrom([]).prompt === "",
+  promptNamesCount: /\\d+ other part/.test(cascade.prompt),
+};
+
+/* ------------------------------------------------------------ variants --- */
+
+const variants = ideaVariants(idea, base);
+results.variants = {
+  count: variants.length,
+  allAngles: ANGLES.every((a) => variants.some((v) => v.angle === a)),
+  everyOneHasTradeoff: variants.every((v) => v.tradeoff.length > 40),
+  everyOneHasChanges: variants.every((v) => v.changes.length >= 2),
+  everyOneRescored: variants.every((v) => typeof v.fit === "number" && v.fit >= 0 && v.fit <= 100),
+  deltasVary: new Set(variants.map((v) => v.delta)).size > 1,
+  someDeltaNegativeOrZero: variants.some((v) => v.delta <= 0),
+  ideasDiffer: new Set(variants.map((v) => v.idea.oneLiner)).size === variants.length,
+  saferCostsLess: (variants.find((v) => v.angle === "safer")?.idea.startupCost ?? 99) < (idea.startupCost || 100),
+  easierIsFaster: (variants.find((v) => v.angle === "easier")?.idea.timeToLaunchDays ?? 99) <= 7,
+  deterministic: ideaVariants(idea, base)[0].fit === variants[0].fit,
+};
+
+/* ------------------------------------------------------------- pricing --- */
+
+const tiers = pricingTiers(business());
+const noPrice = pricingTiers(business({ money: { ...cold.money, price: 0 } }));
+const badMargin = pricingTiers(business({ money: { ...cold.money, price: 30, variableCostPerSale: 40 } }));
+
+results.pricing = {
+  blockedWithoutPrice: noPrice.blocked !== null && noPrice.tiers.length === 0,
+  threeTiers: tiers.tiers.length === 3,
+  ascending: tiers.tiers[0].price < tiers.tiers[1].price && tiers.tiers[1].price < tiers.tiers[2].price,
+  coreIsEntered: tiers.tiers.find((t) => t.key === "core")?.price === 100,
+  oneRecommended: tiers.tiers.filter((t) => t.recommended).length === 1,
+  everyTierHasJob: tiers.tiers.every((t) => t.job.length > 30),
+  everyTierHasWho: tiers.tiers.every((t) => t.who.length > 20),
+  hasLogic: tiers.logic.length >= 3,
+  hasAssumptions: tiers.assumptions.length >= 2,
+  warnsOnBadMargin: badMargin.warnings.length > 0,
+  roundPrices: tiers.tiers.every((t) => t.price % 5 === 0),
+};
+
+/* -------------------------------------------------------------- intake --- */
+
+const clear = intakeFromText("A mobile car detailing service for busy professionals who don't have time to take the car anywhere.", base);
+const vague = intakeFromText("Something with AI", base);
+const cleaning = intakeFromText("Post-construction cleaning for builders after a site finishes", base);
+const negated = intakeFromText("Mobile dog grooming for elderly owners who can't get their dog to a salon.", base);
+
+results.intake = {
+  /* The price question must survive a niche match — see intake.ts. */
+  alwaysAsksPrice: [clear, vague, cleaning, negated].every((i) =>
+    i.missing.some((m) => /charge/i.test(m.field)),
+  ),
+  /* "can't get their dog to a salon" must not come back as "Get their dog to a salon". */
+  keepsNegation: (() => {
+    const p = negated.inferred.find((i) => i.field === "The problem")?.value ?? "";
+    return /can'?t/i.test(p);
+  })(),
+  negatedProblem: negated.inferred.find((i) => i.field === "The problem")?.value ?? "(none)",
+  readsCustomer: clear.inferred.some((i) => i.field === "Who it's for" && /professional/i.test(i.value)),
+  readsMode: clear.inferred.some((i) => i.field === "Where it happens"),
+  vagueDeclaresMissing: vague.missing.length >= 2,
+  vagueDoesNotInventCustomer: vague.idea.targetCustomer === "" || vague.missing.some((m) => m.field === "Who it's for"),
+  everyMissingHasPrompt: vague.missing.every((m) => m.prompt.length > 15 && m.why.length > 20),
+  everyInferredHasBasis: clear.inferred.every((i) => i.basis.length > 10),
+  matchesNiche: cleaning.niche !== null,
+  nicheGivesDepth: cleaning.idea.startupCost > 0,
+  noNicheIsHonest: vague.niche === null && /doesn't have detailed knowledge/i.test(vague.note),
+  scoredLikeAnyIdea: clear.idea.opportunityScore > 0 && clear.idea.opportunityScore <= 100,
+  neverInventsRevenue: clear.idea.monthlyRevenuePotential.low === 0,
+};
+
+/* -------------------------------------------------------------- sample --- */
+
+const sEvidence = snapshotEvidence(sample);
+const sLedger = deriveLedger(sample, sampleProfile());
+const sDecision = finalDecision(sample, sampleProfile(), sEvidence, sLedger, 78);
+const sInterviews = analyseInterviews(sample.interviews ?? []);
+
+results.sample = {
+  isFlagged: isSample(sample) && sample.id === SAMPLE_BUSINESS_ID,
+  ownIdIsStable: sample.id === "sample_biz",
+  hasInterviews: (sample.interviews ?? []).length >= 5,
+  hasCompetitors: (sample.research?.competitors ?? []).length >= 2,
+  hasSizing: !!sample.research?.sizing,
+  hasStrategyHistory: (sample.strategyVersions ?? []).length >= 2,
+  paidCustomers: sEvidence.paid,
+  conversations: sEvidence.conversations,
+  /* The important one: an honest mid-validation picture, not a victory lap. */
+  decisionIsNotBuild: sDecision.call !== "build",
+  decisionCall: sDecision.call,
+  qualityIsRealistic: qSample.score > 35 && qSample.score < 85,
+  interviewsProduceFindings: sInterviews.enoughToRead && sInterviews.repeatedPhrases.length > 0,
+  interviewsFindContradiction: sInterviews.contradictions.length > 0,
+  noFakeTestimonials: (sample.identity?.testimonials ?? []).length === 0,
+  competitorsHaveSourceUrls: (sample.research?.competitors ?? []).every((c) => c.url.startsWith("http")),
+  sizingHasSource: !!sample.research?.sizing?.source?.url,
+};
+
+console.log(JSON.stringify(results));
+`,
+  "utf8",
+);
+
+const hook = join(process.cwd(), "scripts", "ts-resolve-hook.mjs");
+const run = spawnSync(
+  process.execPath,
+  ["--experimental-strip-types", "--no-warnings", "--experimental-loader", pathToFileURL(hook).href, harness],
+  { encoding: "utf8", env: { ...process.env }, maxBuffer: 20 * 1024 * 1024 },
+);
+
+rmSync(harness, { force: true });
+
+if (run.status !== 0) {
+  console.error("Harness failed:\n", run.stderr || run.stdout);
+  process.exit(1);
+}
+
+const line = run.stdout.trim().split("\n").filter((l) => l.startsWith("{")).pop();
+const r = JSON.parse(line);
+
+let failures = 0;
+const check = (name, ok, detail = "") => {
+  if (!ok) failures++;
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? ` — ${detail}` : ""}`);
+};
+
+console.log("\n--- business quality ---");
+check("all thirteen dimensions are scored", r.quality.dimensions === 13 && r.quality.allDimensionsPresent, `${r.quality.dimensions}`);
+check("every dimension explains its number", r.quality.everyFactorHasReason);
+check("the same inputs give the same score", r.quality.deterministic);
+check(
+  "a business with evidence scores above one without",
+  r.quality.sampleBeatsCold,
+  `cold ${r.quality.coldScore} vs worked example ${r.quality.sampleScore}`,
+);
+check("an untested business is labelled low confidence", r.quality.coldConfidenceLow);
+check("and one with evidence isn't", r.quality.sampleConfidenceHigher);
+check("it names the fastest improvement", r.quality.hasFastestImprovement && r.quality.improvementPointsSomewhere);
+check("an empty business doesn't score well", r.quality.bandsMakeSense, `band from score ${r.quality.coldScore}`);
+
+console.log("\n--- consistency ---");
+check("an empty business is called too early, not contradictory", r.consistency.blankStaysQuiet);
+check("consumer customer at an enterprise price is caught", r.consistency.priceMismatchFires);
+check("losing money on every sale is blocking", r.consistency.bleedingIsBlocking);
+check("every contradiction offers more than one way out", r.consistency.everyContradictionHasFixes);
+check("every contradiction names both halves", r.consistency.everyContradictionNamesBoth);
+check("blocking problems are listed first", r.consistency.severitySorted);
+check("coherence falls when things clash", r.consistency.coherenceFallsWithProblems);
+
+console.log("\n--- cascading changes ---");
+check("changing the customer invalidates several sections", r.cascade.customerAffectsMany);
+check("each one says why it's now stale", r.cascade.everyAffectedHasWhy);
+check("and where to go and fix it", r.cascade.everyAffectedHasWhere);
+check("overlapping pillars don't duplicate sections", r.cascade.dedupes);
+check("no changes means no prompt", r.cascade.emptyIsQuiet);
+check("the prompt says how many parts are affected", r.cascade.promptNamesCount);
+
+console.log("\n--- idea variants ---");
+check("five variants, one per angle", r.variants.count === 5 && r.variants.allAngles);
+check("each is a genuinely different idea", r.variants.ideasDiffer);
+check("each states what it costs you", r.variants.everyOneHasTradeoff);
+check("each lists what actually changed", r.variants.everyOneHasChanges);
+check("each is rescored against the real profile", r.variants.everyOneRescored);
+check("the scores genuinely differ", r.variants.deltasVary);
+check(
+  "at least one variant scores no better — the app doesn't rig its own suggestions",
+  r.variants.someDeltaNegativeOrZero,
+);
+check("the safer version really does cost less to start", r.variants.saferCostsLess);
+check("the easier version really is faster", r.variants.easierIsFaster);
+check("same inputs, same output", r.variants.deterministic);
+
+console.log("\n--- tiered pricing ---");
+check("nothing is invented without a price", r.pricing.blockedWithoutPrice);
+check("three tiers, ascending", r.pricing.threeTiers && r.pricing.ascending);
+check("the middle tier is the price you actually set", r.pricing.coreIsEntered);
+check("exactly one is recommended", r.pricing.oneRecommended);
+check("every tier says who it's for and why it exists", r.pricing.everyTierHasWho && r.pricing.everyTierHasJob);
+check("the reasoning and assumptions are shown", r.pricing.hasLogic && r.pricing.hasAssumptions);
+check("a loss-making tier is flagged", r.pricing.warnsOnBadMargin);
+check("prices are round numbers, not formula output", r.pricing.roundPrices);
+
+console.log("\n--- free-text intake ---");
+check("it reads the customer out of a sentence", r.intake.readsCustomer);
+check("it works out where the business happens", r.intake.readsMode);
+check("a vague description produces explicit gaps", r.intake.vagueDeclaresMissing);
+check("and never invents a customer it couldn't read", r.intake.vagueDoesNotInventCustomer);
+check("every gap comes with the question to answer", r.intake.everyMissingHasPrompt);
+check("everything it inferred says where that came from", r.intake.everyInferredHasBasis);
+check("a known trade is matched and gains real depth", r.intake.matchesNiche && r.intake.nicheGivesDepth);
+check("an unknown trade says so plainly", r.intake.noNicheIsHonest);
+check("your own idea is scored the same way a generated one is", r.intake.scoredLikeAnyIdea);
+check("it never invents a revenue figure", r.intake.neverInventsRevenue);
+check("it asks what you'd charge even when it recognises the trade", r.intake.alwaysAsksPrice);
+check("it repeats a problem back without dropping the negation", r.intake.keepsNegation, r.intake.negatedProblem);
+
+console.log("\n--- the worked example ---");
+check("it is flagged as a sample", r.sample.isFlagged);
+check("it has interviews, competitors, sizing and history", r.sample.hasInterviews && r.sample.hasCompetitors && r.sample.hasSizing && r.sample.hasStrategyHistory);
+check(
+  "it shows a real mid-validation picture, not a victory lap",
+  r.sample.decisionIsNotBuild,
+  `${r.sample.paidCustomers} payments, ${r.sample.conversations} conversations → "${r.sample.decisionCall}"`,
+);
+check("its quality score is realistic rather than flattering", r.sample.qualityIsRealistic, `${r.quality.sampleScore}`);
+check("its interviews produce a real finding", r.sample.interviewsProduceFindings);
+check("and a real contradiction", r.sample.interviewsFindContradiction);
+check("it contains no fabricated testimonials", r.sample.noFakeTestimonials);
+check("its competitors carry source URLs", r.sample.competitorsHaveSourceUrls);
+check("its market sizing carries a source", r.sample.sizingHasSource);
+
+console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
+process.exit(failures === 0 ? 0 : 1);

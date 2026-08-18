@@ -5,6 +5,9 @@ import Link from "next/link";
 import { Icon } from "./icons";
 import { Badge, Card, Hi, LinkButton } from "./ui";
 import { CALL_LABEL, CALL_TONE, STATE_LABEL, STATE_TONE, useIntel } from "@/lib/intel";
+import { QUALITY_BAND_LABEL, businessQuality } from "@/lib/quality";
+import { checkConsistency } from "@/lib/consistency";
+import { useAppState } from "@/lib/store";
 
 /**
  * The state of the business in one card.
@@ -19,9 +22,13 @@ import { CALL_LABEL, CALL_TONE, STATE_LABEL, STATE_TONE, useIntel } from "@/lib/
  * because a dashboard that only shows progress is a dashboard that flatters.
  */
 export function CommandCentre() {
-  const { state, readiness, decision, redTeam, change, unknowns } = useIntel();
+  const { state, readiness, decision, redTeam, change, unknowns, business } = useIntel();
+  const profile = useAppState((s) => s.profile);
   const threat = redTeam.biggestThreat;
   const unknown = unknowns[0];
+
+  const quality = business ? businessQuality(business, profile) : null;
+  const contradictions = business ? checkConsistency(business, profile).contradictions.length : 0;
 
   return (
     <Card className="p-5">
@@ -31,6 +38,16 @@ export function CommandCentre() {
           Stage {readiness.stage}/10 · {readiness.label}
         </Badge>
         <Badge tone={CALL_TONE[decision.call]}>{CALL_LABEL[decision.call]}</Badge>
+        {quality && (
+          <Badge tone={quality.band === "strong" ? "good" : quality.band === "weak" ? "warn" : "accent"}>
+            Quality {quality.score} · {QUALITY_BAND_LABEL[quality.band]}
+          </Badge>
+        )}
+        {contradictions > 0 && (
+          <Badge tone="warn">
+            {contradictions} contradiction{contradictions === 1 ? "" : "s"}
+          </Badge>
+        )}
       </div>
 
       <p className="text-[15px] mt-3 leading-relaxed font-medium">{decision.headline}</p>
@@ -67,6 +84,9 @@ export function CommandCentre() {
         <LinkButton href="/decide" size="sm" variant="secondary">
           See the full argument
         </LinkButton>
+        <Link href="/quality" className="text-sm text-accent-text hover:underline">
+          Is it any good?
+        </Link>
         <Link href="/money" className="text-sm text-accent-text hover:underline">
           Which number matters most
         </Link>

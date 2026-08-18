@@ -32,6 +32,7 @@ function useNav(): NavGroup[] {
         title: "Discover",
         items: [
           { href: "/", label: "Home", icon: "home" },
+          { href: "/start", label: "Start a business", icon: "spark" },
           { href: "/ideas", label: "Ideas", icon: "spark", badge: state.ideas.length || undefined },
           { href: "/best", label: "Find my best", icon: "target" },
           { href: "/discover", label: "Explore", icon: "compass" },
@@ -50,7 +51,9 @@ function useNav(): NavGroup[] {
         title: "Build",
         items: [
           { href: "/business", label: "My business", icon: "building" },
+          { href: "/quality", label: "Is it any good?", icon: "target" },
           { href: "/decide", label: "Should I do this?", icon: "scales" },
+          { href: "/improve", label: "Make it better", icon: "spark" },
           { href: "/customers", label: "Talk to customers", icon: "chat" },
           { href: "/research", label: "Research", icon: "search" },
           { href: "/mvp", label: "What to build first", icon: "bolt" },

@@ -10,7 +10,8 @@
     "test:scoring": "node scripts/test-scoring.mjs",
     "test:intel": "node scripts/test-intel.mjs",
     "test:research": "node scripts/test-research.mjs",
-    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs"
+    "test:product": "node scripts/test-product.mjs",
+    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs && node scripts/test-product.mjs"
   },
   "repository": {
     "type": "git",

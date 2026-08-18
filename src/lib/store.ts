@@ -362,6 +362,41 @@ export const actions = {
   },
 
   /** Returns false and changes nothing if this isn't one of our backups. */
+  /* ------------------------------------------------------------ the sample */
+
+  /**
+   * Loads the worked example alongside the user's own work.
+   *
+   * Deliberately additive: the sample is pushed onto `businesses` and made
+   * active, so nothing the user has done is touched. `clearSample` removes
+   * exactly that one entry. A sample that overwrote real work — or that
+   * couldn't be told apart from it afterwards — would be much worse than no
+   * sample at all.
+   */
+  loadSample(business: SelectedBusiness, profile: FounderProfile) {
+    update((s) => {
+      const withoutSample = s.businesses.filter((b) => b.id !== business.id);
+      return {
+        ...s,
+        // Only borrow the example profile when the user hasn't written their own.
+        profile: s.profile.completedOnboarding ? s.profile : profile,
+        businesses: [business, ...withoutSample],
+        activeBusinessId: business.id,
+      };
+    });
+  },
+
+  clearSample(sampleId: ID) {
+    update((s) => {
+      const businesses = s.businesses.filter((b) => b.id !== sampleId);
+      return {
+        ...s,
+        businesses,
+        activeBusinessId: s.activeBusinessId === sampleId ? (businesses[0]?.id ?? null) : s.activeBusinessId,
+      };
+    });
+  },
+
   /* --------------------------------------------------- research & customers */
 
   addInterview(businessId: ID, interview: Interview) {

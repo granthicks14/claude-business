@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { Icon } from "./icons";
+import { SampleBanner } from "./sample-banner";
 import { AILoading, Button, Card, EmptyState, ErrorPanel, LinkButton, SectionHeader, Skeleton } from "./ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
@@ -24,7 +25,15 @@ export function Ready({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  return <>{children}</>;
+  // The sample banner lives here rather than on each page: the example stays
+  // active across navigation, and a label only on the page that loaded it would
+  // be gone by the time anyone screenshots anything.
+  return (
+    <>
+      <SampleBanner />
+      {children}
+    </>
+  );
 }
 
 export function RequireProfile({ children }: { children: ReactNode }) {

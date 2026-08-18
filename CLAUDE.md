@@ -31,8 +31,9 @@ npm run typecheck      # types only
 npm run test:scoring   # 22 scoring calibration tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
-npm test               # all three
-npm run check:deploy   # 18 deployment checks, ends in a yes/no
+npm run test:product   # 60 quality/consistency/variant/intake/sample tests
+npm test               # all four
+npm run check:deploy   # 20 deployment checks, ends in a yes/no
 ```
 
 ## Architecture
@@ -46,6 +47,12 @@ src/lib/engine/         The Business Intelligence Engine — all local, all free
 src/lib/engine/knowledge/niches/  Micro-niches with real operational depth.
 src/lib/fit.ts          Business Fit Score (does this suit me?).
 src/lib/launch.ts       Launch Readiness (is this business prepared?).
+src/lib/quality.ts      Business Quality Score (is this worth building at all?).
+src/lib/consistency.ts  Pairs that can't both be true, and what a change breaks.
+src/lib/variants.ts     Five reframings of one idea, each rescored.
+src/lib/pricing.ts      Three tiers derived from the one price you entered.
+src/lib/intake.ts       A typed sentence becomes a scored idea, gaps declared.
+src/lib/sample.ts       The worked example. Fictional, and says so everywhere.
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
@@ -66,6 +73,12 @@ The workspace lives under `/business`: the dashboard, `/identity` (business
 details wizard), `/build` (prompt builder), `/website` (website builder),
 `/spend` (what to pay for), `/launch` (readiness checklist). `/opportunity` is a
 second front door for people who don't know what business they want.
+
+`/start` is the front door proper. Three routes in — "I have an idea", "help me
+find one", "I already run something" — because the app previously served only
+the middle one, and made someone who arrived knowing what they wanted to build
+answer twenty questions about themselves first. `/quality` answers "is this any
+good?", `/improve` answers "how do I make it better?".
 
 ### Never show an empty box
 
@@ -214,16 +227,49 @@ back. Writes are coalesced (120ms) and flushed on `pagehide`, `beforeunload`
 and visibility change, so the per-keystroke serialise cost is gone without any
 risk of losing the last write.
 
-### Three scores, never merged
+### Four scores, never merged
 
 - **Business Fit** (`fit.ts`) — does this suit *me*? Ten weighted factors,
   computed from the profile. Weights in `SCORING_WEIGHTS`.
+- **Business Quality** (`quality.ts`) — is this worth building *by anyone*?
+  Thirteen dimensions, weighted, every one read off something recorded rather
+  than assigned. The only score that doesn't consult the founder at all.
 - **Launch Readiness** (`launch.ts`) — is this business *prepared*? Counts what
   actually exists: offer, price, contact, validation, first-customer plan.
 - **Operational Readiness** (`operations.ts`) — do I understand how it *runs*?
 
 Someone can score well on fit and readiness with no idea what they'd do at 9am
-on Monday. Merging any pair of these hides exactly that.
+on Monday, and a business can be excellent and a poor fit for the person in
+front of it. Merging any pair of these hides exactly that.
+
+### The consistency check
+
+`consistency.ts` looks for pairs that can't both be true — a consumer price
+with a six-month sales cycle, a capacity that can't reach the revenue target,
+a premium position with no proof. Every rule needs **both halves present**
+before it fires, so a blank business is reported as too early rather than
+contradictory; an app that finds nine problems in an empty form teaches people
+to ignore it.
+
+`cascadeFrom` answers the other half: when the customer or the price changes,
+which sections are now stale. That's the failure mode where nothing looks
+broken — the pages still render their old answer, computed from a fact that
+has since changed.
+
+### The worked example
+
+`sample.ts` is a complete fictional business — interviews, competitors with
+URLs, bottom-up sizing with a source, two strategy versions. It exists because
+"see what this does before spending twenty minutes on a questionnaire" is the
+difference between a link that converts and one that doesn't.
+
+It is calibrated to land mid-validation on purpose: one payment, one booking
+not yet paid, an objection appearing in half the conversations. The verdict
+reads *validate more*, and the interview analysis surfaces a real contradiction.
+A sample that returns BUILD would demonstrate the one thing the app is built not
+to do. `SampleBanner` rides every workspace page for as long as it's loaded,
+because people navigate away, come back tomorrow and screenshot things —
+and `loadSample` is additive, so opening it never touches the user's own work.
 
 ### Two profiles, never merged
 
@@ -264,6 +310,17 @@ These are product requirements, not style preferences:
 - **Never render a fraction of a person or a purchase.** "0.75 customers a
   month" and "0.13 sales to payback" are arithmetically fine and unreadable.
   Below one, say it in words.
+- **Never repeat a description back with the meaning changed.** `intake.ts`
+  captures the verb inside the match, because reading "who can't get their dog
+  to a salon" and answering "The problem: get their dog to a salon" states the
+  opposite of what the user wrote — worse than saying nothing, because they
+  assume the app understood.
+- **Recognising a trade is not knowing its price.** A niche entry carries a
+  pricing *basis* and deliberately no figure, so a catalogue match tells the
+  app how the money is counted and nothing about how much. Intake asks what
+  you'd charge on every route, matched or not — skipping it on a match meant
+  the most consequential number went unasked exactly when the app looked most
+  confident.
 
 ## Conventions
 

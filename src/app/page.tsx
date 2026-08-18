@@ -118,16 +118,16 @@ export default function HomePage() {
           <div className="max-w-3xl">
           <Badge tone="accent" className="mb-5">
             <span className="size-1.5 rounded-full bg-accent animate-[pulse-dot_2.4s_ease-in-out_infinite]" aria-hidden="true" />
-            Personal AI startup partner
+            Your AI co-founder
           </Badge>
 
           <h1 className="text-[2.1rem] leading-[1.1] sm:text-5xl sm:leading-[1.08] font-semibold tracking-tight">
-            Turn what you know into <span className="gradient-text">a business</span>.
+            Build a business <span className="gradient-text">worth building</span>.
           </h1>
 
           <p className="mt-4 text-base sm:text-lg text-muted max-w-2xl leading-relaxed">
-            Tell it what you&apos;re good at, what you have, and what you want — and discover businesses you can{" "}
-            <Hi>actually build</Hi>.
+            Turn an idea into a validated strategy, a real offer and a launch plan — with a co-founder that will{" "}
+            <Hi>tell you when it&apos;s a bad idea</Hi>.
           </p>
 
           {ready && (
@@ -143,16 +143,11 @@ export default function HomePage() {
                 </>
               ) : (
                 <>
-                  <LinkButton
-                    href={hasProfile ? "/ideas" : "/onboarding"}
-                    variant="primary"
-                    size="lg"
-                    icon={<Icon.bolt />}
-                  >
-                    Find my business
+                  <LinkButton href="/start" variant="primary" size="lg" icon={<Icon.bolt />}>
+                    Build my business
                   </LinkButton>
-                  <LinkButton href="/discover" size="lg">
-                    Explore ideas
+                  <LinkButton href="/start" size="lg" icon={<Icon.spark />}>
+                    Explore an example
                   </LinkButton>
                 </>
               )}
