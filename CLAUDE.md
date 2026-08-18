@@ -40,12 +40,14 @@ src/components/         Design system (ui.tsx) + shared feature components.
 src/lib/store.ts        The single source of truth. localStorage + useSyncExternalStore.
 src/lib/types.ts        Every data model. AppState is one versioned object.
 src/lib/engine/         The Business Intelligence Engine — all local, all free.
+src/lib/engine/knowledge/niches/  Micro-niches with real operational depth.
 src/lib/fit.ts          Business Fit Score (does this suit me?).
 src/lib/launch.ts       Launch Readiness (is this business prepared?).
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
 src/lib/opportunity.ts  "Best opportunity near me" — no profile required.
+src/lib/operations.ts   How a business runs: day, unit economics, journey.
 src/lib/spend.ts        What's worth paying for, and when.
 src/lib/ai/             Optional provider adapters. server-only.
 ```
@@ -84,15 +86,37 @@ Key modules: `match.ts` (profile → signals), `ideas.ts` (generation),
 `feasibility.ts` (can-you-start), `actions.ts` (stage + next action),
 `evidence.ts` (validation status), `generators/*` (plans, toolkit, explainer).
 
-### Two scores, never merged
+### The niche catalogue
+
+"A cleaning business" isn't a business, it's a category. Post-construction
+cleaning and short-let turnover share a word and nothing else: different buyer,
+sale, equipment, margin, failure mode. `knowledge/niches/` holds micro-niches
+carrying that operating reality — buyer, objections, typical day, fulfilment,
+equipment, unit economics, regulatory categories, scaling.
+
+Coverage is deliberately partial. `knowledgeDepth()` reports whether a business
+matched the catalogue (deep) or is being described from its business model
+(general), and the UI says which. Presenting model-level generality as
+trade-specific knowledge is how a user takes it to someone who does the job and
+stops trusting everything else.
+
+The catalogue carries **no market statistics** — no market sizes, growth rates
+or average revenues. Those need primary sources this build can't reach, so
+entries name the source to check instead of guessing.
+
+A pricing unit is not always a job: priced by area, one job is thousands of
+units. `unitsPerJob` exists because forgetting it produced "5,000 jobs a month".
+
+### Three scores, never merged
 
 - **Business Fit** (`fit.ts`) — does this suit *me*? Ten weighted factors,
   computed from the profile. Weights in `SCORING_WEIGHTS`.
 - **Launch Readiness** (`launch.ts`) — is this business *prepared*? Counts what
   actually exists: offer, price, contact, validation, first-customer plan.
+- **Operational Readiness** (`operations.ts`) — do I understand how it *runs*?
 
-Merging them would let a well-suited but completely unprepared business look
-ready. Keep them apart.
+Someone can score well on fit and readiness with no idea what they'd do at 9am
+on Monday. Merging any pair of these hides exactly that.
 
 ### Two profiles, never merged
 

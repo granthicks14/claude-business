@@ -408,6 +408,12 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           done={!!business.prompts?.length}
         />
         <ShortcutCard
+          href="/business/operations"
+          icon={<Icon.radar className="size-5 text-accent" />}
+          title="How this business runs"
+          description="Your day, the money on one job, what the customer goes through, and what the trade requires."
+        />
+        <ShortcutCard
           href="/business/website"
           icon={<Icon.compass className="size-5 text-accent" />}
           title="Website"
