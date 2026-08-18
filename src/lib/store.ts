@@ -157,6 +157,32 @@ function persist() {
   }
 }
 
+/** Anything that should be a list, guaranteed to be one. */
+function list<T>(v: unknown): T[] {
+  return Array.isArray(v) ? (v as T[]) : [];
+}
+
+/**
+ * Does this look like one of our backups?
+ *
+ * Import used to hand any parsed JSON to `migrate`, which shallow-merges over
+ * an empty state — so importing an unrelated `.json` file wiped everything the
+ * founder had and reported "Data restored". A file has to actually carry one
+ * of our top-level collections, with the right type, before it is allowed to
+ * replace their work.
+ */
+export function looksLikeBackup(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return false;
+  const o = raw as Record<string, unknown>;
+  const isObj = (v: unknown) => !!v && typeof v === "object" && !Array.isArray(v);
+  return (
+    Array.isArray(o.ideas) ||
+    Array.isArray(o.businesses) ||
+    isObj(o.profile) ||
+    (typeof o.version === "number" && (isObj(o.settings) || isObj(o.stats)))
+  );
+}
+
 function migrate(raw: unknown): AppState {
   const base = emptyState();
   if (!raw || typeof raw !== "object") return base;
@@ -170,25 +196,30 @@ function migrate(raw: unknown): AppState {
     settings: { ...base.settings, ...(parsed.settings ?? {}) },
     profile: { ...base.profile, ...(parsed.profile ?? {}) },
     stats: { ...base.stats, ...(parsed.stats ?? {}) },
-    ideas: parsed.ideas ?? [],
-    businesses: (parsed.businesses ?? []).map((b) => ({
-      ...b,
-      competitors: b.competitors ?? [],
-      models: b.models ?? [],
-      personas: b.personas ?? [],
-      content: b.content ?? [],
-      tasks: b.tasks ?? [],
-      experiments: b.experiments ?? [],
-      assumptions: b.assumptions ?? [],
-      decisions: b.decisions ?? [],
-      customers: b.customers ?? [],
-      revenue: b.revenue ?? [],
-      expenses: b.expenses ?? [],
-      radar: b.radar ?? [],
-      prompts: b.prompts ?? [],
-        websiteVersions: b.websiteVersions ?? [],
-      money: { ...defaultMoneyInputs(), ...(b.money ?? {}) },
-    })),
+    // `?? []` only defends against missing. A field that arrived as a string
+    // passed straight through and blew up on the first `.map` in a page, which
+    // is a blank screen the user can't get out of.
+    ideas: list(parsed.ideas),
+    businesses: list<AppState["businesses"][number]>(parsed.businesses)
+      .filter((b) => !!b && typeof b === "object")
+      .map((b) => ({
+        ...b,
+        competitors: list(b.competitors),
+        models: list(b.models),
+        personas: list(b.personas),
+        content: list(b.content),
+        tasks: list(b.tasks),
+        experiments: list(b.experiments),
+        assumptions: list(b.assumptions),
+        decisions: list(b.decisions),
+        customers: list(b.customers),
+        revenue: list(b.revenue),
+        expenses: list(b.expenses),
+        radar: list(b.radar),
+        prompts: list(b.prompts),
+        websiteVersions: list(b.websiteVersions),
+        money: { ...defaultMoneyInputs(), ...(b.money ?? {}) },
+      })),
   };
 }
 
@@ -281,8 +312,11 @@ export const actions = {
     update(() => emptyState());
   },
 
-  importState(next: unknown) {
+  /** Returns false and changes nothing if this isn't one of our backups. */
+  importState(next: unknown): boolean {
+    if (!looksLikeBackup(next)) return false;
     update(() => migrate(next));
+    return true;
   },
 
   addIdeas(ideas: BusinessIdea[]) {

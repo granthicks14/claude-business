@@ -75,6 +75,32 @@ write to `StyleSpec` — there is no code path from "make it more premium" to a
 price or a customer. That structure *is* the guarantee; an instruction telling
 a model not to change the business would only be a hope.
 
+### The trust boundary
+
+There is no login and no database, so there is no cross-user data path to
+secure. The boundary that does exist is the API routes: `normalize.ts` coerces
+everything arriving from a browser — profile, business, idea — into a shape the
+prompt layer can rely on. Casting a request body to a type is a promise, not a
+check; `{"business":{}}` used to reach prompt rendering and return a bare 500.
+`PromptBusiness`/`PromptIdea` name the small surface the server actually reads,
+so the coercers can guarantee all of it.
+
+Both POST routes cap the body at 256KB, because an uncapped route on a deployed
+instance forwards unbounded text to somebody's metered key. The per-IP limiter
+is a brake on that same bill, so its key comes from a platform-set header
+rather than the first `x-forwarded-for` entry, which the caller writes.
+
+Error text returned to the browser is written for a user. The upstream
+provider's own response body goes to the server log instead — it can name
+internal endpoints and account details, and a visitor has no business reading
+them. `AIProviderError.detail` carries it.
+
+The CSP is the static form from the Next.js guide, not the nonce-and-proxy
+form: nonces force every page to render dynamically, which trades away static
+rendering for a policy this app doesn't need, since it loads nothing off-origin
+at all. `default-src 'self'` and `connect-src 'self'` are the directives doing
+the work — a founder's whole plan is in this origin's `localStorage`.
+
 ### The engine
 
 Ideas are assembled from four parts — market × segment × problem × business

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 /**
  * A small in-process response cache.
  *
@@ -19,15 +21,17 @@ interface Entry {
 
 const store = new Map<string, Entry>();
 
+/**
+ * A cryptographic digest, not a short hash.
+ *
+ * This cache is shared by everyone hitting the same instance, and the key is
+ * built from a founder's profile and business. A 32-bit FNV hash has collisions
+ * you can find by accident at these sizes, and a collision here doesn't degrade
+ * a lookup — it hands one person's generated plan to another. SHA-256 is in
+ * Node's standard library, so the safe version costs nothing.
+ */
 export function cacheKey(parts: unknown[]): string {
-  const raw = JSON.stringify(parts);
-  // FNV-1a — plenty for a local cache key, and no dependency.
-  let hash = 2166136261;
-  for (let i = 0; i < raw.length; i++) {
-    hash ^= raw.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return `${(hash >>> 0).toString(36)}:${raw.length}`;
+  return createHash("sha256").update(JSON.stringify(parts)).digest("base64url");
 }
 
 export function cacheGet(key: string): string | null {

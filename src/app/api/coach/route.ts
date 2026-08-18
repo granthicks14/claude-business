@@ -4,11 +4,17 @@ import { getProvider } from "@/lib/ai/providers";
 import { AIProviderError } from "@/lib/ai/providers/types";
 import { BASE_SYSTEM, renderBusiness, renderProfile, sanitize, untrusted } from "@/lib/ai/prompts";
 import { checkRateLimit, clientIp } from "@/lib/ai/ratelimit";
-import { coerceProfile } from "@/lib/normalize";
-import type { JournalEntry, SelectedBusiness } from "@/lib/types";
+import { coerceBusiness, coerceProfile } from "@/lib/normalize";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+/**
+ * The same cap /api/ai enforces. Without it this route parsed whatever arrived
+ * and forwarded it to a metered provider — a megabyte of text is a bill, not
+ * a coaching question.
+ */
+const MAX_BODY_BYTES = 256 * 1024;
 
 const COACH_SYSTEM = `${BASE_SYSTEM}
 
@@ -26,11 +32,21 @@ How you answer:
 - Never promise revenue, and never state an estimate as a fact.
 - Write in plain markdown. No headers unless the answer really needs them.`;
 
+/** Everything here is untrusted: the shapes are what the browser claims to send. */
 interface CoachBody {
   profile?: unknown;
-  business?: SelectedBusiness;
-  journal?: JournalEntry[];
+  business?: unknown;
+  journal?: unknown;
   messages?: { role: "user" | "assistant"; content: string }[];
+}
+
+const str = (v: unknown, max = 2000): string => (typeof v === "string" ? v.slice(0, max) : "");
+
+/** `new Date(undefined).toISOString()` throws, so a bad timestamp can't reach it. */
+function dateOnly(v: unknown): string {
+  const ms = typeof v === "number" && Number.isFinite(v) ? v : NaN;
+  const d = new Date(ms);
+  return Number.isNaN(d.getTime()) ? "undated" : d.toISOString().slice(0, 10);
 }
 
 export async function POST(req: Request) {
@@ -50,9 +66,17 @@ export async function POST(req: Request) {
     );
   }
 
+  const raw = await req.text();
+  if (raw.length > MAX_BODY_BYTES) {
+    return NextResponse.json(
+      { error: "That's a lot of text — try trimming your notes or asking a shorter question." },
+      { status: 413 },
+    );
+  }
+
   let body: CoachBody;
   try {
-    body = (await req.json()) as CoachBody;
+    body = JSON.parse(raw) as CoachBody;
   } catch {
     return NextResponse.json({ error: "Malformed request." }, { status: 400 });
   }
@@ -67,15 +91,17 @@ export async function POST(req: Request) {
   }
 
   const contextParts = [renderProfile(coerceProfile(body.profile))];
-  if (body.business) contextParts.push(renderBusiness(body.business));
+  if (body.business) contextParts.push(renderBusiness(coerceBusiness(body.business)));
 
-  const journal = Array.isArray(body.journal) ? body.journal.slice(0, 12) : [];
+  const journal = (Array.isArray(body.journal) ? body.journal : [])
+    .slice(0, 12)
+    .map((j) => (j && typeof j === "object" ? (j as Record<string, unknown>) : {}));
   if (journal.length) {
     contextParts.push(
       untrusted(
         "journal",
         journal
-          .map((j) => `[${new Date(j.createdAt).toISOString().slice(0, 10)}] ${j.type}: ${j.title} — ${j.body}`)
+          .map((j) => `[${dateOnly(j.createdAt)}] ${str(j.type)}: ${str(j.title)} — ${str(j.body)}`)
           .join("\n")
           .slice(0, 6000),
       ),
@@ -101,9 +127,9 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const status = err instanceof AIProviderError ? err.status : 502;
-    console.error("[coach]", err);
+    console.error("[coach]", err, err instanceof AIProviderError && err.detail ? `upstream: ${err.detail}` : "");
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "The coach could not respond." },
+      { error: err instanceof AIProviderError ? err.message : "The coach could not respond." },
       { status },
     );
   }

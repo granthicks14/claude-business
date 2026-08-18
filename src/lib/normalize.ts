@@ -1,3 +1,4 @@
+import type { PromptBusiness, PromptIdea } from "./ai/prompts";
 import { AGE_BANDS } from "./types";
 import type { BusinessPreference, Commitment, FounderProfile, PayoffStyle, RiskTolerance } from "./types";
 
@@ -7,6 +8,11 @@ import type { BusinessPreference, Commitment, FounderProfile, PayoffStyle, RiskT
  * The API receives whatever the browser sends. Nothing downstream should have
  * to defend itself against a string where an array was expected, so every field
  * is coerced and bounded here, at the trust boundary.
+ *
+ * The profile was coerced from the start; the business and idea were cast
+ * instead, which meant `{"business":{}}` reached prompt rendering and crashed
+ * it. Casting asserts a shape, it doesn't produce one — everything crossing
+ * this boundary now gets coerced.
  */
 
 const MAX_STR = 2000;
@@ -46,6 +52,82 @@ const PREFERENCES = [
   "subscription", "marketplace", "saas", "content", "education", "ecommerce",
   "agency", "consulting",
 ] as const satisfies readonly BusinessPreference[];
+
+/** A plain object, or an empty one. Never an array, never null. */
+function obj(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+}
+
+/** Maps an array of unknowns through a coercer, bounded in length. */
+function objArr<T>(v: unknown, map: (o: Record<string, unknown>) => T, max = 40): T[] {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, max).map((item) => map(obj(item)));
+}
+
+export function coerceIdea(input: unknown): PromptIdea {
+  const i = obj(input);
+  return {
+    name: s(i.name, 200),
+    oneLiner: s(i.oneLiner, 400),
+    mode: oneOf(i.mode, ["online", "local", "hybrid"] as const, "online"),
+    targetCustomer: s(i.targetCustomer, 400),
+    problem: s(i.problem, 600),
+    customerPain: s(i.customerPain, 600),
+    offering: s(i.offering, 600),
+    revenueModel: s(i.revenueModel, 300),
+    pricing: s(i.pricing, 300),
+    startupCost: n(i.startupCost, 0, 1e8),
+    timeToLaunchDays: n(i.timeToLaunchDays, 0, 3650),
+    category: s(i.category, 120),
+    opportunityScore: n(i.opportunityScore, 0, 100),
+  };
+}
+
+/**
+ * Coerces the selected business down to what the prompt layer reads.
+ *
+ * Deliberately narrower than `SelectedBusiness`: revenue amounts and customer
+ * statuses are counted, so they're kept, but notes, contacts and expense lines
+ * are not read here and so are not carried into a prompt at all.
+ */
+export function coerceBusiness(input: unknown): PromptBusiness {
+  const src = obj(input);
+  const plan = obj(src.plan);
+  const offer = obj(src.offer);
+  const brand = obj(src.brand);
+  const validation = obj(src.validation);
+
+  return {
+    idea: coerceIdea(src.idea),
+    revenueTarget: n(src.revenueTarget, 0, 1e9),
+    plan: src.plan
+      ? {
+          uniqueValueProposition: s(plan.uniqueValueProposition, 600),
+          businessModel: s(plan.businessModel, 600),
+        }
+      : undefined,
+    offer: src.offer ? { coreOffer: s(offer.coreOffer, 400), price: s(offer.price, 120) } : undefined,
+    brand: src.brand ? { names: objArr(brand.names, (o) => ({ name: s(o.name, 120) }), 10) } : undefined,
+    validation: src.validation ? { validationScore: n(validation.validationScore, 0, 100) } : undefined,
+    product: src.product,
+    personas: objArr(src.personas, (o) => ({ name: s(o.name, 120), situation: s(o.situation, 400) }), 10),
+    competitors: objArr(src.competitors, (o) => ({ name: s(o.name, 160) }), 20),
+    customers: objArr(src.customers, (o) => ({ status: s(o.status, 40) }), 500),
+    revenue: objArr(src.revenue, (o) => ({ amount: n(o.amount, 0, 1e9) }), 500),
+    tasks: objArr(src.tasks, (o) => ({ title: s(o.title, 200), done: b(o.done) }), 200),
+    decisions: objArr(src.decisions, (o) => ({ decision: s(o.decision, 300), reason: s(o.reason, 400) }), 50),
+    assumptions: objArr(
+      src.assumptions,
+      (o) => ({ statement: s(o.statement, 300), status: s(o.status, 40), confidence: n(o.confidence, 0, 100) }),
+      50,
+    ),
+    experiments: objArr(
+      src.experiments,
+      (o) => ({ hypothesis: s(o.hypothesis, 300), status: s(o.status, 40), result: s(o.result, 400) }),
+      50,
+    ),
+  };
+}
 
 export function coerceProfile(input: unknown): FounderProfile {
   const p = (input ?? {}) as Record<string, unknown>;

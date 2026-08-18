@@ -1,4 +1,4 @@
-import type { BusinessIdea, FounderProfile, SelectedBusiness } from "../types";
+import type { FounderProfile } from "../types";
 import {
   BASE_SYSTEM,
   NO_RESEARCH_NOTE,
@@ -7,13 +7,15 @@ import {
   renderSearchResults,
   untrusted,
 } from "./prompts";
+import type { PromptBusiness, PromptIdea } from "./prompts";
 import type { SchemaName } from "./schemas";
 
 export interface TaskRequest {
   task: TaskName;
   profile: FounderProfile;
-  business?: SelectedBusiness;
-  idea?: BusinessIdea;
+  /** Already coerced by `normalize.ts`. Never the raw request body. */
+  business?: PromptBusiness;
+  idea?: PromptIdea;
   input?: Record<string, unknown>;
 }
 
@@ -42,7 +44,7 @@ function ctx(req: TaskRequest): string {
   return parts.join("\n\n");
 }
 
-function ideaSummary(i: BusinessIdea): string {
+function ideaSummary(i: PromptIdea): string {
   return [
     `Business idea: ${i.name}`,
     `One-liner: ${i.oneLiner}`,

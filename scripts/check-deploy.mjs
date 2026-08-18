@@ -212,6 +212,51 @@ check("Secrets", "no server secret reachable from client code", () => {
   return "server-only modules are server-side only; no NEXT_PUBLIC_ variables";
 });
 
+/* ----------------------------------------------------------------- security */
+
+check("Security", "response headers set a restrictive policy", () => {
+  const config = read("next.config.ts");
+  const required = [
+    ["default-src 'self'", "no default-src 'self'"],
+    ["frame-ancestors 'none'", "no frame-ancestors 'none'"],
+    ["object-src 'none'", "no object-src 'none'"],
+    ["base-uri 'self'", "no base-uri 'self'"],
+    ["form-action 'self'", "no form-action 'self'"],
+    ["Content-Security-Policy", "CSP header is not sent"],
+    ["Permissions-Policy", "Permissions-Policy header is not sent"],
+    ["X-Content-Type-Options", "nosniff is not sent"],
+  ];
+  const missing = required.filter(([needle]) => !config.includes(needle)).map(([, message]) => message);
+  assert(missing.length === 0, missing.join("; "));
+  // The app fetches nothing off-origin, so connect-src must stay closed.
+  assert(!/connect-src[^;]*https:\/\//.test(config), "connect-src allows an external origin");
+  return "CSP, Permissions-Policy, nosniff, DENY, strict-origin-when-cross-origin";
+});
+
+check("Security", "every AI route caps the request body", () => {
+  const routes = sourceFiles("src/app").filter((f) => f.endsWith("route.ts"));
+  const uncapped = [];
+  for (const file of routes) {
+    const src = fs.readFileSync(file, "utf8");
+    if (!/export async function POST/.test(src)) continue;
+    if (!/MAX_BODY_BYTES/.test(src)) uncapped.push(path.relative(ROOT, file));
+  }
+  // An uncapped POST on a deployed instance forwards unbounded text to a
+  // metered provider, which is somebody's bill.
+  assert(uncapped.length === 0, `POST routes with no body limit: ${uncapped.join(", ")}`);
+  return `${routes.filter((f) => /POST/.test(fs.readFileSync(f, "utf8"))).length} POST routes, all capped`;
+});
+
+check("Security", "the rate-limit key is not the client's own header", () => {
+  const src = read("src/lib/ai/ratelimit.ts");
+  assert(
+    !/x-forwarded-for[\s\S]{0,200}?split\(","\)\[0\]/.test(src),
+    "clientIp reads the first x-forwarded-for entry, which the caller can set — one header per request bypasses the limit",
+  );
+  assert(/x-vercel-forwarded-for|x-real-ip/.test(src), "clientIp does not prefer a platform-set header");
+  return "platform header first, nearest proxy hop as fallback";
+});
+
 /* -------------------------------------------------------------- environment */
 
 check("Environment", "no environment variable is required", () => {

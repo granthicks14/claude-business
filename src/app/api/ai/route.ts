@@ -8,7 +8,7 @@ import { checkRateLimit, clientIp } from "@/lib/ai/ratelimit";
 import { SCHEMAS } from "@/lib/ai/schemas";
 import { TASKS, isTaskName, type TaskDef, type TaskRequest } from "@/lib/ai/tasks";
 import { runResearch } from "@/lib/research/search";
-import { coerceProfile } from "@/lib/normalize";
+import { coerceBusiness, coerceIdea, coerceProfile } from "@/lib/normalize";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -63,8 +63,8 @@ export async function POST(req: Request) {
   const request: TaskRequest = {
     task,
     profile: coerceProfile(body.profile),
-    business: (body.business ?? undefined) as TaskRequest["business"],
-    idea: (body.idea ?? undefined) as TaskRequest["idea"],
+    business: body.business ? coerceBusiness(body.business) : undefined,
+    idea: body.idea ? coerceIdea(body.idea) : undefined,
     input: (body.input ?? {}) as Record<string, unknown>,
   };
 
@@ -82,17 +82,20 @@ export async function POST(req: Request) {
   let researchResults = null;
   let researchError: string | undefined;
   let researchProviderName: string | null = null;
-  if (def.queries) {
-    const outcome = await runResearch(def.queries(request));
-    researchProviderName = outcome.provider;
-    researchError = outcome.error;
-    if (outcome.results.length) researchResults = outcome.results;
-  }
-
-  const { system, user } = def.build(request, researchResults);
-  const jsonSchema = toJSONSchema(schema);
 
   try {
+    // Inside the try on purpose: research queries and prompt construction both
+    // read the request, and a throw here used to escape as a bare 500.
+    if (def.queries) {
+      const outcome = await runResearch(def.queries(request));
+      researchProviderName = outcome.provider;
+      researchError = outcome.error;
+      if (outcome.results.length) researchResults = outcome.results;
+    }
+
+    const { system, user } = def.build(request, researchResults);
+    const jsonSchema = toJSONSchema(schema);
+
     const text = await generateWithRepair({
       provider,
       system,
@@ -123,15 +126,17 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
+    // Only messages written for a user are returned. An unexpected internal
+    // error describes the server, not the request, and stays in the log.
     const status = err instanceof AIProviderError ? err.status : 502;
     const retryable = err instanceof AIProviderError ? err.retryable : true;
     const message =
       err instanceof Error && err.name === "TimeoutError"
         ? "The AI took too long to respond. Try again, or generate a smaller batch."
-        : err instanceof Error
+        : err instanceof AIProviderError
           ? err.message
-          : "AI generation failed.";
-    console.error(`[ai:${task}]`, err);
+          : "Generation failed unexpectedly. Try again — if it keeps happening, the built-in engine covers this without a provider.";
+    console.error(`[ai:${task}]`, err, err instanceof AIProviderError && err.detail ? `upstream: ${err.detail}` : "");
     return NextResponse.json({ error: message, retryable }, { status });
   }
 }

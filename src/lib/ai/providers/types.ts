@@ -44,6 +44,15 @@ export class AIProviderError extends Error {
     message: string,
     readonly status: number = 502,
     readonly retryable = true,
+    /**
+     * Upstream text, kept for the server log only.
+     *
+     * `message` is returned to the browser, so it says what happened and what
+     * to do about it. The provider's own response body can name internal
+     * endpoints, deployment ids or account details that a visitor to a
+     * deployed instance has no business reading — that stays here.
+     */
+    readonly detail?: string,
   ) {
     super(message);
     this.name = "AIProviderError";
@@ -70,13 +79,24 @@ export async function describeHttpFailure(res: Response, provider: string): Prom
       `${provider} rejected the API key. Check the key configured on the server.`,
       502,
       false,
+      detail,
     );
   }
   if (res.status === 429) {
-    return new AIProviderError(`${provider} is rate limiting requests. Wait a moment and retry.`, 429, true);
+    return new AIProviderError(`${provider} is rate limiting requests. Wait a moment and retry.`, 429, true, detail);
   }
   if (res.status === 400 && /credit|balance|quota/i.test(detail)) {
-    return new AIProviderError(`${provider} reports an account credit or quota problem: ${detail}`, 502, false);
+    return new AIProviderError(
+      `${provider} reports an account credit or quota problem. Check the billing status of the configured key.`,
+      502,
+      false,
+      detail,
+    );
   }
-  return new AIProviderError(`${provider} request failed (${res.status}). ${detail}`.trim(), 502, res.status >= 500);
+  return new AIProviderError(
+    `${provider} could not complete the request (HTTP ${res.status}).`,
+    502,
+    res.status >= 500,
+    detail,
+  );
 }

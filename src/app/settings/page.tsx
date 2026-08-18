@@ -567,8 +567,12 @@ function DataSettings() {
     try {
       const text = await file.text();
       const parsed = JSON.parse(text) as unknown;
-      if (!parsed || typeof parsed !== "object") throw new Error("Not a valid backup file.");
-      actions.importState(parsed);
+      // Importing replaces everything, so an unrecognised file must be refused
+      // rather than merged — "restored" over a wiped state is the worst outcome.
+      if (!actions.importState(parsed)) {
+        toast("That doesn't look like a Business Builder backup — nothing was changed", "bad");
+        return;
+      }
       toast("Data restored", "good");
     } catch {
       toast("That file couldn't be read as a backup", "bad");

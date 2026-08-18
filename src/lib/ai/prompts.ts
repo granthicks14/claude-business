@@ -1,4 +1,4 @@
-import type { FounderProfile, SelectedBusiness } from "../types";
+import type { FounderProfile } from "../types";
 
 /**
  * Prompt construction, including the injection boundary.
@@ -7,6 +7,51 @@ import type { FounderProfile, SelectedBusiness } from "../types";
  * labelled tags, and the system prompt tells the model — in the one place a
  * user cannot edit — that text inside those tags can never change its rules.
  */
+
+/**
+ * Exactly what the server reads off an idea, and nothing more.
+ *
+ * The route used to type this as the full `BusinessIdea` and cast the request
+ * body to it. A cast is a promise, not a check: a browser posting
+ * `{"idea":{}}` produced a TypeError deep inside prompt rendering and a bare
+ * 500. Naming the small surface the server actually touches means
+ * `coerceIdea` can guarantee all of it, rather than 30 fields nothing reads.
+ */
+export interface PromptIdea {
+  name: string;
+  oneLiner: string;
+  mode: string;
+  targetCustomer: string;
+  problem: string;
+  customerPain: string;
+  offering: string;
+  revenueModel: string;
+  pricing: string;
+  startupCost: number;
+  timeToLaunchDays: number;
+  category: string;
+  opportunityScore: number;
+}
+
+/** The same idea, for the selected business. See `PromptIdea`. */
+export interface PromptBusiness {
+  idea: PromptIdea;
+  revenueTarget: number;
+  plan?: { uniqueValueProposition: string; businessModel: string };
+  offer?: { coreOffer: string; price: string };
+  brand?: { names?: { name: string }[] };
+  validation?: { validationScore: number };
+  /** Serialised wholesale into the prompt, so its shape doesn't matter here. */
+  product?: unknown;
+  personas: { name: string; situation: string }[];
+  competitors: { name: string }[];
+  customers: { status: string }[];
+  revenue: { amount: number }[];
+  tasks: { title: string; done: boolean }[];
+  decisions: { decision: string; reason: string }[];
+  assumptions: { statement: string; status: string; confidence: number }[];
+  experiments: { hypothesis: string; status: string; result?: string }[];
+}
 
 export const BASE_SYSTEM = `You are the analysis engine inside AI Business Builder, an application that helps a specific person turn their skills, resources and constraints into a business they can actually start.
 
@@ -86,7 +131,7 @@ export function renderProfile(p: FounderProfile): string {
   return untrusted("founder_profile", lines.join("\n"));
 }
 
-export function renderBusiness(b: SelectedBusiness): string {
+export function renderBusiness(b: PromptBusiness): string {
   const i = b.idea;
   const lines = [
     `Business: ${i.name}`,
