@@ -29,6 +29,8 @@ npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
 npm run test:scoring   # 22 scoring calibration tests
+npm run test:intel     # 78 decision-layer calibration tests
+npm test               # both
 npm run check:deploy   # 18 deployment checks, ends in a yes/no
 ```
 
@@ -47,6 +49,8 @@ src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
 src/lib/opportunity.ts  "Best opportunity near me" — no profile required.
+src/lib/intel/          The decision layer. Evidence grading, assumptions,
+                        red team, verdicts, sensitivity. All deterministic.
 src/lib/operations.ts   How a business runs: day, unit economics, journey.
 src/lib/spend.ts        What's worth paying for, and when.
 src/lib/ai/             Optional provider adapters. server-only.
@@ -133,6 +137,42 @@ entries name the source to check instead of guessing.
 A pricing unit is not always a job: priced by area, one job is thousands of
 units. `unitsPerJob` exists because forgetting it produced "5,000 jobs a month".
 
+### The decision layer
+
+`intel/` is the part of the app that is allowed to say no. All of it is
+deterministic — no provider, no cost, the same answer twice — because an
+argument against your own business is the thing a language model is worst at
+producing honestly.
+
+**The evidence ladder** (`epistemics.ts`) is what the rest rests on. A payment
+is worth roughly forty survey answers, and the weights are exponential so no
+amount of politeness outranks one person's money. Counts are damped by a square
+root: the tenth interview teaches less than the first, so stacking weak evidence
+cannot substitute for climbing a rung. Every claim carries a grade — fact,
+evidence, inference, estimate, assumption, scenario, unknown — and the UI shows
+it on the claim, not in a footnote.
+
+**The ledger** (`assumptions.ts`) is derived, not generated: every business
+rests on the same short list of beliefs, so they're structural. Uncertainty
+falls only against evidence that bears on that belief — ten conversations say
+a lot about whether the problem is real and nothing about the unit economics.
+Experiments rank by information gain ÷ cost ÷ time, which is what makes the app
+tell someone with no customers to ask one person for money rather than build a
+landing page. Nobody wrote that rule; the arithmetic produces it.
+
+**The verdict** (`decision.ts`) returns BUILD, VALIDATE MORE, PIVOT, PAUSE or
+KILL. Failure patterns are checked before success patterns, so it can't
+congratulate someone whose customers are all leaving.
+
+Claims carry an evidence rung as well as a grade. Without that, "eleven people
+had a chat" and "two people paid" both weigh the same in the bull/bear judge —
+both are honestly `evidence` — which is exactly how a strength ladder gets
+quietly undone in the one place it matters.
+
+`intel/index.ts` assembles one report per state change. Pages read slices of it
+rather than recomputing, so the dashboard, the decision page and the money page
+cannot show three different answers.
+
 ### Three scores, never merged
 
 - **Business Fit** (`fit.ts`) — does this suit *me*? Ten weighted factors,
@@ -177,6 +217,12 @@ These are product requirements, not style preferences:
 - **Age drives practicality, never permission.** Say what may need an adult and
   what to verify locally; never assert a law, never suggest misstating an age.
 - **Label estimates as estimates.** No income promises, no exact score deltas.
+- **Never invent a lifetime value.** LTV needs to know how often a customer
+  buys. With fewer than two customers' worth of logged payments, `unitEconomics`
+  returns null and says why, rather than producing a flattering number.
+- **Never render a fraction of a person or a purchase.** "0.75 customers a
+  month" and "0.13 sales to payback" are arithmetically fine and unreadable.
+  Below one, say it in words.
 
 ## Conventions
 

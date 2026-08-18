@@ -12,7 +12,9 @@ import {
   EmptyState,
   EstimateNote,
   Field,
+  Hi,
   Input,
+  Meter,
   NumberInput,
   SectionHeader,
   Select,
@@ -22,6 +24,7 @@ import {
 } from "@/components/ui";
 import { Explain } from "@/components/teach";
 import { currency, customersFromTraffic, runMoneyModel } from "@/lib/finance";
+import { ECONOMICS_DISCLAIMER, SENSITIVITY_NOTE, useIntel } from "@/lib/intel";
 import { actions, newId, useAppState } from "@/lib/store";
 import type { Customer, ExpenseEntry, MoneyModelInputs, RevenueEntry, SelectedBusiness } from "@/lib/types";
 
@@ -34,7 +37,7 @@ export default function MoneyPage() {
 }
 
 function Money({ business }: { business: SelectedBusiness }) {
-  const [tab, setTab] = useState<"model" | "ledger" | "customers">("model");
+  const [tab, setTab] = useState<"model" | "levers" | "ledger" | "customers">("model");
 
   return (
     <div className="space-y-6">
@@ -48,14 +51,146 @@ function Money({ business }: { business: SelectedBusiness }) {
         onChange={(id) => setTab(id as typeof tab)}
         tabs={[
           { id: "model", label: "Money model" },
+          { id: "levers", label: "What matters most" },
           { id: "ledger", label: "Revenue & expenses", badge: business.revenue.length + business.expenses.length || undefined },
           { id: "customers", label: "Customers", badge: business.customers.length || undefined },
         ]}
       />
 
       {tab === "model" && <Simulator business={business} />}
+      {tab === "levers" && <Levers />}
       {tab === "ledger" && <Ledger business={business} />}
       {tab === "customers" && <Customers business={business} />}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------- levers */
+
+/**
+ * Which of these numbers is actually worth your week.
+ *
+ * The money model tells you what happens if the inputs are right. This tells
+ * you which input to go and check — which is the more useful question, because
+ * nobody's first guesses are right and there isn't time to test them all.
+ */
+function Levers() {
+  const intel = useIntel();
+  const { sensitivity: sens, economics, scenarios, goal } = intel;
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-5">
+        <SectionHeader
+          title="Which number deserves your attention"
+          description="Each row improves one input by 10% and leaves the rest alone. The ordering is the useful part."
+        />
+        <div className="space-y-4">
+          {sens.map((s) => (
+            <div key={s.input}>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-sm font-medium">{s.label}</span>
+                <Badge tone={s.band === "high" ? "accent" : s.band === "medium" ? "neutral" : "neutral"}>
+                  {s.band === "high" ? "Biggest lever" : s.band === "medium" ? "Worth checking" : "Barely matters"}
+                </Badge>
+              </div>
+              <div className="mt-1">
+                <Meter
+                  value={Math.min(100, Math.abs(s.impactPct))}
+                  label={s.concrete}
+                  tone={s.band === "high" ? "accent" : "good"}
+                  hint={s.meaning}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-muted mt-4 leading-relaxed">{SENSITIVITY_NOTE}</p>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader
+          title="What one customer is worth"
+          description="Per-sale arithmetic, plus the one figure most tools invent."
+        />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <Stat label="Kept per sale" value={currency(economics.contributionPerSale)} tone={economics.contributionPerSale > 0 ? "good" : "bad"} />
+          <Stat label="Gross margin" value={`${economics.grossMarginPct}%`} />
+          <Stat label="Cost to acquire" value={currency(economics.cac)} />
+          <Stat
+            label="Lifetime value"
+            value={economics.ltv === null ? "Not known" : currency(economics.ltv)}
+            tone={economics.ltv === null ? undefined : "good"}
+          />
+        </div>
+        <p className="text-sm text-muted mt-4 leading-relaxed">{economics.ltvBasis}</p>
+        {economics.paybackNote && <p className="text-sm text-muted mt-2 leading-relaxed">{economics.paybackNote}</p>}
+        {economics.warnings.map((w) => (
+          <p key={w} className="text-sm text-warn mt-3 leading-relaxed">
+            {w}
+          </p>
+        ))}
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader
+          title="Four ways this could go"
+          description="Including the one most tools leave out."
+        />
+        <div className="space-y-3">
+          {scenarios.map((s) => (
+            <div
+              key={s.key}
+              className={`rounded-lg border p-3 ${s.key === "failure" ? "border-warn/30 bg-warn-soft" : "border-border"}`}
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="text-sm font-medium">{s.label}</span>
+                <span className="text-sm tabular-nums">
+                  {currency(s.revenue)}/mo · profit {currency(s.profit)}
+                </span>
+              </div>
+              <p className="text-xs text-muted mt-1 leading-relaxed">{s.assumption}</p>
+              <p className="text-xs text-muted mt-0.5">{s.runwayNote}</p>
+            </div>
+          ))}
+        </div>
+        <EstimateNote>
+          These are scenarios, not forecasts. They show what the arithmetic does at different volumes — nothing here
+          predicts which one happens.
+        </EstimateNote>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader
+          title="Working backwards from your goal"
+          description="What the income goal in your profile actually asks of you."
+        />
+        {goal.steps.length === 0 ? (
+          <p className="text-sm text-muted">{goal.verdict}</p>
+        ) : (
+          <>
+            <ol className="space-y-3">
+              {goal.steps.map((s, i) => (
+                <li key={s.label} className="flex gap-3">
+                  <span className="shrink-0 size-6 rounded-full bg-surface-2 border border-border grid place-items-center text-xs font-medium">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="text-sm font-medium">{s.label}: </span>
+                    <Hi tone="mark">{s.value}</Hi>
+                    <span className="block text-xs text-muted mt-0.5 leading-relaxed">{s.from}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="text-sm mt-4 leading-relaxed rounded-lg border border-accent-border bg-accent-soft p-3">
+              {goal.verdict}
+            </p>
+          </>
+        )}
+      </Card>
+
+      <p className="text-xs text-muted leading-relaxed">{ECONOMICS_DISCLAIMER}</p>
     </div>
   );
 }

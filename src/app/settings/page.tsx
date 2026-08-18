@@ -22,6 +22,16 @@ import {
   useToast,
 } from "@/components/ui";
 import { download } from "@/lib/export";
+import {
+  DEFAULT_PRIORITIES,
+  PRIORITY_HELP,
+  PRIORITY_KEYS,
+  PRIORITY_LABEL,
+  PRIORITIES_NOTE,
+  describePriorities,
+  isCustomised,
+  normalisePriorities,
+} from "@/lib/intel/priorities";
 import { rescore } from "@/lib/scoring";
 import { actions, snapshot, useAppState } from "@/lib/store";
 import {
@@ -46,7 +56,7 @@ export default function SettingsPage() {
 }
 
 function Settings() {
-  const [tab, setTab] = useState<"profile" | "mode" | "ai" | "data">("profile");
+  const [tab, setTab] = useState<"profile" | "mode" | "priorities" | "ai" | "data">("profile");
 
   return (
     <div className="space-y-6">
@@ -58,6 +68,7 @@ function Settings() {
         tabs={[
           { id: "profile", label: "Founder profile" },
           { id: "mode", label: "How much to explain" },
+          { id: "priorities", label: "What you're optimising for" },
           { id: "ai", label: "Intelligence" },
           { id: "data", label: "Your data" },
         ]}
@@ -65,6 +76,7 @@ function Settings() {
 
       {tab === "profile" && <ProfileEditor />}
       {tab === "mode" && <ExperienceSetting />}
+      {tab === "priorities" && <PrioritiesSetting />}
       {tab === "ai" && <AISetup />}
       {tab === "data" && <DataSettings />}
     </div>
@@ -664,6 +676,94 @@ function DataSettings() {
           you might want any of it.
         </p>
       </Dialog>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- priorities */
+
+/**
+ * What the founder is optimising for.
+ *
+ * Four goals in plain language rather than ten factor sliders: nobody opens a
+ * business tool wanting to set "customerAccess" to 1.3. Each slider
+ * redistributes weight across the factors that genuinely serve that goal, and
+ * the note under them says what it can't do — a preference can reorder a list,
+ * it can't make an unaffordable business affordable.
+ */
+function PrioritiesSetting() {
+  const stored = useAppState((s) => s.settings?.priorities);
+  const toast = useToast();
+  const current = normalisePriorities(stored);
+
+  const set = (key: (typeof PRIORITY_KEYS)[number], value: number) => {
+    actions.setPriorities(normalisePriorities({ ...current, [key]: value }));
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="p-5">
+        <SectionHeader
+          title="What matters most to you"
+          description="This changes the order ideas rank in. Move one up and the others adjust, because they always add up to 100."
+        />
+
+        <div className="space-y-5">
+          {PRIORITY_KEYS.map((key) => (
+            <div key={key}>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <label htmlFor={`priority-${key}`} className="text-sm font-medium">
+                  {PRIORITY_LABEL[key]}
+                </label>
+                <span className="text-sm text-muted tabular-nums">{current[key]}%</span>
+              </div>
+              <p className="text-xs text-muted mt-0.5 mb-2 leading-relaxed">{PRIORITY_HELP[key]}</p>
+              <input
+                id={`priority-${key}`}
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={current[key]}
+                onChange={(e) => set(key, Number(e.target.value))}
+                className="w-full h-11 accent-[var(--accent)] cursor-pointer"
+                aria-describedby={`priority-help-${key}`}
+              />
+              <span id={`priority-help-${key}`} className="sr-only">
+                {PRIORITY_HELP[key]}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-sm mt-5 rounded-lg border border-accent-border bg-accent-soft p-3 leading-relaxed">
+          {describePriorities(stored)}
+        </p>
+
+        {isCustomised(stored) && (
+          <div className="mt-4">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                actions.setPriorities(undefined);
+                toast("Back to the default balance", "good");
+              }}
+            >
+              Reset to the default balance
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="What this can and can't change" />
+        <p className="text-sm text-muted leading-relaxed">{PRIORITIES_NOTE}</p>
+        <p className="text-sm text-muted leading-relaxed mt-3">
+          The default balance is {PRIORITY_KEYS.map((k) => `${PRIORITY_LABEL[k].toLowerCase()} ${DEFAULT_PRIORITIES[k]}%`).join(", ")} —
+          deliberately weighted towards whether you can actually start something rather than how big it could get.
+        </p>
+      </Card>
     </div>
   );
 }

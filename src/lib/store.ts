@@ -19,6 +19,7 @@ import type {
   ID,
   JournalEntry,
   MoneyModelInputs,
+  ScoreSnapshot,
   SelectedBusiness,
 } from "./types";
 
@@ -313,6 +314,24 @@ export const actions = {
   },
 
   /** Returns false and changes nothing if this isn't one of our backups. */
+  /** What the founder is optimising for. See `intel/priorities.ts`. */
+  setPriorities(priorities: { speed: number; profit: number; risk: number; scalability: number } | undefined) {
+    update((s) => ({ ...s, settings: { ...s.settings, priorities } }));
+  },
+
+  /**
+   * Records a score reading against the active business.
+   *
+   * Appending is guarded in `intel/changelog.ts` so identical readings don't
+   * accumulate — a history that records every page view is noise nobody reads.
+   */
+  recordScoreSnapshot(businessId: ID, history: ScoreSnapshot[]) {
+    update((s) => ({
+      ...s,
+      businesses: s.businesses.map((b) => (b.id === businessId ? { ...b, scoreHistory: history } : b)),
+    }));
+  },
+
   importState(next: unknown): boolean {
     if (!looksLikeBackup(next)) return false;
     update(() => migrate(next));

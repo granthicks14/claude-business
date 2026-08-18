@@ -170,10 +170,21 @@ function spread(value: number, pivot = 60, gain = 1.45): number {
 export function computeFit(
   idea: BusinessIdea,
   profile: FounderProfile,
-  /** Internal: skips the sensitivity pass, which would otherwise recurse. */
-  opts: { withImprovements?: boolean } = {},
+  opts: {
+    /** Internal: skips the sensitivity pass, which would otherwise recurse. */
+    withImprovements?: boolean;
+    /**
+     * Per-factor weights, when the user has said what they're optimising for.
+     *
+     * Only the weighting moves. Every factor score, the realism cap and the
+     * reasons are unchanged — a preference can reorder a list, it can't make
+     * an unaffordable business affordable. See `intel/priorities.ts`.
+     */
+    weights?: Record<FitFactor, number>;
+  } = {},
 ): FitResult {
   const withImprovements = opts.withImprovements ?? true;
+  const weights = opts.weights ?? SCORING_WEIGHTS;
   const ctx = resolveContext(idea, profile);
   const { model, segment, signals } = ctx;
   const feas = assessFeasibility(idea, profile);
@@ -182,7 +193,7 @@ export function computeFit(
   const hours = signals.hours;
   const factors: FitFactorResult[] = [];
   const add = (factor: FitFactor, score: number, reason: string) =>
-    factors.push({ factor, score: clamp(score), weight: SCORING_WEIGHTS[factor], reason });
+    factors.push({ factor, score: clamp(score), weight: weights[factor] ?? SCORING_WEIGHTS[factor], reason });
 
   /* ------------------------------------------------------- personal fit --- */
   {

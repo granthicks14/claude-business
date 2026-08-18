@@ -62,20 +62,21 @@ export function scenarioSet(inputs: MoneyModelInputs): ScenarioResult[] {
     const customers = Math.max(0, anchor * VOLUME[key]);
     const { revenue, profit } = evaluate(inputs, customers);
 
+    const count = people(customers);
     const assumption =
       key === "expected"
-        ? `${r(customers)} customers a month, exactly the number you entered.`
+        ? `${count} a month, exactly the number you entered.`
         : key === "failure"
-          ? `${r(customers)} customers a month — roughly a sixth of plan. This is what "it didn't really take off" looks like in numbers.`
+          ? `${count} a month — roughly a sixth of plan. This is what "it didn't really take off" looks like in numbers.`
           : key === "conservative"
-            ? `${r(customers)} customers a month, half of plan. Things usually start slower than expected.`
-            : `${r(customers)} customers a month, nearly double plan. Only if acquisition works better than you're assuming.`;
+            ? `${count} a month, half of plan. Things usually start slower than expected.`
+            : `${count} a month, nearly double plan. Only if acquisition works better than you're assuming.`;
 
     return {
       key,
       label: SCENARIO_LABEL[key],
       assumption,
-      customers: r(customers),
+      customers: Math.round(customers * 10) / 10,
       revenue: r(revenue),
       profit: r(profit),
       runwayNote:
@@ -226,8 +227,16 @@ export interface UnitEconomics {
   ltv: number | null;
   ltvBasis: string;
   ltvToCac: number | null;
-  /** Months of margin needed to earn back the acquisition cost. */
-  paybackMonths: number | null;
+  /**
+   * How many sales it takes to earn back what a customer costs to acquire.
+   *
+   * Named for what it counts. It was `paybackMonths`, which was wrong twice —
+   * the arithmetic is cost ÷ margin per sale, and rendering it produced
+   * "0.13 sales", which is not a sentence anyone can act on.
+   */
+  paybackSales: number | null;
+  /** The same figure as a sentence, because below one sale a decimal is noise. */
+  paybackNote: string | null;
   observedRepeatRate: number | null;
   claims: Claim[];
   warnings: string[];
@@ -293,7 +302,13 @@ export function unitEconomics(
   }
 
   const ltvToCac = ltv !== null && cac > 0 ? Math.round((ltv / cac) * 100) / 100 : null;
-  const paybackMonths = cac > 0 && grossPerSale > 0 ? Math.round((cac / grossPerSale) * 100) / 100 : null;
+  const paybackSales = cac > 0 && grossPerSale > 0 ? Math.round((cac / grossPerSale) * 100) / 100 : null;
+  const paybackNote =
+    paybackSales === null
+      ? null
+      : paybackSales <= 1
+        ? "You earn back what a customer costs to acquire on their first purchase."
+        : `It takes about ${Math.ceil(paybackSales)} purchases from a customer to earn back what they cost to acquire.`;
 
   if (contributionPerSale <= 0 && price > 0) {
     warnings.push(
@@ -305,9 +320,9 @@ export function unitEconomics(
       `You're spending more to get a customer than they're worth over their whole time with you (${ltvToCac}× return). That has to change before any spending on acquisition makes sense.`,
     );
   }
-  if (paybackMonths !== null && paybackMonths > 12) {
+  if (paybackSales !== null && paybackSales > 6) {
     warnings.push(
-      `It takes about ${paybackMonths} sales to earn back what a customer costs to acquire. That's a long time to be out of pocket without funding.`,
+      `A customer has to buy about ${Math.ceil(paybackSales)} times before they've covered what they cost to acquire. That's a long time to be out of pocket, and it only works if they actually keep buying.`,
     );
   }
   if (grossMarginPct > 0 && grossMarginPct < 20 && price > 0) {
@@ -332,7 +347,8 @@ export function unitEconomics(
     ltv,
     ltvBasis,
     ltvToCac,
-    paybackMonths,
+    paybackSales,
+    paybackNote,
     observedRepeatRate,
     claims,
     warnings,
@@ -503,6 +519,19 @@ function clampPct(n: number): number {
 function r(n: number): number {
   return Math.round(n * 100) / 100;
 }
+/**
+ * Customer counts as a person would say them.
+ *
+ * Half a customer doesn't exist. Below one the honest phrasing is words, and
+ * above it a whole number is what the reader is going to plan against anyway.
+ */
+function people(n: number): string {
+  if (n <= 0) return "No customers";
+  if (n < 1) return "Fewer than one customer";
+  const whole = Math.round(n);
+  return `${whole} customer${whole === 1 ? "" : "s"}`;
+}
+
 function money(n: number): string {
   if (!Number.isFinite(n)) return "—";
   return `$${Math.round(n * 100) / 100}`;

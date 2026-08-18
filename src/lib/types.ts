@@ -629,6 +629,27 @@ export interface WebsiteVersion {
   createdAt: number;
 }
 
+/** One recorded reading of a business's scores. See `intel/changelog.ts`. */
+export interface ScoreSnapshot {
+  at: number;
+  fit: number;
+  readiness: number;
+  /** Age-discounted evidence weight. */
+  evidence: number;
+  /** Sum of importance x uncertainty across open questions. */
+  doubt: number;
+  call: "build" | "validate-more" | "pivot" | "pause" | "kill";
+  /** The raw counts, so a diff can name what actually changed. */
+  counts: {
+    paid: number;
+    repeat: number;
+    conversations: number;
+    contacted: number;
+    churned: number;
+    experiments: number;
+  };
+}
+
 export interface SelectedBusiness {
   id: ID;
   ideaId: ID;
@@ -691,6 +712,13 @@ export interface SelectedBusiness {
    * accepting a headline shouldn't rewrite what the business is.
    */
   websiteAccepted?: Record<string, string>;
+  /**
+   * Score history, newest first.
+   *
+   * Stored so a score change can be explained by diffing the evidence counts
+   * that produced it, rather than appearing to drift. See `intel/changelog.ts`.
+   */
+  scoreHistory?: ScoreSnapshot[];
 }
 
 /** Which system answers generation requests. */
@@ -714,6 +742,13 @@ export interface AppState {
     intelligence: Intelligence;
     /** Defaults to "beginner". Controls how much the UI explains. */
     experienceMode: ExperienceMode;
+    /**
+     * What the founder is optimising for, as four percentages summing to 100.
+     *
+     * Changes the order ideas rank in, never the facts behind them. Undefined
+     * means the app's own balance. See `intel/priorities.ts`.
+     */
+    priorities?: { speed: number; profit: number; risk: number; scalability: number };
   };
   profile: FounderProfile;
   ideas: BusinessIdea[];

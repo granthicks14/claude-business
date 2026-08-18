@@ -7,6 +7,7 @@ import { Icon } from "./icons";
 import { Badge, Card, ScoreRing } from "./ui";
 import { currency } from "@/lib/finance";
 import { BAND_LABEL, computeFit } from "@/lib/fit";
+import { useFitWeights } from "@/lib/intel";
 import { actions, useAppState } from "@/lib/store";
 import { LEVEL_LABEL, type BusinessIdea } from "@/lib/types";
 
@@ -15,9 +16,14 @@ const BAND_TONE = { best: "good", good: "accent", possible: "neutral", poor: "wa
 export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: number; index?: number }) {
   const inCompare = useAppState((s) => s.compareIds.includes(idea.id));
   const profile = useAppState((s) => s.profile);
-  // Recomputed against the live profile rather than read off the idea, so
-  // editing your situation re-ranks the list immediately.
-  const fit = useMemo(() => computeFit(idea, profile, { withImprovements: false }), [idea, profile]);
+  const weights = useFitWeights();
+  // Recomputed against the live profile and the founder's stated priorities
+  // rather than read off the idea, so editing either re-ranks the list
+  // immediately instead of leaving a stale number on the card.
+  const fit = useMemo(
+    () => computeFit(idea, profile, { withImprovements: false, weights }),
+    [idea, profile, weights],
+  );
 
   return (
     <Card

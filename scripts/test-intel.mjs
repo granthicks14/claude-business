@@ -313,7 +313,11 @@ results.unitEconomics = {
   contribution: econNone.contributionPerSale,
   marginPct: econNone.grossMarginPct,
   negativeWarns: econBad.warnings.length > 0,
-  paybackMonths: econNone.paybackMonths,
+  paybackSales: econNone.paybackSales,
+  paybackNote: econNone.paybackNote,
+  paybackNoteWhenCheap: unitEconomics(money({ cac: 5 })).paybackNote,
+  scenarioAssumptions: scen.map((s) => s.assumption),
+  fractionalPeople: scenarioSet(money({ customersPerMonth: 5 })).find((s) => s.key === "failure")?.assumption,
 };
 
 const goal = reverseEngineerGoal(money(), 1000);
@@ -563,6 +567,16 @@ check(
 check("contribution per sale is correct", r.unitEconomics.contribution === 70, String(r.unitEconomics.contribution));
 check("gross margin is correct", r.unitEconomics.marginPct === 80, String(r.unitEconomics.marginPct));
 check("negative unit economics produce a warning", r.unitEconomics.negativeWarns);
+check(
+  "payback is stated in words, not as a fraction of a sale",
+  typeof r.unitEconomics.paybackNoteWhenCheap === "string" && !/0\.\d+ sales/.test(r.unitEconomics.paybackNoteWhenCheap),
+  r.unitEconomics.paybackNoteWhenCheap,
+);
+check(
+  "no scenario claims a fraction of a person",
+  !r.unitEconomics.scenarioAssumptions.some((a) => /\b0\.\d+ customers?\b/.test(a)),
+  r.unitEconomics.fractionalPeople,
+);
 check("goal reverse-engineering shows every step's assumption", r.goal.everyStepCitesAssumption);
 check("goal maths is correct", r.goal.customersNeeded === "18", `needs ${r.goal.customersNeeded} customers`);
 check(
