@@ -164,26 +164,41 @@ export default function HomePage() {
             </p>
           )}
 
-          {ready && !hasProfile && (
-            <div className="mt-6 max-w-2xl animate-in" style={{ animationDelay: "120ms" }}>
-              <p className="text-xs uppercase tracking-wide text-faint font-medium mb-2">
-                Don&apos;t know what business you want?
-              </p>
-              <Link
-                href="/opportunity"
-                className="hover-lift group flex items-start gap-3 rounded-xl border border-border bg-surface p-4 min-h-16"
-              >
-                <span className="shrink-0 mt-0.5 grid place-items-center size-8 rounded-lg bg-accent-soft text-accent transition-transform duration-200 group-hover:scale-110">
-                  <Icon.money className="size-4" />
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-medium text-sm">Find the best opportunity where I live</span>
-                  <span className="block text-[13px] text-muted mt-0.5 leading-relaxed">
-                    Describe your town, answer four questions, and skip the profile entirely. For when you mostly care
-                    what could actually make money.
-                  </span>
-                </span>
-              </Link>
+          {/*
+            Five doors, not one funnel. People arrive in genuinely different
+            states — no idea, an idea, a running business, or just curious which
+            industry is worth their time — and routing all of them through the
+            same profile questionnaire was the single biggest reason to leave.
+          */}
+          {ready && (
+            <div className="mt-7 max-w-2xl animate-in" style={{ animationDelay: "120ms" }}>
+              <p className="text-xs uppercase tracking-wide text-faint font-medium mb-2.5">Or go straight to it</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <QuickLink
+                  href="/analyze"
+                  icon={<Icon.search className="size-4" />}
+                  title="I already run a business"
+                  detail="Score it, and get the three things worth fixing first."
+                />
+                <QuickLink
+                  href="/explore"
+                  icon={<Icon.compass className="size-4" />}
+                  title="Which industry is worth it?"
+                  detail="Eighteen, ranked against your money, hours and skills."
+                />
+                <QuickLink
+                  href="/opportunity"
+                  icon={<Icon.money className="size-4" />}
+                  title="What would work where I live?"
+                  detail="Describe your town. No profile needed."
+                />
+                <QuickLink
+                  href="/start"
+                  icon={<Icon.spark className="size-4" />}
+                  title="I have an idea already"
+                  detail="Describe it in a sentence and get it scored."
+                />
+              </div>
             </div>
           )}
 

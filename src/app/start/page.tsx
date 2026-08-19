@@ -21,7 +21,7 @@ import { actions, useAppState } from "@/lib/store";
  * common reason to leave.
  */
 
-type Mode = "idea" | "find" | "existing" | null;
+type Mode = "idea" | "find" | null;
 
 export default function StartPage() {
   return (
@@ -71,18 +71,23 @@ function Start() {
             cta="Find me options"
             onClick={() => router.push("/onboarding")}
           />
+          {/*
+            This used to run the same free-text intake as "I have an idea",
+            which treated a trading business as a sentence to be parsed. It now
+            goes to the analyser, which reads the website, works out what kind
+            of business it is and returns the three things worth fixing.
+          */}
           <ModeCard
             art={<ShopArt className="w-full" />}
             title="I already run something"
-            detail="Bring an existing business in and work on the part that isn't working."
-            cta="Improve what I have"
-            onClick={() => setMode("existing")}
+            detail="Give it your website or a description. It scores the business, says what it can't tell, and names what to fix first."
+            cta="Analyse my business"
+            onClick={() => router.push("/analyze")}
           />
         </div>
       )}
 
-      {mode === "idea" && <IdeaIntake onBack={() => setMode(null)} existing={false} />}
-      {mode === "existing" && <IdeaIntake onBack={() => setMode(null)} existing />}
+      {mode === "idea" && <IdeaIntake onBack={() => setMode(null)} />}
 
       {mode === null && (
         <Card className="p-5 mt-6">
@@ -143,7 +148,7 @@ function ModeCard({
 
 /* ------------------------------------------------------------------ intake --- */
 
-function IdeaIntake({ onBack, existing }: { onBack: () => void; existing: boolean }) {
+function IdeaIntake({ onBack }: { onBack: () => void }) {
   const router = useRouter();
   const toast = useToast();
   const profile = useAppState((s) => s.profile);
@@ -166,20 +171,15 @@ function IdeaIntake({ onBack, existing }: { onBack: () => void; existing: boolea
     router.push("/business");
   };
 
-  const placeholder = existing
-    ? "e.g. I run a small window cleaning round in Leeds, about 40 regulars, but I'm working six days and barely clearing £1,800 a month."
-    : "e.g. A mobile car detailing service for busy professionals who don't have time to take the car anywhere.";
+  const placeholder =
+    "e.g. A mobile car detailing service for busy professionals who don't have time to take the car anywhere.";
 
   return (
     <div className="space-y-4">
       <Card className="p-5">
         <SectionHeader
-          title={existing ? "Tell me about the business you run" : "Describe the idea"}
-          description={
-            existing
-              ? "What it is, who buys, and the bit that isn't working. The last part is the most useful."
-              : "One or two sentences is plenty. Say who it's for if you know — that's the thing the app most wants."
-          }
+          title="Describe the idea"
+          description="One or two sentences is plenty. Say who it's for if you know — that's the thing the app most wants."
           action={
             <Button size="sm" variant="ghost" onClick={onBack}>
               Back
@@ -191,7 +191,7 @@ function IdeaIntake({ onBack, existing }: { onBack: () => void; existing: boolea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholder}
-          aria-label={existing ? "Describe your existing business" : "Describe your idea"}
+          aria-label="Describe your idea"
         />
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="primary" onClick={read} icon={<Icon.arrowRight className="size-4" />}>

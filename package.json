@@ -11,7 +11,8 @@
     "test:intel": "node scripts/test-intel.mjs",
     "test:research": "node scripts/test-research.mjs",
     "test:product": "node scripts/test-product.mjs",
-    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs && node scripts/test-product.mjs"
+    "test:analyze": "node scripts/test-analyze.mjs",
+    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs && node scripts/test-product.mjs && node scripts/test-analyze.mjs"
   },
   "repository": {
     "type": "git",

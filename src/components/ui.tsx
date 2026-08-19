@@ -316,6 +316,18 @@ export function EmptyState({
 /* Forms                                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * The id a Field hands down to whatever control sits inside it.
+ *
+ * `htmlFor` was optional and almost nowhere passed, so most labels in the app
+ * were visually attached to their input and programmatically attached to
+ * nothing: clicking the label didn't focus the field, and a screen reader
+ * announced an unlabelled textbox. Threading the id through context fixes
+ * every existing call site at once, rather than asking each one to remember —
+ * which is the same reason it was broken everywhere in the first place.
+ */
+const FieldIdContext = createContext<string | undefined>(undefined);
+
 export function Field({
   label,
   hint,
@@ -327,19 +339,34 @@ export function Field({
   label: ReactNode;
   hint?: ReactNode;
   children: ReactNode;
+  /** Only needed for a control that isn't one of the primitives below. */
   htmlFor?: string;
   required?: boolean;
 }) {
+  const auto = useId();
+  const id = htmlFor ?? auto;
+  const hintId = hint ? `${id}-hint` : undefined;
+
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-sm font-medium">
+      <label htmlFor={id} className="block text-sm font-medium">
         {label}
         {required && <span className="text-bad ml-0.5">*</span>}
       </label>
-      {hint && <p className="text-xs text-muted leading-relaxed">{hint}</p>}
-      {children}
+      {hint && (
+        <p id={hintId} className="text-xs text-muted leading-relaxed">
+          {hint}
+        </p>
+      )}
+      <FieldIdContext.Provider value={id}>{children}</FieldIdContext.Provider>
     </div>
   );
+}
+
+/** Lets a control adopt its Field's id without every call site passing one. */
+function useFieldId(explicit?: string): string | undefined {
+  const inherited = useContext(FieldIdContext);
+  return explicit ?? inherited;
 }
 
 const inputBase =
@@ -347,21 +374,29 @@ const inputBase =
   "hover:border-accent-border focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25 " +
   "placeholder:text-faint disabled:opacity-60";
 
-export function Input({ className = "", ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} className={`${inputBase} ${className}`} />;
+export function Input({ className = "", id, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input {...rest} id={useFieldId(id)} className={`${inputBase} ${className}`} />;
 }
 
 export function Textarea({
   className = "",
   ref,
+  id,
   ...rest
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: Ref<HTMLTextAreaElement> }) {
-  return <textarea ref={ref} {...rest} className={`${inputBase} min-h-24 resize-y leading-relaxed ${className}`} />;
+  return (
+    <textarea
+      ref={ref}
+      {...rest}
+      id={useFieldId(id)}
+      className={`${inputBase} min-h-24 resize-y leading-relaxed ${className}`}
+    />
+  );
 }
 
-export function Select({ className = "", children, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Select({ className = "", children, id, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select {...rest} className={`${inputBase} pr-8 appearance-none bg-no-repeat ${className}`}
+    <select {...rest} id={useFieldId(id)} className={`${inputBase} pr-8 appearance-none bg-no-repeat ${className}`}
       style={{
         backgroundImage:
           "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",

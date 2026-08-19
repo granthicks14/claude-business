@@ -32,7 +32,8 @@ npm run test:scoring   # 22 scoring calibration tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
 npm run test:product   # 60 quality/consistency/variant/intake/sample tests
-npm test               # all four
+npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
+npm test               # all five
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 ```
 
@@ -53,6 +54,9 @@ src/lib/variants.ts     Five reframings of one idea, each rescored.
 src/lib/pricing.ts      Three tiers derived from the one price you entered.
 src/lib/intake.ts       A typed sentence becomes a scored idea, gaps declared.
 src/lib/sample.ts       The worked example. Fictional, and says so everywhere.
+src/lib/analyze/        The existing-business analyser. Reads a page, works out
+                        what kind of business it is, scores fifteen dimensions.
+src/lib/explore.ts      Eighteen industries ranked against one founder.
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
@@ -75,10 +79,50 @@ details wizard), `/build` (prompt builder), `/website` (website builder),
 second front door for people who don't know what business they want.
 
 `/start` is the front door proper. Three routes in — "I have an idea", "help me
-find one", "I already run something" — because the app previously served only
-the middle one, and made someone who arrived knowing what they wanted to build
-answer twenty questions about themselves first. `/quality` answers "is this any
-good?", `/improve` answers "how do I make it better?".
+find one", and "I already run something", which hands off to `/analyze` —
+because the app previously served only the middle one, and made someone who
+arrived knowing what they wanted to build answer twenty questions about
+themselves first. `/quality` answers "is this any
+good?", `/improve` answers "how do I make it better?". `/analyze` is for people
+who already trade, and `/explore` for people who don't know which industry is
+worth their time.
+
+### The analyser
+
+`analyze/` answers "how good is the business I already run?" from a web
+address, a description, or neither. `fetch-site.ts` retrieves a public page
+with an ordinary outbound request — no scraping service, so no cost — and
+`site.ts` parses it as a pure function over a string, which is why the parser
+is testable without a network.
+
+**A dimension is allowed to return no score.** `score: null` with a grade of
+`unknown` is a first-class result and the overall figure is computed only
+across the rows that have something behind them. Defaulting the unknowns to 50
+would produce a confident middling number for a business nobody has looked at
+— exactly the output a founder would act on and shouldn't. The report states
+its own coverage instead.
+
+Findings come from two places, joined rather than chained: the absence checks
+find what isn't there, and `findingsFromScores` finds what is there and weak.
+Without the second, a founder who answered every question got an empty to-do
+list, which reads as approval for a business the app had just scored at sixty.
+
+Rewrites carry `[VISIBLE PLACEHOLDERS]` for anything unknown, because a
+rewrite containing an invented guarantee gets published by someone, and then
+it's a lie with their name on it.
+
+### The URL fence
+
+`analyze/url-guard.ts` holds the rules about which addresses may be fetched,
+deliberately separate from `fetch-site.ts` — that module is `server-only`,
+which is right for something that opens sockets and wrong for the part that
+decides what's allowed, because a security fence tests can't exercise is a
+fence nobody has checked. It's pure and uses no node builtins, so the suite
+throws loopback, link-local, private and cloud-metadata addresses straight at
+it. Hostnames are resolved before connecting and **every** resolved address
+must be public; redirects are followed one hop at a time with the same check
+applied to each, because a public hostname is allowed to redirect to
+127.0.0.1 and `fetch` would follow it silently.
 
 ### Never show an empty box
 
@@ -315,6 +359,11 @@ These are product requirements, not style preferences:
   to a salon" and answering "The problem: get their dog to a salon" states the
   opposite of what the user wrote — worse than saying nothing, because they
   assume the app understood.
+- **Never report a market ranking as universal.** `explore.ts` weights its
+  levers from the founder's own budget, hours, income goal and risk appetite.
+  Two opposite founders must not share more than half their top five — when
+  the geography lever had a fixed weight they shared four of five, which is a
+  leaderboard with a tilt rather than a personalised ranking.
 - **Recognising a trade is not knowing its price.** A niche entry carries a
   pricing *basis* and deliberately no figure, so a catalogue match tells the
   app how the money is counted and nothing about how much. Intake asks what
