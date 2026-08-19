@@ -67,9 +67,9 @@ function Start() {
           <ModeCard
             art={<ToolboxArt className="w-full" />}
             title="Help me find one"
-            detail="Answer a few questions about your skills, time and money, and get options ranked against them."
+            detail="Describe yourself in a sentence — or answer the questions if you'd rather. Options get ranked against what you say."
             cta="Find me options"
-            onClick={() => router.push("/onboarding")}
+            onClick={() => router.push("/describe")}
           />
           {/*
             This used to run the same free-text intake as "I have an idea",

@@ -13,7 +13,8 @@
     "test:research": "node scripts/test-research.mjs",
     "test:product": "node scripts/test-product.mjs",
     "test:analyze": "node scripts/test-analyze.mjs",
-    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs && node scripts/test-product.mjs && node scripts/test-analyze.mjs"
+    "test:describe": "node scripts/test-describe.mjs",
+    "test": "node scripts/test-scoring.mjs && node scripts/test-intel.mjs && node scripts/test-research.mjs && node scripts/test-product.mjs && node scripts/test-analyze.mjs && node scripts/test-describe.mjs"
   },
   "repository": {
     "type": "git",

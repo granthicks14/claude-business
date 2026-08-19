@@ -35,6 +35,7 @@ function useNav(): NavGroup[] {
           { href: "/", label: "Home", icon: "home" },
           { href: "/start", label: "Start a business", icon: "spark" },
           { href: "/ideas", label: "Ideas", icon: "spark", badge: state.ideas.length || undefined },
+          { href: "/describe", label: "Tell it about me", icon: "chat" },
           { href: "/best", label: "Find my best", icon: "target" },
           { href: "/explore", label: "Which industry?", icon: "compass" },
           { href: "/analyze", label: "Analyse my business", icon: "search" },
