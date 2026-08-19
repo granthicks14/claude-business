@@ -282,12 +282,12 @@ function Experiments({ business }: { business: SelectedBusiness }) {
           }
         />
         {suggest.error && <ErrorPanel error={suggest.error} onRetry={propose} retrying={suggest.loading} />}
-        {suggest.loading && <AILoading stage={suggest.stage} compact />}
+        {suggest.loading && <AILoading stage={suggest.stage} stages={suggest.stages} stageIndex={suggest.stageIndex} compact />}
       </Card>
 
       {judge.loading && (
         <Card className="px-4">
-          <AILoading stage={judge.stage} compact />
+          <AILoading stage={judge.stage} stages={judge.stages} stageIndex={judge.stageIndex} compact />
         </Card>
       )}
 
@@ -479,7 +479,7 @@ function Assumptions({ business }: { business: SelectedBusiness }) {
           }
         />
         {task.error && <ErrorPanel error={task.error} onRetry={surface} retrying={task.loading} />}
-        {task.loading && <AILoading stage={task.stage} compact />}
+        {task.loading && <AILoading stage={task.stage} stages={task.stages} stageIndex={task.stageIndex} compact />}
       </Card>
 
       {business.assumptions.length === 0 && !task.loading ? (

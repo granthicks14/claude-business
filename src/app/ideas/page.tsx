@@ -39,7 +39,7 @@ export default function IdeasPage() {
 function Ideas() {
   const state = useAppState((s) => s);
   const toast = useToast();
-  const { generate, retry, loading, stage, progress, error, meta, clearError } = useIdeaGeneration();
+  const { generate, retry, loading, stage, stages, stageIndex, progress, error, meta, clearError } = useIdeaGeneration();
 
   const [sort, setSort] = useState<SortKey>("score");
   const [filter, setFilter] = useState<FilterKey>("all");
@@ -105,7 +105,7 @@ function Ideas() {
 
       {loading && (
         <Card className="p-5">
-          <AILoading stage={stage} compact />
+          <AILoading stage={stage} stages={stages} stageIndex={stageIndex} compact />
           {progress.total > 1 && (
             <div className="mt-2">
               <div className="h-1 rounded-full bg-surface-2 overflow-hidden">

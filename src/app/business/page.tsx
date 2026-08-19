@@ -350,7 +350,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
             <ErrorPanel error={advice.error} onRetry={runAdvice} retrying={advice.loading} />
           </div>
         )}
-        {advice.loading && <AILoading stage={advice.stage} compact />}
+        {advice.loading && <AILoading stage={advice.stage} stages={advice.stages} stageIndex={advice.stageIndex} compact />}
 
         {business.health && !advice.loading && (
           <div className="mt-5 pt-4 border-t border-border">
@@ -476,7 +476,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           }
         />
         {radar.error && <ErrorPanel error={radar.error} onRetry={runRadar} retrying={radar.loading} />}
-        {radar.loading && <AILoading stage={radar.stage} compact />}
+        {radar.loading && <AILoading stage={radar.stage} stages={radar.stages} stageIndex={radar.stageIndex} compact />}
 
         {business.radar.length > 0 ? (
           <ul className="grid gap-3 sm:grid-cols-2">

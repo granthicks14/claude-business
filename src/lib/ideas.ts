@@ -167,6 +167,9 @@ export function useIdeaGeneration() {
   const [loading, setLoading] = useState(false);
   const [meta, setMeta] = useState<AIMeta | null>(null);
   const [stage, setStage] = useState("");
+  // The whole pipeline, so the loading UI can show what is done and what remains.
+  const [stages, setStages] = useState<string[]>([]);
+  const [stageIndexState, setStageIndexState] = useState(0);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [error, setError] = useState<{ message: string; retryable: boolean; code?: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -191,12 +194,17 @@ export function useIdeaGeneration() {
     setError(null);
     setProgress({ done: 0, total: options.angles.length });
 
-    const stages = stagesFor("ideas");
-    setStage(stages[0]);
+    const taskStages = stagesFor("ideas");
+    setStages(taskStages);
+    setStage(taskStages[0]);
+    setStageIndexState(0);
     let stageIndex = 0;
     const timer = setInterval(() => {
-      stageIndex = Math.min(stageIndex + 1, stages.length - 1);
-      if (mounted.current) setStage(stages[stageIndex]);
+      stageIndex = Math.min(stageIndex + 1, taskStages.length - 1);
+      if (mounted.current) {
+        setStage(taskStages[stageIndex]);
+        setStageIndexState(stageIndex);
+      }
     }, currentIntelligence() === "engine" ? 300 : 2600);
 
     const seen = new Set((options.avoid ?? []).map(normalizeName));
@@ -371,5 +379,5 @@ export function useIdeaGeneration() {
     return generate(lastOptions.current);
   }, [generate]);
 
-  return { generate, retry, loading, stage, progress, error, meta, clearError: () => setError(null) };
+  return { generate, retry, loading, stage, stages, stageIndex: stageIndexState, progress, error, meta, clearError: () => setError(null) };
 }

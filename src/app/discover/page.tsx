@@ -319,7 +319,7 @@ function StressTest() {
       {task.error && <ErrorPanel error={task.error} onRetry={run} retrying={task.loading} />}
       {task.loading && (
         <Card className="p-6">
-          <AILoading stage={task.stage} />
+          <AILoading stage={task.stage} stages={task.stages} stageIndex={task.stageIndex} />
         </Card>
       )}
 
@@ -434,7 +434,7 @@ function NicheFinder() {
       {task.error && <ErrorPanel error={task.error} onRetry={find} retrying={task.loading} />}
       {task.loading && (
         <Card className="p-6">
-          <AILoading stage={task.stage} />
+          <AILoading stage={task.stage} stages={task.stages} stageIndex={task.stageIndex} />
         </Card>
       )}
 

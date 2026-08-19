@@ -88,7 +88,7 @@ function Best() {
         <Card>
           {generation.loading ? (
             <div className="p-6">
-              <AILoading stage={generation.stage} />
+              <AILoading stage={generation.stage} stages={generation.stages} stageIndex={generation.stageIndex} />
               <p className="text-xs text-center text-faint">
                 {generation.progress.done} of {generation.progress.total} angles explored
               </p>
@@ -125,7 +125,7 @@ function Best() {
       {generation.error && <ErrorPanel error={generation.error} onRetry={generation.retry} retrying={generation.loading} />}
       {generation.loading && (
         <Card className="px-4">
-          <AILoading stage={generation.stage} compact />
+          <AILoading stage={generation.stage} stages={generation.stages} stageIndex={generation.stageIndex} compact />
         </Card>
       )}
 
@@ -215,7 +215,7 @@ function Best() {
             <ErrorPanel error={verdict.error} onRetry={explain} retrying={verdict.loading} />
           </div>
         )}
-        {verdict.loading && <AILoading stage={verdict.stage} compact />}
+        {verdict.loading && <AILoading stage={verdict.stage} stages={verdict.stages} stageIndex={verdict.stageIndex} compact />}
 
         {comparison && !verdict.loading && (
           <div className="mt-5 pt-4 border-t border-border space-y-4">

@@ -949,17 +949,97 @@ export function Dialog({
 /* Feedback                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export function AILoading({ stage, compact }: { stage: string; compact?: boolean }) {
+/**
+ * The wait, made legible.
+ *
+ * WHY A CHECKLIST RATHER THAN A SPINNER
+ *
+ * This used to render one line of text next to a pulsing dot, which is a
+ * spinner with extra words: it tells you something is happening and nothing
+ * about what. The pipeline was already known — `stagesFor(task)` computed the
+ * whole list and the UI discarded all but the current entry — so showing what
+ * is finished, what is running and what is still to come costs nothing and
+ * turns dead time into an explanation of the work.
+ *
+ * WHY IT ISN'T THEATRE
+ *
+ * The stages are the real steps of the task being run, and this only mounts
+ * while a genuinely asynchronous operation is pending. Where the local engine
+ * answers instantly it stays out of the way. A five-second progress sequence
+ * staged over three milliseconds of work would be a fabricated wait, which is
+ * the same lie as a fabricated statistic.
+ *
+ * Reduced motion is respected by the global rule: the marks and the list are
+ * static text, and only the transition between them animates.
+ */
+export function AILoading({
+  stage,
+  stages,
+  stageIndex = 0,
+  compact,
+}: {
+  stage: string;
+  /** The whole pipeline. Omit it and this degrades to the single-line form. */
+  stages?: string[];
+  stageIndex?: number;
+  compact?: boolean;
+}) {
+  const hasList = Array.isArray(stages) && stages.length > 1;
+
+  if (!hasList) {
+    return (
+      <div
+        className={`flex items-center gap-3 ${compact ? "py-3" : "py-10 justify-center"}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="relative flex size-2.5 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-accent" style={{ animation: "pulse-dot 1.4s ease-in-out infinite" }} />
+        </span>
+        <span className="text-sm text-muted">{stage || "Thinking…"}</span>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className={`flex items-center gap-3 ${compact ? "py-3" : "py-10 justify-center"}`}
-      role="status"
-      aria-live="polite"
-    >
-      <span className="relative flex size-2.5 shrink-0">
-        <span className="absolute inset-0 rounded-full bg-accent" style={{ animation: "pulse-dot 1.4s ease-in-out infinite" }} />
-      </span>
-      <span className="text-sm text-muted">{stage || "Thinking…"}</span>
+    <div className={compact ? "py-3" : "py-8"}>
+      {/*
+        Only the current step is announced. Marking the whole list live would
+        make a screen reader re-read five items every time one changed.
+      */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {stage}
+      </p>
+
+      <ol className="space-y-2.5 max-w-sm mx-auto">
+        {stages!.map((s, i) => {
+          const done = i < stageIndex;
+          const current = i === stageIndex;
+          return (
+            <li
+              key={s}
+              className={`flex items-start gap-2.5 text-sm transition-colors duration-300 ${
+                done ? "text-muted" : current ? "text-text font-medium" : "text-faint"
+              }`}
+            >
+              <span className="shrink-0 mt-0.5 size-4 grid place-items-center" aria-hidden="true">
+                {done ? (
+                  <svg viewBox="0 0 16 16" className="size-4 text-good" fill="none" stroke="currentColor" strokeWidth="2.2">
+                    <path d="m3.5 8.5 3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : current ? (
+                  <span className="relative flex size-2.5">
+                    <span className="absolute inset-0 rounded-full bg-accent" style={{ animation: "pulse-dot 1.4s ease-in-out infinite" }} />
+                  </span>
+                ) : (
+                  <span className="size-2 rounded-full border border-border-strong" />
+                )}
+              </span>
+              <span className="leading-snug">{s}</span>
+            </li>
+          );
+        })}
+      </ol>
     </div>
   );
 }

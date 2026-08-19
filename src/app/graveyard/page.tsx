@@ -145,7 +145,7 @@ function ArchivedCard({ business }: { business: SelectedBusiness }) {
 
       <div className="mt-4 pt-4 border-t border-border">
         {task.error && <ErrorPanel error={task.error} onRetry={analyse} retrying={task.loading} />}
-        {task.loading && <AILoading stage={task.stage} compact />}
+        {task.loading && <AILoading stage={task.stage} stages={task.stages} stageIndex={task.stageIndex} compact />}
 
         {retro ? (
           <div className="space-y-4">

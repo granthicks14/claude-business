@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { GrowthArt } from "@/components/art";
 import { Badge, Card, Hi, LinkButton, Meter, ScoreRing, SectionHeader, Tabs } from "@/components/ui";
+import { PositionMap, type MapPoint } from "@/components/position-map";
 import { CONSISTENCY_NOTE, SEVERITY_LABEL, SEVERITY_TONE, checkConsistency } from "@/lib/consistency";
 import { QUALITY_HELP, QUALITY_LABEL, QUALITY_BAND_LABEL, QUALITY_NOTE, businessQuality } from "@/lib/quality";
 import { useAppState } from "@/lib/store";
@@ -32,10 +33,55 @@ export default function QualityPage() {
 
 function Quality({ business }: { business: SelectedBusiness }) {
   const profile = useAppState((s) => s.profile);
+  const others = useAppState((s) => s.businesses);
   const [tab, setTab] = useState<"score" | "check">("score");
 
   const quality = useMemo(() => businessQuality(business, profile), [business, profile]);
   const consistency = useMemo(() => checkConsistency(business, profile), [business, profile]);
+
+  /*
+   * Opportunity against risk, for every business the founder is holding.
+   *
+   * The risk axis is inverted on the way in. The scorecard reads high-is-good
+   * on every row, so its "risk" dimension is really "how safe" — plotting that
+   * straight would put the most dangerous idea in the safe corner.
+   */
+  const mapPoints = useMemo<MapPoint[]>(() => {
+    const live = others.filter((b) => !b.archivedAt);
+    const set = live.some((b) => b.id === business.id) ? live : [business, ...live];
+
+    return set
+      .map((b): MapPoint | null => {
+        /*
+         * One unscoreable business must not take the page down with it.
+         *
+         * Before the map, only the active business was scored, so a record
+         * that couldn't be read broke its own page and nothing else. Scoring
+         * every business to draw a picture widens that blast radius — and a
+         * decorative plot is never worth losing the scorecard it sits next to.
+         * A business that throws is simply left off the map.
+         */
+        let q;
+        try {
+          q = b.id === business.id ? quality : businessQuality(b, profile);
+        } catch {
+          return null;
+        }
+        const opp = q.factors.find((f) => f.dimension === "marketOpportunity");
+        const safety = q.factors.find((f) => f.dimension === "risk");
+        if (!opp || !safety) return null;
+        return {
+          id: b.id,
+          label: b.idea.name.length > 26 ? `${b.idea.name.slice(0, 24)}…` : b.idea.name,
+          opportunity: opp.score,
+          risk: 100 - safety.score,
+          reading: b.id === business.id ? opp.reason : `${opp.reason} ${safety.reason}`,
+          current: b.id === business.id,
+        };
+      })
+      .filter((p): p is MapPoint => p !== null)
+      .slice(0, 6);
+  }, [others, business, profile, quality]);
 
   return (
     <div className="max-w-3xl">
@@ -127,6 +173,16 @@ function Quality({ business }: { business: SelectedBusiness }) {
                   </li>
                 ))}
               </ul>
+            </Card>
+          )}
+
+          {mapPoints.length > 0 && (
+            <Card className="p-5">
+              <SectionHeader
+                title="Worth it, against what it costs you to find out"
+                description="Opportunity and risk are already two rows on the scorecard. Against each other they answer a different question — whether the upside justifies the exposure."
+              />
+              <PositionMap points={mapPoints} />
             </Card>
           )}
 

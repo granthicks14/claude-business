@@ -310,7 +310,7 @@ function Compare() {
             <ErrorPanel error={task.error} onRetry={compare} retrying={task.loading} />
           </div>
         )}
-        {task.loading && <AILoading stage={task.stage} compact />}
+        {task.loading && <AILoading stage={task.stage} stages={task.stages} stageIndex={task.stageIndex} compact />}
 
         {verdict && !task.loading && (
           <div className="mt-5 pt-4 border-t border-border space-y-4">

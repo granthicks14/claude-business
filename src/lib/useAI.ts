@@ -58,6 +58,15 @@ export function useIntelligence(): Intelligence {
 export function useAITask<T>(task: string) {
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState("");
+  /*
+   * The whole pipeline and how far through it we are, not just the current
+   * line. The list was already being computed and thrown away — the loading
+   * UI could only ever show one message at a time, which reads as a spinner
+   * with extra words. Exposing the shape lets it show what is done, what is
+   * happening and what is still to come.
+   */
+  const [stages, setStages] = useState<string[]>([]);
+  const [stageIndexState, setStageIndexState] = useState(0);
   const [error, setError] = useState<AIError | null>(null);
   const [meta, setMeta] = useState<AIMeta | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -82,12 +91,17 @@ export function useAITask<T>(task: string) {
       setLoading(true);
       setError(null);
 
-      const stages = stagesFor(task);
-      setStage(stages[0]);
+      const taskStages = stagesFor(task);
+      setStages(taskStages);
+      setStage(taskStages[0]);
+      setStageIndexState(0);
       let stageIndex = 0;
       const timer = setInterval(() => {
-        stageIndex = Math.min(stageIndex + 1, stages.length - 1);
-        if (mounted.current) setStage(stages[stageIndex]);
+        stageIndex = Math.min(stageIndex + 1, taskStages.length - 1);
+        if (mounted.current) {
+          setStage(taskStages[stageIndex]);
+          setStageIndexState(stageIndex);
+        }
       }, 900);
 
       try {
@@ -201,7 +215,7 @@ export function useAITask<T>(task: string) {
 
   const reset = useCallback(() => setError(null), []);
 
-  return { run, retry, reset, loading, stage, error, meta };
+  return { run, retry, reset, loading, stage, stages, stageIndex: stageIndexState, error, meta };
 }
 
 /* -------------------------------------------------------------------------- */
