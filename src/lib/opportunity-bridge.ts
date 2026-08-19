@@ -87,7 +87,7 @@ export function toBusinessIdea(o: Opportunity, inputs: OpportunityInputs): Busin
     tags: [o.repeat ? "recurring" : "one-off", o.mode, o.difficulty],
     scores,
     opportunityScore: avg,
-    scoreExplanation: `Business Builder analysis score of ${o.total} from the opportunity finder, based on the area you described. Its strongest dimension is ${o.strongest}; its weakest is ${o.weakest}. The biggest unknown is: ${o.unknown}`,
+    scoreExplanation: `Groundwork analysis score of ${o.total} from the opportunity finder, based on the area you described. Its strongest dimension is ${o.strongest}; its weakest is ${o.weakest}. The biggest unknown is: ${o.unknown}`,
     saved: true,
     favorite: false,
     notes: [

@@ -56,7 +56,7 @@ export default function SharePage() {
           <EmptyState
             title="This link doesn't contain a plan"
             description="Shared plans carry their content inside the link itself, so the whole URL has to be copied — including everything after the # symbol."
-            action={<LinkButton href="/" variant="primary">Go to AI Business Builder</LinkButton>}
+            action={<LinkButton href="/" variant="primary">Go to Groundwork</LinkButton>}
           />
         </Card>
       </div>
@@ -68,7 +68,7 @@ export default function SharePage() {
       <header className="border-b border-border no-print">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
           <Link href="/" className="text-sm font-medium text-muted hover:text-text transition-colors">
-            AI Business Builder
+            Groundwork
           </Link>
           <Badge>Shared plan</Badge>
         </div>
@@ -200,7 +200,7 @@ export default function SharePage() {
 
         <footer className="pt-6 border-t border-border">
           <p className="text-xs text-faint leading-relaxed">
-            Shared from AI Business Builder. Any financial figures are illustrative estimates based on stated
+            Shared from Groundwork. Any financial figures are illustrative estimates based on stated
             assumptions, not projections or guarantees, and nothing here is legal, tax or financial advice.
           </p>
           <LinkButton href="/" size="sm" className="mt-4 no-print">

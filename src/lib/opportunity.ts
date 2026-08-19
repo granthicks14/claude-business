@@ -23,7 +23,7 @@ import type { FounderProfile } from "./types";
  *      data, and is labelled as such.
  *
  * Every output carries a confidence level and names what it's missing. The
- * scores are called a Business Builder analysis score, never a measurement.
+ * scores are called a Groundwork analysis score, never a measurement.
  */
 
 /* -------------------------------------------------------------------------- */
@@ -655,7 +655,7 @@ export function findOpportunities(inputs: OpportunityInputs, profile?: FounderPr
     opportunities: top,
     comparisons,
     disclaimer:
-      "These are Business Builder analysis scores, not measurements. They come from the business models the engine knows and the description you wrote — not from local data, which this app has no way to see. Treat them as a starting point for your own checking, not a finding.",
+      "These are Groundwork analysis scores, not measurements. They come from the business models the engine knows and the description you wrote — not from local data, which this app has no way to see. Treat them as a starting point for your own checking, not a finding.",
   };
 }
 

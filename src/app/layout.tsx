@@ -5,17 +5,23 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "AI Business Builder — Turn what you know into a business",
-    template: "%s · AI Business Builder",
+    default: "Groundwork — Build a business worth building",
+    template: "%s · Groundwork",
   },
   description:
-    "Tell it what you're good at, what you have, and what you want. Get business opportunities scored against your real situation, validated, planned, and broken down into what to do today.",
-  applicationName: "AI Business Builder",
+    "Find a business worth building, or work out whether the one you run is any good. Scored against your real situation, argued against honestly, and broken down into what to do this week. Free to run, no account.",
+  applicationName: "Groundwork",
   robots: { index: true, follow: true },
   openGraph: {
-    title: "AI Business Builder",
-    description: "Discover businesses you can actually build — scored, validated, and planned around your situation.",
+    title: "Groundwork — Build a business worth building",
+    description:
+      "A co-founder that will tell you when it's a bad idea. Scores what you're considering, argues the other side, and says what to do next.",
     type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Groundwork — Build a business worth building",
+    description: "A co-founder that will tell you when it's a bad idea.",
   },
 };
 

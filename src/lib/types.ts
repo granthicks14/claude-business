@@ -1,5 +1,5 @@
 /**
- * Core data models for AI Business Builder.
+ * Core data models for Groundwork.
  *
  * Everything the user creates lives in a single versioned `AppState` object
  * that is persisted locally (see lib/store.ts). Keeping the models flat and

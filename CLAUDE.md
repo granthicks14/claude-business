@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# AI Business Builder — project memory
+# Groundwork — project memory
 
 Next.js 16 App Router, React 19, TypeScript, Tailwind v4. No database, no auth,
 no server state. Everything the user creates lives in `localStorage`.
@@ -35,6 +35,7 @@ npm run test:product   # 60 quality/consistency/variant/intake/sample tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
 npm test               # all five
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
+npm run check:access   # proves no cross-user data path exists
 ```
 
 ## Architecture
@@ -57,6 +58,8 @@ src/lib/sample.ts       The worked example. Fictional, and says so everywhere.
 src/lib/analyze/        The existing-business analyser. Reads a page, works out
                         what kind of business it is, scores fifteen dimensions.
 src/lib/explore.ts      Eighteen industries ranked against one founder.
+src/lib/legal.ts        What the app actually does with data. The policy pages
+                        render this rather than restating it.
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
@@ -141,6 +144,32 @@ chose and entered) and `StyleSpec` (how it looks). `applyStyleRequest` can only
 write to `StyleSpec` — there is no code path from "make it more premium" to a
 price or a customer. That structure *is* the guarantee; an instruction telling
 a model not to change the business would only be a hope.
+
+### The name, and the key that didn't change
+
+The product is Groundwork: the work you do before you build. The localStorage
+key is still `abb:`, deliberately. That key is the only copy of a user's work —
+no account, no server backup — so renaming it to match the brand would make
+every existing user's profile and businesses vanish on their next visit, with
+no error to explain it. The name is internal; nobody sees it but us.
+
+### No cross-user data path, and how that stays true
+
+There are no accounts, sessions, cookies or database. Every user's work is in
+their own browser, so the usual access-control test matrix — A reads B's
+record, tamper with an id, escalate a role — has no target. That is a stronger
+position than access control implemented well, but only while it holds, and a
+comment claiming it is worth nothing the day somebody adds a route taking a
+`userId`. `check:access` verifies it structurally: no route reads an identity,
+nothing touches a session, no database client exists, no route keeps caller
+data in module state, every POST is capped and rate limited, and no client
+component reads a non-public env var.
+
+**No environment variable reaches the browser.** `check:deploy` fails on any
+`NEXT_PUBLIC_` usage at all. The contact address was briefly one and was backed
+out: a simple invariant anyone can check is worth more than the convenience,
+because the next `NEXT_PUBLIC_` variable would then be an argument rather than
+a failure.
 
 ### The trust boundary
 
@@ -364,6 +393,12 @@ These are product requirements, not style preferences:
   Two opposite founders must not share more than half their top five — when
   the geography lever had a fixed weight they shared four of five, which is a
   leaderboard with a tilt rather than a personalised ranking.
+- **Never publish a policy that describes a different product.** `legal.ts`
+  holds the data-handling facts next to the code they describe, and every
+  claim in it was checked against that code. A template privacy page tells the
+  reader confident things that are false, which is worse than having none.
+- **Never invent a contact address.** An unconfigured deployment says so
+  rather than printing a mailbox nobody reads.
 - **Recognising a trade is not knowing its price.** A niche entry carries a
   pricing *basis* and deliberately no figure, so a catalogue match tells the
   app how the money is counted and nothing about how much. Intake asks what

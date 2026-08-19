@@ -26,6 +26,17 @@ import type {
   StrategyVersion,
 } from "./types";
 
+/*
+ * Deliberately still `abb:` after the rename to Groundwork.
+ *
+ * This key is the only copy of a user's work — there is no account and no
+ * server-side backup to restore from. Renaming it to match the brand would
+ * make every existing user's profile, ideas and businesses vanish on their
+ * next visit, with no way to get them back and no error to explain it. A
+ * cosmetic prefix is not worth that, and a migration that reads the old key
+ * would have to stay in the codebase forever anyway. The name is internal;
+ * nobody sees it but us.
+ */
 const STORAGE_KEY = "abb:state";
 export const STATE_VERSION = 1;
 
@@ -609,6 +620,18 @@ export const actions = {
       businesses: s.businesses.filter((b) => b.id !== id),
       activeBusinessId: s.activeBusinessId === id ? null : s.activeBusinessId,
     }));
+  },
+
+  /**
+   * Throw away the coach transcripts, keeping everything else.
+   *
+   * Separate from "delete everything" because it's the one thing people
+   * routinely want gone on its own: a chat log records half-formed thinking
+   * and the odd personal aside, and wanting rid of that shouldn't mean losing
+   * the business you've spent a fortnight on.
+   */
+  clearConversations() {
+    update((s) => ({ ...s, conversations: [] }));
   },
 
   setIntelligence(intelligence: AppState["settings"]["intelligence"]) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { Footer } from "./footer";
 import { Icon, type IconName } from "./icons";
 import { ToastProvider } from "./ui";
 import { activeBusiness, hydrate, useAppState } from "@/lib/store";
@@ -126,9 +127,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="min-h-dvh lg:grid lg:grid-cols-[248px_1fr]">
         <MobileBar onOpen={() => setMobileOpen(true)} />
         <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-        <main id="main" className="min-w-0 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl w-full mx-auto">
-          {children}
-        </main>
+        <div className="min-w-0 flex flex-col">
+          <main id="main" className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl w-full mx-auto">
+            {children}
+          </main>
+          <Footer />
+        </div>
       </div>
     </ToastProvider>
   );
@@ -137,13 +141,21 @@ export function Shell({ children }: { children: React.ReactNode }) {
 function Wordmark() {
   return (
     <Link href="/" className="flex items-center gap-2.5 min-w-0 group">
+      {/*
+        A form standing on a ground line, with footings running down into it.
+        The footings carry the idea: what holds a business up is the part
+        nobody sees, done before anything is built above the surface. The
+        previous mark was a bar chart, which said "analytics dashboard".
+      */}
       <span className="size-8 rounded-lg bg-accent grid place-items-center shrink-0 shadow-sm">
-        <svg viewBox="0 0 24 24" className="size-[18px] text-white dark:text-[oklch(15%_0.02_265)]" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M4 19V9M10 19V5M16 19v-6M22 19H2" />
+        <svg viewBox="0 0 24 24" className="size-[18px] text-white dark:text-[oklch(15%_0.02_265)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 5 5.5 15.5h13z" />
+          <path d="M3 15.5h18" />
+          <path d="M8 18.5v1.2M12 18.5v2.2M16 18.5v1.2" opacity=".65" />
         </svg>
       </span>
       <span className="font-semibold tracking-tight truncate group-hover:text-accent-text transition-colors">
-        Business Builder
+        Groundwork
       </span>
     </Link>
   );

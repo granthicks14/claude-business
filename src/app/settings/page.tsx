@@ -569,6 +569,7 @@ function DataSettings() {
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmBusiness, setConfirmBusiness] = useState<string | null>(null);
 
   const exportAll = () => {
     download(`business-builder-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(snapshot(), null, 2), "application/json");
@@ -582,7 +583,7 @@ function DataSettings() {
       // Importing replaces everything, so an unrecognised file must be refused
       // rather than merged — "restored" over a wiped state is the worst outcome.
       if (!actions.importState(parsed)) {
-        toast("That doesn't look like a Business Builder backup — nothing was changed", "bad");
+        toast("That doesn't look like a Groundwork backup — nothing was changed", "bad");
         return;
       }
       toast("Data restored", "good");
@@ -643,12 +644,99 @@ function DataSettings() {
         <p className="text-xs text-warn mt-3">Restoring replaces everything currently on this device.</p>
       </Card>
 
+      {/*
+        Deleting one thing, rather than only all of it.
+        "Delete everything" was the sole control, which makes deletion an
+        all-or-nothing decision nobody takes — so people who wanted one bad
+        idea or one chat log gone kept everything instead.
+      */}
+      <Card className="p-5">
+        <SectionHeader
+          title="Delete part of this"
+          description="Everything here is on this device only, so deleting is immediate and there's no copy anywhere to restore from."
+        />
+
+        <div className="space-y-3">
+          {state.businesses.length > 0 && (
+            <div>
+              <p className="text-sm font-medium mb-2">Businesses</p>
+              <ul className="space-y-2">
+                {state.businesses.map((b) => (
+                  <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
+                    <span className="text-sm min-w-0 truncate">{b.idea.name}</span>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => setConfirmBusiness(b.id)}
+                      aria-label={`Delete ${b.idea.name}`}
+                    >
+                      Delete
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {state.conversations.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3">
+              <span className="text-sm min-w-0">
+                Coach conversations
+                <span className="text-muted"> · {state.conversations.length} saved</span>
+              </span>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => {
+                  actions.clearConversations();
+                  toast("Conversations deleted", "good");
+                }}
+              >
+                Delete
+              </Button>
+            </div>
+          )}
+
+          {state.businesses.length === 0 && state.conversations.length === 0 && (
+            <p className="text-sm text-muted leading-relaxed">
+              Nothing to delete individually yet — no businesses and no saved conversations.
+            </p>
+          )}
+        </div>
+      </Card>
+
       <Card className="p-5">
         <SectionHeader title="Start over" description="Deletes your profile, ideas, businesses and journal from this browser." />
         <Button variant="danger" onClick={() => setConfirmReset(true)} icon={<Icon.trash className="size-4" />}>
           Delete everything
         </Button>
       </Card>
+
+      <Dialog
+        open={confirmBusiness !== null}
+        onClose={() => setConfirmBusiness(null)}
+        title="Delete this business?"
+        footer={
+          <>
+            <Button onClick={() => setConfirmBusiness(null)}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                if (confirmBusiness) actions.deleteBusiness(confirmBusiness);
+                setConfirmBusiness(null);
+                toast("Business deleted", "good");
+              }}
+            >
+              Delete it
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-muted leading-relaxed">
+          This removes the business and everything recorded against it — interviews, competitors, customers, revenue,
+          tasks and notes. Your other businesses and your profile are untouched. It can&apos;t be undone.
+        </p>
+      </Dialog>
 
       <Dialog
         open={confirmReset}

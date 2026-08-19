@@ -1,11 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!--
+    The Groundwork mark: a form standing on a ground line, with footings
+    going down into it. The footings are the whole point — the work that
+    holds a business up is the part nobody sees, done before anything is
+    built above the surface. The old mark was a bar chart, which said
+    "analytics dashboard" rather than anything about this product.
+  -->
   <rect width="32" height="32" rx="7" fill="#4f46e5" />
-  <path
-    d="M7 23V13M13.7 23V9M20.3 23v-8M25 23H7"
-    stroke="#fff"
-    stroke-width="3"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-    fill="none"
-  />
+  <g stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M16 7 8.5 20.5h15z" />
+    <path d="M5 20.5h22" />
+    <path d="M11 24.5v1.5M16 24.5v2.5M21 24.5v1.5" opacity=".65" />
+  </g>
 </svg>
