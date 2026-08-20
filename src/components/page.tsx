@@ -98,10 +98,10 @@ export function RequireBusiness({ children }: { children: (business: SelectedBus
           }
           action={
             <>
-              <LinkButton href={hasIdeas ? "/ideas" : "/best"} variant="primary">
+              <LinkButton href={hasIdeas ? "/lab?tab=shortlist" : "/lab?tab=choose"} variant="primary">
                 {hasIdeas ? "Choose from my ideas" : "Find my best business"}
               </LinkButton>
-              {!hasIdeas && <LinkButton href="/ideas">Generate ideas</LinkButton>}
+              {!hasIdeas && <LinkButton href="/lab?tab=shortlist">Generate ideas</LinkButton>}
             </>
           }
         />

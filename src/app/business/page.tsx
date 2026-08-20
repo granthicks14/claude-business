@@ -522,7 +522,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
       <Card className="p-5">
         <SectionHeader title="Manage" description="Switch focus, or archive this and keep what you learned." />
         <div className="flex flex-wrap gap-2">
-          <LinkButton href="/ideas" size="sm">
+          <LinkButton href="/lab?tab=shortlist" size="sm">
             Start a different idea
           </LinkButton>
           <Button size="sm" variant="danger" onClick={() => setArchiving(true)} icon={<Icon.archive className="size-4" />}>

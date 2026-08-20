@@ -94,7 +94,7 @@ function IdeaDetail() {
         <EmptyState
           title="That idea isn't here"
           description="It may have been deleted, or the link is from a different device — your data is stored locally in this browser."
-          action={<LinkButton href="/ideas" variant="primary">Back to ideas</LinkButton>}
+          action={<LinkButton href="/lab?tab=shortlist" variant="primary">Back to ideas</LinkButton>}
         />
       </Card>
     );
@@ -173,7 +173,7 @@ function IdeaDetail() {
         {/* -ml-2 keeps the text optically aligned with the heading while the
             padding gives it a real tap target on a phone. */}
         <Link
-          href="/ideas"
+          href="/lab?tab=shortlist"
           className="text-sm text-muted hover:text-text inline-flex items-center gap-1.5 mb-1 -ml-2 px-2 min-h-11"
         >
           <Icon.arrowRight className="size-3.5 rotate-180" /> All ideas
@@ -495,7 +495,7 @@ function IdeaDetail() {
               onClick={() => {
                 actions.deleteIdea(idea.id);
                 toast("Idea deleted");
-                router.push("/ideas");
+                router.push("/lab?tab=shortlist");
               }}
             >
               Delete

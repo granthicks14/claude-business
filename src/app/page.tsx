@@ -101,10 +101,10 @@ export default function HomePage() {
         <StageCard />
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <QuickLink href="/ideas" icon={<Icon.spark className="size-4" />} title="My ideas" detail={`${state.ideas.length} scored against your profile`} />
+          <QuickLink href="/lab?tab=shortlist" icon={<Icon.spark className="size-4" />} title="My ideas" detail={`${state.ideas.length} scored against your profile`} />
           <QuickLink href="/coach" icon={<Icon.chat className="size-4" />} title="Ask your mentor" detail="Free, works without an API key" />
           <QuickLink href="/opportunity" icon={<Icon.money className="size-4" />} title="Best opportunity near me" detail="Rank ideas against your area" />
-          <QuickLink href={business ? "/money" : "/discover"} icon={<Icon.money className="size-4" />} title={business ? "Run the numbers" : "Explore ideas"} detail={business ? "Price, customers, what you keep" : "Browse by category"} />
+          <QuickLink href={business ? "/money" : "/lab?tab=generate"} icon={<Icon.money className="size-4" />} title={business ? "Run the numbers" : "Explore ideas"} detail={business ? "Price, customers, what you keep" : "Browse by category"} />
         </div>
       </div>
     );
@@ -157,7 +157,7 @@ export default function HomePage() {
           {ready && hasProfile && !business && state.ideas.length > 0 && (
             <p className="mt-4 text-sm text-muted">
               You have {state.ideas.length} idea{state.ideas.length === 1 ? "" : "s"} saved.{" "}
-              <Link href="/best" className="text-accent-text font-medium underline underline-offset-2">
+              <Link href="/lab?tab=choose" className="text-accent-text font-medium underline underline-offset-2">
                 Find your best one
               </Link>
               .
@@ -267,7 +267,7 @@ export default function HomePage() {
             written out, never promises.
           </p>
           <div className="mt-5">
-            <LinkButton href={hasProfile ? "/ideas" : "/onboarding"} variant="primary" icon={<Icon.arrowRight />}>
+            <LinkButton href={hasProfile ? "/lab?tab=shortlist" : "/onboarding"} variant="primary" icon={<Icon.arrowRight />}>
               {hasProfile ? "Generate ideas" : "Build my founder profile"}
             </LinkButton>
           </div>
@@ -334,11 +334,11 @@ export default function HomePage() {
             : "Answer a few questions about your skills, resources and goals. Five minutes, and you can edit any of it later."}
         </p>
         <div className="mt-5 flex flex-wrap gap-2.5 justify-center">
-          <LinkButton href={business ? "/business" : hasProfile ? "/ideas" : "/onboarding"} variant="primary" size="lg">
+          <LinkButton href={business ? "/business" : hasProfile ? "/lab?tab=shortlist" : "/onboarding"} variant="primary" size="lg">
             {business ? "Open dashboard" : hasProfile ? "Generate ideas" : "Start"}
           </LinkButton>
           {!business && (
-            <LinkButton href="/discover" size="lg" variant="secondary">
+            <LinkButton href="/lab?tab=generate" size="lg" variant="secondary">
               Browse categories
             </LinkButton>
           )}

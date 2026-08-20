@@ -578,7 +578,7 @@ export function actionsForFactor(factor: FitFactor, idea: BusinessIdea, profile:
     case "timeFit":
       return [
         { label: "Update your available hours", estimate: "Large, if you have more than you said", href: "/profile#hours", kind: "profile" },
-        { label: "Find something that fits smaller hours", estimate: "Varies by idea", href: "/ideas", kind: "act" },
+        { label: "Find something that fits smaller hours", estimate: "Varies by idea", href: "/lab?tab=shortlist", kind: "act" },
       ];
     case "skillFit":
       return [

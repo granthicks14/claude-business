@@ -13,88 +13,172 @@ import type { AppState } from "@/lib/types";
 interface NavItem {
   href: string;
   label: string;
-  icon: IconName;
   badge?: number;
 }
 
-interface NavGroup {
-  title: string;
+interface NavSection {
+  href: string;
+  label: string;
+  icon: IconName;
+  badge?: number;
+  /** What this section answers, in the founder's words. Shown when it's open. */
+  blurb: string;
+  /** Everything inside. Only rendered while the section is the one you're in. */
   items: NavItem[];
+  /** Routes that belong to this section but aren't listed under it. */
+  also?: string[];
 }
 
-/** Nav adapts to where the founder is in the journey — no dead sections. */
-function useNav(): NavGroup[] {
+/**
+ * Six sections, and you only ever see one section's contents.
+ *
+ * THE DEFECT THIS FIXES
+ *
+ * This function used to return thirty-six links, all visible at once, grouped
+ * under three headings. Thirty-six is not a menu — it's a directory, and it
+ * put the founder in the position of choosing between "Ideas", "Find my best"
+ * and "Browse categories" with no way to know what distinguished them. (Very
+ * little did: all three ran the same generator. They're one page now.)
+ *
+ * The shape below is six sections that mirror the actual sequence of the work:
+ * who you are, what you might do, what you picked, whether it holds up, and
+ * making it. Each section's own pages appear only while you're inside it, so
+ * the sidebar shows six links plus wherever you currently are — never the
+ * whole map at once.
+ *
+ * Sections are not hidden when empty. A section that appears once you have
+ * enough data reads as the app changing shape underneath you; one that's
+ * present and says what it's waiting for reads as a plan.
+ */
+function useNav(): NavSection[] {
   const state = useAppState((s) => s);
   const business = activeBusiness(state);
 
   return useMemo(() => {
-    const groups: NavGroup[] = [
+    const openTasks = business?.tasks.filter((t) => !t.done).length ?? 0;
+    const hasArchive = state.businesses.some((b) => b.archivedAt);
+
+    return [
       {
-        title: "Discover",
+        href: "/",
+        label: "Home",
+        icon: "home",
+        blurb: "Where you are, and the one thing worth doing next.",
+        items: [{ href: "/start", label: "Start here" }],
+      },
+      {
+        href: "/profile",
+        label: "You",
+        icon: "target",
+        blurb: "What the scoring knows about you. Everything else is computed from this.",
         items: [
-          { href: "/", label: "Home", icon: "home" },
-          { href: "/start", label: "Start a business", icon: "spark" },
-          { href: "/ideas", label: "Ideas", icon: "spark", badge: state.ideas.length || undefined },
-          { href: "/describe", label: "Tell it about me", icon: "chat" },
-          { href: "/best", label: "Find my best", icon: "target" },
-          { href: "/explore", label: "Which industry?", icon: "compass" },
-          { href: "/analyze", label: "Analyse my business", icon: "search" },
-          { href: "/discover", label: "Browse categories", icon: "radar" },
-          { href: "/opportunity", label: "Best opportunity", icon: "money" },
+          { href: "/profile", label: "My profile" },
+          { href: "/describe", label: "Tell it about me in a sentence" },
+          { href: "/coach", label: "Ask a question" },
+          { href: "/learn", label: "Learn the words" },
+          { href: "/journal", label: "Journal" },
+          { href: "/search", label: "Search everything" },
+          { href: "/settings", label: "Settings and your data" },
         ],
+        also: ["/onboarding", "/cost"],
+      },
+      {
+        href: "/lab",
+        label: "Brainstorm",
+        icon: "spark",
+        badge: state.ideas.length || undefined,
+        blurb: "Options, not recommendations. Widen first, then narrow.",
+        items: [
+          { href: "/lab", label: "The lab", badge: state.ideas.length || undefined },
+          { href: "/explore", label: "Which industry?" },
+          { href: "/opportunity", label: "Best opportunity near me" },
+          { href: "/analyze", label: "Score a business I already run" },
+          ...(state.compareIds.length > 0
+            ? [{ href: "/compare", label: "Compare", badge: state.compareIds.length }]
+            : []),
+          ...(hasArchive ? [{ href: "/graveyard", label: "Ones you stopped" }] : []),
+        ],
+        also: ["/ideas", "/best", "/discover"],
+      },
+      {
+        href: "/business",
+        label: "My business",
+        icon: "building",
+        blurb: business ? "The one you picked, and how it runs." : "Nothing picked yet — choose one in Brainstorm.",
+        items: business
+          ? [
+              { href: "/business", label: "Overview" },
+              { href: "/business/identity", label: "Business details" },
+              { href: "/business/operations", label: "How it runs" },
+              { href: "/plan", label: "The plan" },
+              { href: "/money", label: "Money" },
+              { href: "/business/spend", label: "What to pay for" },
+            ]
+          : [],
+      },
+      {
+        href: "/quality",
+        label: "Does it hold up?",
+        icon: "scales",
+        blurb: "The part of the app allowed to say no.",
+        items: business
+          ? [
+              { href: "/quality", label: "Is it any good?" },
+              { href: "/decide", label: "Should I do this?" },
+              { href: "/improve", label: "Make it better" },
+              { href: "/customers", label: "Talk to customers" },
+              { href: "/research", label: "What you actually know" },
+              { href: "/validation", label: "Evidence" },
+            ]
+          : [],
+      },
+      {
+        href: "/tasks",
+        label: "Make it",
+        icon: "bolt",
+        badge: openTasks || undefined,
+        blurb: "The doing. Smallest useful thing first.",
+        items: business
+          ? [
+              { href: "/tasks", label: "Tasks", badge: openTasks || undefined },
+              { href: "/mvp", label: "What to build first" },
+              { href: "/landing", label: "Landing page" },
+              { href: "/business/website", label: "Website" },
+              { href: "/business/build", label: "Make things" },
+              { href: "/marketing", label: "Marketing" },
+              { href: "/sales", label: "Sales" },
+              { href: "/practice", label: "Practise the conversation" },
+              { href: "/business/launch", label: "Launch checklist" },
+            ]
+          : [],
       },
     ];
+  }, [state, business]);
+}
 
-    if (state.compareIds.length > 0) {
-      groups[0].items.push({ href: "/compare", label: "Compare", icon: "scales", badge: state.compareIds.length });
+/**
+ * Which section a path belongs to.
+ *
+ * Longest match wins, so `/business/website` lands in "Make it" rather than
+ * "My business" purely because `/business` is a prefix of it. Getting this
+ * wrong doesn't break anything visibly — it just quietly opens the wrong
+ * section, which is worse, because nobody reports it.
+ */
+function sectionFor(sections: NavSection[], pathname: string): NavSection | null {
+  if (pathname === "/") return sections[0];
+  let best: NavSection | null = null;
+  let bestLength = 0;
+  for (const section of sections) {
+    for (const candidate of [section.href, ...section.items.map((i) => i.href), ...(section.also ?? [])]) {
+      const path = candidate.split("?")[0];
+      if (path === "/") continue;
+      if ((pathname === path || pathname.startsWith(path + "/")) && path.length > bestLength) {
+        best = section;
+        bestLength = path.length;
+      }
     }
-
-    if (business) {
-      const openTasks = business.tasks.filter((t) => !t.done).length;
-      groups.push({
-        title: "Build",
-        items: [
-          { href: "/business", label: "My business", icon: "building" },
-          { href: "/quality", label: "Is it any good?", icon: "target" },
-          { href: "/decide", label: "Should I do this?", icon: "scales" },
-          { href: "/improve", label: "Make it better", icon: "spark" },
-          { href: "/customers", label: "Talk to customers", icon: "chat" },
-          { href: "/research", label: "Research", icon: "search" },
-          { href: "/mvp", label: "What to build first", icon: "bolt" },
-          { href: "/landing", label: "Landing page", icon: "doc" },
-          { href: "/business/identity", label: "Business details", icon: "doc" },
-          { href: "/business/build", label: "Make things", icon: "bolt" },
-          { href: "/business/operations", label: "How it runs", icon: "radar" },
-          { href: "/business/website", label: "Website", icon: "compass" },
-          { href: "/business/launch", label: "Launch checklist", icon: "check" },
-          { href: "/validation", label: "Validation", icon: "flask" },
-          { href: "/plan", label: "Plan", icon: "doc" },
-          { href: "/tasks", label: "Tasks", icon: "check", badge: openTasks || undefined },
-          { href: "/marketing", label: "Marketing", icon: "megaphone" },
-          { href: "/sales", label: "Sales", icon: "handshake" },
-          { href: "/practice", label: "Practise", icon: "flask" },
-          { href: "/business/spend", label: "What to pay for", icon: "scales" },
-          { href: "/money", label: "Money", icon: "money" },
-        ],
-      });
-    }
-
-    const track: NavItem[] = [
-      { href: "/profile", label: "My profile", icon: "target" },
-      { href: "/coach", label: "Coach", icon: "chat" },
-      { href: "/learn", label: "Learn the words", icon: "book" },
-      { href: "/journal", label: "Journal", icon: "doc" },
-      { href: "/search", label: "Search", icon: "search" },
-    ];
-    if (state.businesses.some((b) => b.archivedAt)) {
-      track.push({ href: "/graveyard", label: "Graveyard", icon: "archive" });
-    }
-    track.push({ href: "/settings", label: "Settings", icon: "settings" });
-    track.push({ href: "/cost", label: "Cost audit", icon: "money" });
-    groups.push({ title: business ? "Track" : "You", items: track });
-
-    return groups;
-  }, [state]);
+  }
+  return best;
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -183,8 +267,9 @@ function MobileBar({ onOpen }: { onOpen: () => void }) {
 }
 
 function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => void }) {
-  const groups = useNav();
-  const pathname = usePathname();
+  const sections = useNav();
+  const pathname = usePathname() ?? "/";
+  const current = sectionFor(sections, pathname);
   const progress = useAppState(selectProgress);
 
   return (
@@ -217,42 +302,72 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-5">
-          {groups.map((group) => (
-            <div key={group.title}>
-              <p className="px-2.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-faint">
-                {group.title}
-              </p>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => {
-                  const active = item.href === "/" ? pathname === "/" : pathname?.startsWith(item.href);
-                  const IconComponent = Icon[item.icon];
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors min-h-10
-                          ${
-                            active
-                              ? "bg-accent-soft text-accent-text font-medium"
-                              : "text-muted hover:text-text hover:bg-surface-2"
-                          }`}
-                      >
-                        <IconComponent />
-                        <span className="flex-1 truncate">{item.label}</span>
-                        {item.badge !== undefined && (
-                          <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-surface-2 text-faint">
-                            {item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          <ul className="space-y-1">
+            {sections.map((section) => {
+              const open = section === current;
+              const IconComponent = Icon[section.icon];
+              return (
+                <li key={section.href}>
+                  <Link
+                    href={section.href}
+                    aria-current={open && pathname === section.href ? "page" : undefined}
+                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors min-h-10
+                      ${open ? "bg-accent-soft text-accent-text font-medium" : "text-muted hover:text-text hover:bg-surface-2"}`}
+                  >
+                    <IconComponent />
+                    <span className="flex-1 truncate">{section.label}</span>
+                    {section.badge !== undefined && (
+                      <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-surface-2 text-faint">
+                        {section.badge}
+                      </span>
+                    )}
+                  </Link>
+
+                  {/*
+                   * Only the section you're in opens. That's what keeps this a
+                   * menu rather than the thirty-six-link directory it was —
+                   * and the blurb is there because a section header that only
+                   * says "Brainstorm" makes the founder guess what's under it.
+                   */}
+                  {open && (
+                    <div className="mt-1 mb-2 ml-3.5 pl-3 border-l border-border">
+                      <p className="text-[11px] text-faint leading-relaxed pb-1.5 pr-1">{section.blurb}</p>
+                      {section.items.length === 0 ? (
+                        <p className="text-[11px] text-faint leading-relaxed pb-1 pr-1">
+                          Nothing here until you pick a business to work on.
+                        </p>
+                      ) : (
+                        <ul className="space-y-0.5">
+                          {section.items.map((item) => {
+                            const path = item.href.split("?")[0];
+                            const active = pathname === path;
+                            return (
+                              <li key={item.href}>
+                                <Link
+                                  href={item.href}
+                                  aria-current={active ? "page" : undefined}
+                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors min-h-9
+                                    ${active ? "text-accent-text font-medium" : "text-muted hover:text-text hover:bg-surface-2"}`}
+                                >
+                                  <span className="flex-1 truncate">{item.label}</span>
+                                  {item.badge !== undefined && (
+                                    <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-surface-2 text-faint">
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
         {progress.total > 0 && (

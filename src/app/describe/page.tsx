@@ -56,7 +56,7 @@ function Describe() {
     if (!result) return;
     actions.saveProfile({ ...result.profile, completedOnboarding: true });
     toast("Profile saved — nothing is final, you can change any of it", "good");
-    router.push("/ideas");
+    router.push("/lab?tab=shortlist");
   };
 
   return (

@@ -151,7 +151,7 @@ function Onboarding() {
     if (isLast) {
       actions.saveProfile({ ...draft, completedOnboarding: true });
       toast("Founder profile saved", "good");
-      router.push("/ideas");
+      router.push("/lab?tab=shortlist");
       return;
     }
     // Save as we go, so a closed tab doesn't lose the answers.
@@ -171,7 +171,7 @@ function Onboarding() {
             onClick={() => {
               actions.saveProfile({ ...draft, completedOnboarding: true });
               toast("Saved — you can finish the rest in Settings", "good");
-              router.push("/ideas");
+              router.push("/lab?tab=shortlist");
             }}
             className="hover:text-text underline underline-offset-2"
           >

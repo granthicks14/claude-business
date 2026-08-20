@@ -153,7 +153,7 @@ const RULES: Rule[] = [
           minutes: 20,
           cost: "Free",
           difficulty: "easy",
-          href: "/ideas",
+          href: "/lab?tab=shortlist",
           easier: "Don't agonise. Pick the one you'd be least embarrassed to tell a friend about, and start there.",
           stage: "idea",
         },

@@ -33,7 +33,8 @@ npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
 npm run test:product   # 60 quality/consistency/variant/intake/sample tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
-npm test               # all five
+npm run test:competition # 52 competition-reading tests
+npm test               # all seven
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
 ```
@@ -57,6 +58,7 @@ src/lib/intake.ts       A typed sentence becomes a scored idea, gaps declared.
 src/lib/sample.ts       The worked example. Fictional, and says so everywhere.
 src/lib/analyze/        The existing-business analyser. Reads a page, works out
                         what kind of business it is, scores fifteen dimensions.
+src/lib/competition.ts  How crowded is this, and what does that mean. Two-sided.
 src/lib/explore.ts      Eighteen industries ranked against one founder.
 src/lib/legal.ts        What the app actually does with data. The policy pages
                         render this rather than restating it.
@@ -76,7 +78,8 @@ src/lib/spend.ts        What's worth paying for, and when.
 src/lib/ai/             Optional provider adapters. server-only.
 ```
 
-The workspace lives under `/business`: the dashboard, `/identity` (business
+`/lab` is the brainstorming lab — one route where `/ideas`, `/best` and
+`/discover` used to be three. The workspace lives under `/business`: the dashboard, `/identity` (business
 details wizard), `/build` (prompt builder), `/website` (website builder),
 `/spend` (what to pay for), `/launch` (readiness checklist). `/opportunity` is a
 second front door for people who don't know what business they want.
@@ -196,6 +199,49 @@ form: nonces force every page to render dynamically, which trades away static
 rendering for a policy this app doesn't need, since it loads nothing off-origin
 at all. `default-src 'self'` and `connect-src 'self'` are the directives doing
 the work — a founder's whole plan is in this origin's `localStorage`.
+
+### Competition is a reading, not a penalty
+
+`competition.ts` exists because every other part of the app treated competition
+as a deduction: a higher score meant a less crowded market, and `redFlags`
+listed "lots of competitors" with nothing on the other side. Follow that
+gradient and the app's ideal business is one nobody else is doing — the single
+most expensive belief a first-time founder can hold, because an empty market is
+usually an empty market for a reason.
+
+So each density carries what it's good news about *and* what it costs, and
+"crowded" leads with the fact that crowds don't form around businesses that
+don't pay.
+
+**An empty competitor list is a fact about the research, never about the
+market.** The app has no search data and cannot count a trade, so with nothing
+recorded it refuses to read the market at all rather than saying "looks open" —
+which reads as a finding and is pure invention. Confidence is capped at
+`medium` no matter how many records exist, and the ceiling is stated in the
+output: a handful you found by hand is a sample, not a census. There is
+deliberately no `high` in the type.
+
+The four explanations for an empty market are ordered against the founder's own
+optimism — "people tried it and it doesn't pay" first, "it's genuinely early"
+last — because that ordering is the only editorial work on the page that does
+anything.
+
+### The navigation, and why you only see one section
+
+The sidebar used to render thirty-six links at once. That isn't a menu, it's a
+directory, and it made a founder choose between "Ideas", "Find my best" and
+"Browse categories" with no way to tell them apart — very little did tell them
+apart, since all three called the same generator with a different angle
+constant. They're `/lab` now, three panels of one loop, and the old URLs
+redirect rather than 404.
+
+`shell.tsx` returns six sections and opens only the one you're in, so the
+sidebar shows six links plus wherever you currently are. Sections are never
+hidden when empty: one that appears once you have enough data reads as the app
+changing shape underneath you, while one that's present and says what it's
+waiting for reads as a plan. `sectionFor` matches longest-prefix-wins, so
+`/business/website` opens "Make it" rather than "My business" — getting that
+wrong breaks nothing visibly, which is exactly why it needs the test.
 
 ### The engine
 

@@ -31,6 +31,14 @@ import {
   findGaps,
   type CompareField,
 } from "@/lib/research/competitors";
+import {
+  CONFIDENCE_LABEL,
+  CONFIDENCE_MEANING,
+  DENSITY_LABEL,
+  EMPTY_MARKET_EXPLANATIONS,
+  competitorSearches,
+  readCompetition,
+} from "@/lib/competition";
 import { MARKET_NOTE, SIZING_FIELDS, researchPlan, sizeMarket, summariseFindings } from "@/lib/research/market";
 import { researchQuality } from "@/lib/intel/epistemics";
 import { actions, newId, useAppState } from "@/lib/store";
@@ -337,6 +345,127 @@ function Size({ business }: { business: SelectedBusiness }) {
 
 /* ----------------------------------------------------------- competitors --- */
 
+/**
+ * How crowded is this, and what does that mean?
+ *
+ * Sits above the competitor list rather than below it, because the reading is
+ * the thing the founder came for and the records are how it's earned. When
+ * there are no records it refuses to read the market at all — which is the
+ * whole point of the card, and the reason it renders at zero rather than
+ * hiding until there's something flattering to say.
+ */
+function CompetitionRead({ business }: { business: SelectedBusiness }) {
+  const read = useMemo(() => readCompetition(business), [business]);
+  const searches = useMemo(() => competitorSearches(business), [business]);
+
+  return (
+    <Card className="p-5">
+      <SectionHeader
+        title="How crowded is this?"
+        description="Competition is a reading, not a penalty. Both an empty field and a packed one are questions — they're just different questions."
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={read.density === "none-recorded" ? "warn" : read.density === "thin" ? "accent" : "good"}>
+          {DENSITY_LABEL[read.density]}
+        </Badge>
+        <Badge tone={read.confidence === "none" ? "warn" : read.confidence === "low" ? "accent" : "good"}>
+          {CONFIDENCE_LABEL[read.confidence]}
+        </Badge>
+      </div>
+
+      <p className="text-[15px] leading-relaxed mt-3">{read.headline}</p>
+      <p className="text-sm text-muted leading-relaxed mt-1">{read.because}</p>
+
+      {read.refusal && (
+        <p className="text-sm leading-relaxed mt-3 rounded-lg border border-border bg-surface-2 p-3">
+          <Hi tone="warn">What this app can&apos;t tell you:</Hi> {read.refusal}
+        </p>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2 mt-4">
+        <div className="rounded-lg border border-border p-3">
+          <p className="text-xs font-medium mb-1">
+            <Hi tone="good">What this is good news about</Hi>
+          </p>
+          <p className="text-sm text-muted leading-relaxed">{read.reading.goodSign}</p>
+        </div>
+        <div className="rounded-lg border border-border p-3">
+          <p className="text-xs font-medium mb-1">
+            <Hi tone="warn">What it costs you</Hi>
+          </p>
+          <p className="text-sm text-muted leading-relaxed">{read.reading.badSign}</p>
+        </div>
+      </div>
+
+      <p className="text-sm leading-relaxed mt-3">
+        <Hi tone="accent">Go and find out:</Hi> {read.reading.question}
+      </p>
+
+      {/*
+       * The four explanations for an empty market, shown only when the market
+       * looks empty. A founder who has just had an idea is already disposed
+       * towards the untapped-market reading, so the list is ordered against
+       * that and the ordering is the editorial work.
+       */}
+      {(read.density === "none-recorded" || read.density === "thin") && (
+        <div className="mt-4">
+          <p className="text-sm font-medium mb-2">If nobody seems to be doing this, there are four reasons why</p>
+          <ol className="space-y-2">
+            {EMPTY_MARKET_EXPLANATIONS.map((e, i) => (
+              <li key={e.reason} className="rounded-lg border border-border p-3">
+                <p className="text-sm font-medium">
+                  {i + 1}. {e.reason}
+                </p>
+                <p className="text-xs text-muted mt-1 leading-relaxed">{e.ifTrue}</p>
+                <p className="text-xs mt-1 leading-relaxed">
+                  <Hi tone="accent">How to tell:</Hi> {e.test}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <div className="mt-4 rounded-lg border border-accent-border bg-accent-soft p-3">
+        <p className="text-sm font-medium">{read.nextStep.what}</p>
+        <p className="text-sm text-muted mt-1 leading-relaxed">{read.nextStep.why}</p>
+        <p className="text-xs text-muted mt-1">Costs: {read.nextStep.cost}</p>
+      </div>
+
+      {searches.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xs text-muted mb-2">
+            The app won&apos;t name a competitor for you — an invented company is worse than none. These are the searches
+            that find real ones.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {searches.map((s) => (
+              <a
+                key={s.url}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                title={s.why}
+                className="inline-flex items-center gap-1.5 min-h-8 px-2.5 rounded-lg border border-border text-xs hover:border-accent-border hover:bg-surface-2"
+              >
+                <Icon.search className="size-3.5" />
+                {s.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-4">
+        <ClaimList claims={read.claims} />
+      </div>
+
+      <p className="text-xs text-muted mt-3 leading-relaxed">{CONFIDENCE_MEANING[read.confidence]}</p>
+    </Card>
+  );
+}
+
 function Competitors({ business }: { business: SelectedBusiness }) {
   const toast = useToast();
   const competitors = business.research?.competitors ?? [];
@@ -372,6 +501,8 @@ function Competitors({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-4">
+      <CompetitionRead business={business} />
+
       <Card className="p-5">
         <SectionHeader
           title="Why would someone choose you?"

@@ -345,7 +345,15 @@ function redFlags(ctx: IdeaContext, idea: BusinessIdea): string[] {
   const { model, industry, signals } = ctx;
   const flags: string[] = [];
   if (idea.startupCost > 300) flags.push(`Costs about ${money(idea.startupCost)} before you know anyone will pay.`);
-  if (industry.competition < 40) flags.push("Lots of competitors already doing this well.");
+  /*
+   * Both ends of this scale are flags, and for a long time only one of them
+   * was. Listing "lots of competitors" as a red flag while treating an empty
+   * field as the best possible outcome points a beginner directly at the most
+   * expensive mistake available to them: a trade nobody is in is usually a
+   * trade that didn't pay, and they find out six months later.
+   */
+  if (industry.competition < 40) flags.push("Lots of competitors already doing this well — you'll need a reason to switch that a customer can say out loud.");
+  else if (industry.competition >= 78) flags.push("Very few people appear to do this. That's a question, not a win — find out whether anyone tried and stopped before you commit money to it.");
   if (model.delivery.audienceDriven) flags.push("Income depends on building an audience first — slow, and most people don't finish.");
   if (model.mode === "local") flags.push("Seasonal demand, and you're limited to people near you.");
   if (model.requiresLocation && !signals.hasTransport) flags.push("Needs you to get to customers, and you haven't got transport sorted.");

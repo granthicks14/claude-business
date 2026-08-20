@@ -843,7 +843,12 @@ export function Tabs({
   active,
   onChange,
 }: {
-  tabs: { id: string; label: string; badge?: ReactNode }[];
+  /**
+   * A tab may be disabled when the panel behind it genuinely has nothing in
+   * it yet. Shown-but-unavailable beats hidden: a tab that appears once you
+   * have enough data reads as the app changing shape underneath you.
+   */
+  tabs: { id: string; label: string; badge?: ReactNode; disabled?: boolean }[];
   active: string;
   onChange: (id: string) => void;
 }) {
@@ -855,12 +860,15 @@ export function Tabs({
             key={t.id}
             role="tab"
             aria-selected={active === t.id}
+            disabled={t.disabled}
             onClick={() => onChange(t.id)}
             className={`px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap min-h-11
               ${
                 active === t.id
                   ? "border-accent text-accent-text"
-                  : "border-transparent text-muted hover:text-text hover:border-border-strong"
+                  : t.disabled
+                    ? "border-transparent text-faint cursor-not-allowed"
+                    : "border-transparent text-muted hover:text-text hover:border-border-strong"
               }`}
           >
             {t.label}

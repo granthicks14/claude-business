@@ -58,7 +58,7 @@ function Compare() {
             icon={<Icon.scales className="size-8 mx-auto text-accent" />}
             title="Nothing selected yet"
             description="Add up to four ideas using the scales icon on any idea card, then compare them side by side across cost, speed, difficulty and fit."
-            action={<LinkButton href="/ideas" variant="primary">Go to my ideas</LinkButton>}
+            action={<LinkButton href="/lab?tab=shortlist" variant="primary">Go to my ideas</LinkButton>}
           />
         </Card>
       </div>
