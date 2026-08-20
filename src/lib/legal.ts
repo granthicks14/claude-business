@@ -17,7 +17,9 @@
  * Every claim below was checked against the code:
  *   - no cookies are set (no `document.cookie`, no `Set-Cookie` anywhere),
  *   - no analytics, tag manager or tracking script is bundled,
- *   - there is no account system, no session and no server-side user record,
+ *   - accounts exist but are local: a passphrase encrypts data in this browser
+ *     and there is no session, no server-side user record and nothing to
+ *     authenticate to,
  *   - the only outbound hosts are the optional AI providers, the optional
  *     search provider, and whatever address the user types into /analyze.
  */
@@ -56,10 +58,16 @@ export const WHAT_IS_STORED: DataFact[] = [
     automatic: true,
   },
   {
-    what: "There is no account and no password",
+    what: "Your account is a passphrase that encrypts that data, not a login",
     detail:
-      "You are not asked to register, and nothing identifies you between visits beyond the data sitting in your own browser. Using the app on a second device starts from scratch, because there is nothing to sync from.",
-    automatic: true,
+      "Creating an account asks for a name to show on this device and a passphrase. The passphrase is used to derive an encryption key (PBKDF2-SHA256, 600,000 iterations) which encrypts your work with AES-GCM before it is written to this browser. The passphrase itself is never stored, never sent anywhere and never logged, and the key is held only in the page's memory — so closing the tab or signing out locks the data again. Several people can have separate accounts on one browser and none can open another's.",
+    automatic: false,
+  },
+  {
+    what: "There is no server account, so there is no password reset and no sync",
+    detail:
+      "Because nothing about your account exists outside this browser, nobody can reset a forgotten passphrase — not us, not whoever deployed this site. If you forget it, the encrypted data cannot be recovered by anyone, and an exported backup file is the only way back. For the same reason there is no syncing between devices: moving to another browser or phone means exporting a backup and importing it there.",
+    automatic: false,
   },
   {
     what: "No cookies are set, and nothing tracks you",
@@ -103,7 +111,7 @@ export const WHAT_DOES_NOT_HAPPEN: string[] = [
   "There is no mailing list, and no way for the app to email you.",
   "Nobody operating this site can see your business, because it never reaches them.",
   "No payment is taken, so no card details exist to be handled.",
-  "Support cannot recover your work if you clear your browser — there is no copy.",
+  "Support cannot recover your work if you clear your browser or forget your passphrase — there is no copy and no reset.",
 ];
 
 /**

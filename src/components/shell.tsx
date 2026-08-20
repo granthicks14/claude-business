@@ -7,7 +7,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Footer } from "./footer";
 import { Icon, type IconName } from "./icons";
 import { ToastProvider } from "./ui";
-import { activeBusiness, hydrate, useAppState } from "@/lib/store";
+import { AccountGate } from "./account-gate";
+import { activeBusiness, useAppState } from "@/lib/store";
 import type { AppState } from "@/lib/types";
 
 interface NavItem {
@@ -78,6 +79,7 @@ function useNav(): NavSection[] {
           { href: "/learn", label: "Learn the words" },
           { href: "/journal", label: "Journal" },
           { href: "/search", label: "Search everything" },
+          { href: "/account", label: "Account and security" },
           { href: "/settings", label: "Settings and your data" },
         ],
         also: ["/onboarding", "/cost"],
@@ -186,14 +188,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    hydrate();
-  }, []);
-
-  useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // The share view is a clean public page: no app chrome.
+  /*
+   * The share view is a clean public page: no app chrome, and deliberately
+   * outside the account gate. A share link carries its own snapshot in the URL
+   * — it reads nothing from local storage — so requiring the recipient to
+   * unlock an account they do not have would make every shared link useless.
+   */
   const bare = pathname?.startsWith("/share");
 
   if (bare) {
@@ -202,6 +205,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <ToastProvider>
+      <AccountGate>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:px-4 focus:py-2 focus:bg-surface focus:border focus:border-accent focus:rounded-lg focus:shadow-pop text-sm font-medium"
@@ -219,6 +223,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Footer />
         </div>
       </div>
+      </AccountGate>
     </ToastProvider>
   );
 }

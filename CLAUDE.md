@@ -335,6 +335,31 @@ finding. Interview outcomes feed `snapshotEvidence`, so a recorded commitment
 or payment moves the verdict — otherwise the research pages would be a diary
 the rest of the app ignores.
 
+### Accounts, and the leak they close
+
+There was never a *remote* way for one user's data to reach another — no server
+record, no session, no `userId` anywhere, proven structurally by
+`check:access` and by 21 adversarial probes. But local-first storage had a leak
+between real people: whoever opened the app on a shared browser landed inside
+the previous person's founder profile, money model and plan.
+
+`vault.ts` closes it. A passphrase derives a key (PBKDF2-SHA256, 600k
+iterations — Argon2id would be better and is not in WebCrypto, so using it
+would mean shipping WASM to every visitor), that key encrypts the whole state
+with AES-GCM, and several accounts can sit side by side in one browser. The
+key is held in memory; `resumeInTab` optionally keeps it in `sessionStorage`
+when the user ticks "stay unlocked in this tab", which is off by default and
+explains its own trade on screen.
+
+**It is called a vault, never a login.** There is no server, so the passphrase
+proves nothing to anybody — it decrypts local data. That means no password
+reset and no sync, and both are stated wherever a user can act on them rather
+than discovered later. `legal.ts` says the same thing, because a policy that
+describes a different product is worse than none.
+
+The pre-vault `abb:state` key is still read once, offered as something to claim
+into a new account, and only removed after the encrypted copy reads back.
+
 ### Storage: one key, deliberately
 
 State is one object under one localStorage key. That was checked rather than

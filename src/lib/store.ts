@@ -3,11 +3,18 @@
 /**
  * Local-first persistence.
  *
- * All user data lives in the browser (localStorage) — no account, no server
- * database, no per-user hosting cost, and one user's data can never leak to
- * another because it never leaves their device. The store is a tiny external
- * store consumed through `useSyncExternalStore`, so components re-render only
- * when the slice they read actually changes identity.
+ * All user data lives in the browser — no server database, no per-user hosting
+ * cost, and one user's data can never reach another over a network because it
+ * never leaves their device. The store is a tiny external store consumed
+ * through `useSyncExternalStore`, so components re-render only when the slice
+ * they read actually changes identity.
+ *
+ * Nothing here writes to localStorage directly any more. Every read and write
+ * goes through `vault.ts`, which encrypts the state under a passphrase-derived
+ * key held only in memory. That closes the one leak local-first storage still
+ * had: on a shared browser, the next person to open the app used to land
+ * inside the previous person's business. The store therefore starts empty and
+ * stays empty until an account is unlocked.
  */
 
 import { useCallback, useRef, useSyncExternalStore } from "react";
@@ -25,19 +32,8 @@ import type {
   SelectedBusiness,
   StrategyVersion,
 } from "./types";
+import { isUnlocked, saveState } from "./vault";
 
-/*
- * Deliberately still `abb:` after the rename to Groundwork.
- *
- * This key is the only copy of a user's work — there is no account and no
- * server-side backup to restore from. Renaming it to match the brand would
- * make every existing user's profile, ideas and businesses vanish on their
- * next visit, with no way to get them back and no error to explain it. A
- * cosmetic prefix is not worth that, and a migration that reads the old key
- * would have to stay in the codebase forever anyway. The name is internal;
- * nobody sees it but us.
- */
-const STORAGE_KEY = "abb:state";
 export const STATE_VERSION = 1;
 
 export function emptyProfile(): FounderProfile {
@@ -177,19 +173,32 @@ function emit() {
 let writeTimer: ReturnType<typeof setTimeout> | null = null;
 let flushBound = false;
 
+/**
+ * Writes go through the vault, so nothing is ever stored in the clear.
+ *
+ * Encryption is asynchronous — WebCrypto has no synchronous form — which
+ * changes one property of the old plaintext write: a `pagehide` handler cannot
+ * await, so the very last change before a tab is killed outright can be lost.
+ * The debounce below already put up to 120ms at that risk, so the window is
+ * the same size it always was; it is simply no longer zero at the moment of
+ * teardown. Encryption at rest is worth that, and the flush on
+ * `visibilitychange` fires early enough on mobile to cover the common case of
+ * switching away from the tab rather than killing it.
+ */
 function writeNow() {
   if (typeof window === "undefined") return;
   if (writeTimer) {
     clearTimeout(writeTimer);
     writeTimer = null;
   }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (err) {
-    // Quota exceeded or storage disabled — surface it rather than failing quietly.
-    console.error("Could not save your data locally.", err);
-    window.dispatchEvent(new CustomEvent("abb:persist-error"));
-  }
+  // Locked means there is no key: dropping the write is correct, because the
+  // alternative is writing somebody's business plan somewhere unencrypted.
+  if (!isUnlocked()) return;
+
+  const snapshot = state;
+  void saveState(snapshot).then((saved) => {
+    if (!saved) window.dispatchEvent(new CustomEvent("abb:persist-error"));
+  });
 }
 
 function persist() {
@@ -283,16 +292,37 @@ function migrate(raw: unknown): AppState {
   };
 }
 
-export function hydrate() {
-  if (hydrated || typeof window === "undefined") return;
+/**
+ * Load decrypted state into the store.
+ *
+ * The vault owns reading and decryption; this only normalises what comes back
+ * and marks the store ready. Hydration is no longer something that happens on
+ * mount — it happens when an account is unlocked, and until then the store
+ * holds an empty state so no page can render anyone's data.
+ */
+export function hydrateFrom(raw: unknown) {
+  state = migrate(raw);
   hydrated = true;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) state = migrate(JSON.parse(raw));
-  } catch (err) {
-    console.error("Saved data could not be read; starting fresh.", err);
-  }
   emit();
+}
+
+/**
+ * Drop everything in memory when the vault locks.
+ *
+ * Without this, signing out would leave the previous account's profile and
+ * businesses sitting in the module while the sign-in screen rendered over the
+ * top — which is precisely the leak on a shared browser that the vault exists
+ * to close.
+ */
+export function clearInMemoryState() {
+  state = emptyState();
+  hydrated = false;
+  emit();
+}
+
+/** True once an account's data has been decrypted into the store. */
+export function isHydrated(): boolean {
+  return hydrated;
 }
 
 function subscribe(listener: () => void) {
