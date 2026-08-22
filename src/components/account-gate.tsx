@@ -1,10 +1,12 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Icon } from "./icons";
 import { Badge, Button, Card, Field, Hi, Input, SectionHeader } from "./ui";
-import { clearInMemoryState, emptyState, hydrateFrom } from "@/lib/store";
+import { needsAccount } from "@/lib/routes";
+import { clearInMemoryState, emptyState, hydrateFrom, markReadyEmpty } from "@/lib/store";
 import {
   MIN_PASSPHRASE,
   createAccount,
@@ -46,26 +48,43 @@ function useVault() {
 
 export function AccountGate({ children }: { children: React.ReactNode }) {
   const unlocked = useVault();
-  /*
-   * Rendered only after mount. The account list lives in localStorage, which
-   * the server cannot see, so deciding what to show during SSR would guarantee
-   * a hydration mismatch on every visit.
-   */
+  const pathname = usePathname() ?? "/";
   const [ready, setReady] = useState(false);
+
   useEffect(() => {
     /*
-     * If this tab was told to stay unlocked, restore before rendering anything.
-     * Doing it here rather than in the gate's children means a reload never
-     * flashes the sign-in screen at somebody who asked not to see it.
+     * If this tab was told to stay unlocked, restore before deciding what to
+     * show, so a reload never flashes a prompt at somebody who asked not to
+     * see one.
      */
     void resumeInTab().then((resumed) => {
       if (resumed) hydrateFrom(resumed.state);
+      // Nothing to restore: settle the store as empty so pages waiting on
+      // hydration stop waiting. A locked visitor is not a loading visitor.
+      else markReadyEmpty();
       setReady(true);
     });
   }, []);
 
-  if (!ready) return null;
+  /*
+   * Children render on the server and on the first client pass, for every
+   * route. That is deliberate and it is safe: a locked browser has no key, so
+   * the store is empty and every page draws what a first-time visitor sees.
+   *
+   * The first version of this returned `null` until it had checked storage,
+   * which left the front page as an empty document that only filled in once
+   * script ran — the shape of a cloaked phishing page, on a domain with no
+   * reputation to spend. See `lib/routes.ts`.
+   */
   if (unlocked) return <>{children}</>;
+  if (!needsAccount(pathname)) return <>{children}</>;
+
+  /*
+   * A private route, still locked. Until the storage check finishes, keep
+   * rendering the page rather than blanking it — the store is empty, so this
+   * is the same empty-state view the page shows a new user.
+   */
+  if (!ready) return <>{children}</>;
   return <SignIn />;
 }
 

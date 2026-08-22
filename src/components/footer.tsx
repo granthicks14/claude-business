@@ -19,7 +19,7 @@ export function Footer() {
           <div className="min-w-0 max-w-sm">
             <p className="font-semibold tracking-tight">Groundwork</p>
             <p className="text-[13px] text-muted mt-1.5 leading-relaxed">
-              The work you do before you build. Free to run, no account, and everything you type stays in your own
+              The work you do before you build. Free to run, no server account, and everything you type stays in your own
               browser.
             </p>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Icon } from "./icons";
 import { SampleBanner } from "./sample-banner";
@@ -10,10 +10,27 @@ import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 import { useIntelligence, type AIError, type AIMeta } from "@/lib/useAI";
 
-/** Holds rendering until local data has loaded, so nothing flashes empty. */
+/**
+ * Holds rendering until local data has loaded, so nothing flashes empty.
+ *
+ * "Loaded" has two endings, and only one of them used to be handled. A visitor
+ * who unlocks an account hydrates the store, which is the case this was written
+ * for. A visitor who has no account never will — there is nothing encrypted to
+ * decrypt — and for them the skeleton below was permanent. That is most
+ * first-time visitors, and every crawler and scanner, so the public pages were
+ * serving a loading state that never resolved.
+ *
+ * `settled` is the second ending: one frame after mount, whatever the store is
+ * holding is what this visitor gets. Kept local to the component rather than
+ * read from the store, because the thing being waited on is "has the client
+ * taken over from the server yet", which is a rendering fact, not a data one.
+ */
 export function Ready({ children }: { children: ReactNode }) {
   const ready = useStoreReady();
-  if (!ready) {
+  const [settled, setSettled] = useState(false);
+  useEffect(() => setSettled(true), []);
+
+  if (!ready && !settled) {
     return (
       <div className="space-y-4" aria-busy="true">
         <Skeleton className="h-8 w-56" />

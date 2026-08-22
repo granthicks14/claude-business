@@ -189,7 +189,7 @@ function Profile() {
 
       <Card className="p-4">
         <p className="text-sm text-muted leading-relaxed">
-          All of this stays on this device. There&apos;s no account and no server copy — which is also why clearing
+          All of this stays on this device, encrypted under your passphrase. There&apos;s no server copy — which is also why clearing
           your browser data would lose it. Export a backup from{" "}
           <a href="/settings" className="underline underline-offset-2 decoration-accent/60 hover:decoration-accent">
             Settings → Your data

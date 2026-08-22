@@ -600,7 +600,7 @@ function DataSettings() {
       <Card className="p-5">
         <SectionHeader title="Where your data lives" />
         <p className="text-sm text-muted leading-relaxed">
-          Everything you create is stored in this browser, on this device. There&apos;s no account and no server
+          Everything you create is encrypted and stored in this browser, on this device. There&apos;s no server
           database, which means nobody else can read it — and also that clearing your browser data, or switching to
           another device, will lose it. Take a backup if it matters to you.
         </p>

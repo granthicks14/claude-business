@@ -6,14 +6,14 @@ import { LAST_REVIEWED } from "@/lib/legal";
 
 export const metadata: Metadata = {
   title: "Terms",
-  description: "What Groundwork is, what it isn't, and what you can expect from it. Free to use, no account, no warranty.",
+  description: "What Groundwork is, what it isn't, and what you can expect from it. Free to use, no server account, no warranty.",
 };
 
 export default function TermsPage() {
   return (
     <LegalPage
       title="Terms of use"
-      lead="Short version: it's free, there's no account, the output is a structured opinion rather than advice, and the decisions remain yours."
+      lead="Short version: it's free, your account lives only on your own device, the output is a structured opinion rather than advice, and the decisions remain yours."
       reviewed={LAST_REVIEWED}
     >
       <h2>What this is</h2>
@@ -36,7 +36,7 @@ export default function TermsPage() {
 
       <h2>What you can expect from it</h2>
       <ul>
-        <li>The core application works with no account, no key and no payment, and is intended to stay that way.</li>
+        <li>The core application works with no server account, no key and no payment, and is intended to stay that way.</li>
         <li>Where it doesn&apos;t know something, it says so rather than filling the gap with something plausible.</li>
         <li>Where it makes an estimate, it labels it as one and shows what it was computed from.</li>
         <li>It will argue against your idea when the inputs justify that. That is the point of it.</li>

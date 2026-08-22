@@ -20,7 +20,7 @@ export default function PrivacyPage() {
   return (
     <LegalPage
       title="Privacy"
-      lead="Short version: everything you type stays in this browser. There is no account, no cookie, no analytics, and nothing is uploaded unless you specifically ask for it."
+      lead="Short version: everything you type is encrypted and stays in this browser. Your account exists only on this device, no cookie is set, there is no analytics, and nothing is uploaded unless you specifically ask for it."
       reviewed={LAST_REVIEWED}
     >
       <h2>What is stored, and where</h2>
@@ -45,7 +45,7 @@ export default function PrivacyPage() {
 
       <h2>Your data is yours, and you can take it or destroy it</h2>
       <p>
-        Because there is no account, there is nothing to request from anybody. Everything is on your device and under
+        Because there is no server-side account, there is nothing to request from anybody. Everything is on your device and under
         your control right now:
       </p>
       <ul>

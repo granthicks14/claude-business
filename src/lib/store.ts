@@ -325,6 +325,25 @@ export function isHydrated(): boolean {
   return hydrated;
 }
 
+/**
+ * Marks the store settled with nothing in it.
+ *
+ * A locked browser has no key, so there is nothing to decrypt and nothing will
+ * ever arrive — but "hydrated" was the flag pages use to decide whether they
+ * are still waiting. Without this, every public page that renders through
+ * `Ready` sat on a loading skeleton forever for a visitor who has not made an
+ * account, which is most first-time visitors and every scanner.
+ *
+ * Empty-and-finished and full-and-finished are both finished; only the
+ * contents differ.
+ */
+export function markReadyEmpty(): void {
+  if (hydrated) return;
+  state = emptyState();
+  hydrated = true;
+  emit();
+}
+
 function subscribe(listener: () => void) {
   listeners.add(listener);
   return () => {

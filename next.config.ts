@@ -55,8 +55,53 @@ const nextConfig: NextConfig = {
           // rather than leaving it to be asked for.
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+            value:
+              "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), serial=(), midi=(), " +
+              "magnetometer=(), gyroscope=(), accelerometer=(), display-capture=(), idle-detection=(), " +
+              "local-fonts=(), screen-wake-lock=(), interest-cohort=()",
           },
+          /*
+           * HSTS. Two years, subdomains included, and deliberately NOT
+           * `preload`.
+           *
+           * Preload is a one-way door: submitting a domain to the browser
+           * preload lists is easy and removal takes months of shipping browser
+           * releases. `includeSubDomains` on a preloaded entry would also bind
+           * every future subdomain, including ones nobody has set up yet and
+           * cannot serve over TLS. The header itself gives the protection that
+           * matters — after a first visit, the browser refuses plaintext — and
+           * whoever owns the production domain can add preload once they are
+           * sure every subdomain is ready for it.
+           */
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          /*
+           * Cross-origin isolation. The app opens no popups it talks to and
+           * embeds nothing, so severing the opener relationship costs nothing
+           * and stops a page that opened this one from reaching into it.
+           */
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+          /*
+           * Nothing here is meant to be embedded by another site — the same
+           * position `frame-ancestors 'none'` already takes for documents.
+           * This extends it to the subresources.
+           */
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        ],
+      },
+      /*
+       * API responses must never be cached by a shared cache.
+       *
+       * These routes are the only ones that see request bodies, and a body can
+       * carry a founder's profile and business on its way to an optional AI
+       * provider. Nothing about the response is public, and a CDN holding one
+       * caller's generated plan for the next caller is exactly the failure the
+       * rest of this app is built to make impossible.
+       */
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, private" },
+          { key: "Vary", value: "*" },
         ],
       },
     ];
