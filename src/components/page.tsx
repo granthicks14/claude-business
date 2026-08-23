@@ -60,10 +60,18 @@ export function RequireProfile({ children }: { children: ReactNode }) {
   // profile, but they do have ideas. Blocking them here would be the app
   // insisting on the questionnaire it just let them skip.
   const hasWork = useAppState((s) => s.ideas.length > 0 || s.businesses.length > 0);
+  const section = useSectionLabel();
 
   if (!done && !hasWork) {
     return (
-      <Card>
+      // Same reason as `RequireBusiness` below: this gate replaces the page,
+      // so it has to carry the page's h1 or the route has none.
+      <>
+        <PageHero
+          title={section ? `${section} — tell us about you first` : "Tell us about you first"}
+          description="Everything in this section is scored against your own skills, money and hours, so it needs a profile before it can say anything true."
+        />
+        <Card>
         <EmptyState
           icon={<Icon.spark className="size-8 mx-auto text-accent" />}
           title="First, tell us about you"
@@ -74,7 +82,8 @@ export function RequireProfile({ children }: { children: ReactNode }) {
             </LinkButton>
           }
         />
-      </Card>
+        </Card>
+      </>
     );
   }
 
@@ -101,11 +110,30 @@ export function RequireProfile({ children }: { children: ReactNode }) {
 export function RequireBusiness({ children }: { children: (business: SelectedBusiness) => ReactNode }) {
   const state = useAppState((s) => s);
   const business = activeBusiness(state);
+  const section = useSectionLabel();
 
   if (!business) {
     const hasIdeas = state.ideas.length > 0;
     return (
-      <Card>
+      /*
+       * The gate is the page, so it has to carry the page's `h1`.
+       *
+       * `RequireBusiness` replaces the whole route when nothing is selected,
+       * which meant fourteen workspace pages rendered with no `h1` at all —
+       * their own `PageHero` sits inside this render prop and never ran. A
+       * reader navigating by heading landed on a document with nothing above
+       * `h2`, and the page could not say where it was.
+       *
+       * The title is derived from the navigation rather than passed in, the
+       * same way `PageHero` does it, so this cannot drift out of step with the
+       * sidebar or need fourteen call sites to remember anything.
+       */
+      <>
+        <PageHero
+          title={section ? `${section} — pick a business first` : "Pick a business first"}
+          description="This section works on one business at a time, so there is nothing to show until you have chosen one."
+        />
+        <Card>
         <EmptyState
           icon={<Icon.building className="size-8 mx-auto text-accent" />}
           title="Pick a business first"
@@ -123,7 +151,8 @@ export function RequireBusiness({ children }: { children: (business: SelectedBus
             </>
           }
         />
-      </Card>
+        </Card>
+      </>
     );
   }
 

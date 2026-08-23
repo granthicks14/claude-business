@@ -28,13 +28,14 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:scoring   # 31 scoring, diversity and refusal calibration tests
+npm run test:accounts  # 26 account-isolation and vault-registry tests
+npm run test:scoring   # 43 scoring, title, diversity and refusal tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
-npm run test:product   # 73 quality/consistency/variant/intake/sample tests
+npm run test:product   # 78 quality/consistency/variant/intake/sample tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
-npm test               # all seven
+npm test               # all eight
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
 ```
@@ -59,6 +60,10 @@ src/lib/variants.ts     Five reframings of one idea, each rescored.
 src/lib/pricing.ts      Three tiers derived from the one price you entered.
 src/lib/intake.ts       A typed sentence becomes a scored idea, gaps declared.
 src/lib/sample.ts       The worked example. Fictional, and says so everywhere.
+src/lib/idea-summary.ts What it is, who pays, how you earn — derived, never stored.
+src/lib/engine/naming.ts Titles that describe the business rather than sell it.
+src/lib/engine/topics.ts What a business is about, keyed on the problem.
+src/components/reveal.tsx Scroll-triggered entrance. Visible by default, always.
 src/lib/analyze/        The existing-business analyser. Reads a page, works out
                         what kind of business it is, scores fifteen dimensions.
 src/lib/competition.ts  How crowded is this, and what does that mean. Two-sided.
@@ -305,6 +310,43 @@ Three founders who differ only after the word "sports" — one bare, one who
 refuses video work, one who refuses consumers — now share **no** ideas at all,
 and neither refusal leaks. `test:scoring` holds all of it.
 
+### A title is a description, not an advertisement
+
+`engine/naming.ts` builds every idea's title as **[what you sell] [kind of
+business] for [who buys it]** — "Highlight Reel Service for Parents of Young
+Athletes". It replaced per-model `nameTemplates` ("The {topic} desk", "{topic},
+done properly", "{segment} collective"), which were brand names: shown ten of
+them, a founder could not tell what any of them sold without opening each one,
+so the title cost a click to deliver information it should have carried itself.
+
+The customer clause prefers the segment's `label` over its `short`, because
+`short` is frequently a vague single noun where the label is the specific one —
+"experts" against "professionals who should be posting but aren't". It drops
+words the phrase has already used, refuses to drop a head noun (trimming "new
+parents" to "for new" is grammatical wreckage that reads as a truncation bug),
+and is omitted rather than cut short when it will not fit in 62 characters.
+
+`SLOP` is exported so `test:scoring` asserts against the same list the generator
+avoids rather than a second copy that drifts. Deliberately *not* in it: "desk",
+"room", "circle" — as bare substrings those match "Desk Workers" and "Room
+Hire". The construction was wrong, not the word, so `looksAutoNamed` matches the
+shape instead, and that same function is what lets `migrate` re-title stored
+ideas without ever overwriting a name the founder typed themselves.
+
+### Interests rank markets; they never gate them — and never fill them
+
+Beyond the `strength > 0` fix below, `generateIdeas` caps by model **kind** and
+by **topic**, not only by model id and segment: "done-for-you", "content-service"
+and "setup-service" are three ids and one kind, so a batch could pass every cap
+and still be six versions of "you do it for them". There is a per-industry cap
+too, and then a **second pass with the caps relaxed** — a cap that shrinks the
+batch just reads as the app having nothing to offer, and diversity is allowed to
+shape the order but not the size.
+
+`fallbackIndustries` returns a spread across categories when no capability
+matches. It used to return two industries, which is why a founder who listed no
+skills received eight ideas that were all admin support and callouts.
+
 ### The niche catalogue
 
 "A cleaning business" isn't a business, it's a category. Post-construction
@@ -386,6 +428,22 @@ finding. Interview outcomes feed `snapshotEvidence`, so a recorded commitment
 or payment moves the verdict — otherwise the research pages would be a diary
 the rest of the app ignores.
 
+### Creating an account cannot destroy one
+
+`abb:accounts` is the only record that an account exists, and every vault
+operation is a read-modify-write over that one shared array. `createAccount`
+spends about a second inside PBKDF2 between its read and its write, and it used
+to write the list it had captured *before* that — so an account created in
+another tab during the window was dropped from the registry and its vault blob
+orphaned. The passphrase still worked; there was nothing left to type it into.
+
+The read now happens at the last possible moment and the label-uniqueness check
+moves with it. Ids are checked against both the registry and raw storage before
+a blob is written, so a collision refuses rather than overwriting somebody's
+data. A full quota returns an error instead of throwing past an `await` and
+leaving the create form spinning forever. `test:accounts` drives the real module
+against a fake `localStorage`, including another tab writing mid-creation.
+
 ### Accounts, and the leak they close
 
 There was never a *remote* way for one user's data to reach another — no server
@@ -432,6 +490,33 @@ would buy nothing measurable and cost a migration of data people can't get
 back. Writes are coalesced (120ms) and flushed on `pagehide`, `beforeunload`
 and visibility change, so the per-keystroke serialise cost is gone without any
 risk of losing the last write.
+
+### Scroll animation, and the rule that keeps it safe
+
+`.animate-in` runs on mount, which on a long page means everything below the
+fold finishes animating before the reader arrives — the motion is spent on an
+empty screen. `components/reveal.tsx` adds an IntersectionObserver entrance,
+exposed as `useReveal()` so `Section` and the idea cards attach it to elements
+they already render rather than gaining a wrapper that would break a grid.
+
+**Content is visible by default.** The hiding class is applied by script, and
+only when there is an observer to remove it and `prefers-reduced-motion` is not
+set. A crawler, a browser without JavaScript, a reduced-motion setting or a
+thrown observer all get a fully painted page, because the failure mode of a
+scroll animation is otherwise a blank document.
+
+There is deliberately no second count-up: `CountUp` in `ui.tsx` refuses to
+animate on mount so that a reload does not show movement that did not happen,
+and a first-view count-up would quietly undo that.
+
+### A gate is still a page
+
+`RequireBusiness` and `RequireProfile` replace the whole route when there is
+nothing to show, which meant fourteen workspace pages rendered with **no `h1` at
+all** — their own `PageHero` sits inside the render prop and never ran. Both
+gates now carry the page's `h1`, titled from `useSectionLabel()` so it cannot
+drift from the sidebar. Measured in Chromium: 22 routes, one `h1` each, no
+skipped levels, in both the gated and the business-selected branch.
 
 ### Four scores, never merged
 
