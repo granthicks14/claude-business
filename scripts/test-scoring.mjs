@@ -82,6 +82,38 @@ results.repeatAcrossBatches = b1.filter((i) => b2.some((j) => j.name === i.name)
 // One batch must not be ten variations on one business model.
 results.distinctModels = new Set(b1.map((i) => i.model?.id ?? i.modelId ?? i.name)).size;
 
+/*
+ * Refusals are promises, and the engine has to keep them.
+ *
+ * Three founders who differ only after the word "sports". If the app is doing
+ * real work, their shortlists should barely overlap — and the two who ruled
+ * something out must never be shown it. An ignored refusal costs more trust
+ * than a weak recommendation, because it proves the app was not listening.
+ */
+const sportsOnly = profile({ interests: ["sports"] });
+const noVideo = profile({
+  interests: ["sports"], skills: ["sales", "communication"],
+  startingBudget: 200, hoursPerWeek: 10,
+  wontDo: "making videos, filming, video editing", preferences: ["local"],
+});
+const noConsumers = profile({
+  interests: ["sports"], skills: ["coding", "software"],
+  startingBudget: 2000, hoursPerWeek: 25, wantsScalable: true,
+  preferences: ["online"], wontDo: "working with individual consumers",
+});
+
+const nA = generateIdeas(sportsOnly, { count: 8, seed: 5 }).map((i) => i.name);
+const nB = generateIdeas(noVideo, { count: 8, seed: 5 }).map((i) => i.name);
+const idsC = generateIdeas(noConsumers, { count: 8, seed: 5 });
+const nC = idsC.map((i) => i.name);
+
+const shared = (x: string[], y: string[]) => x.filter((n) => y.includes(n)).length;
+results.differentiation = { ab: shared(nA, nB), ac: shared(nA, nC), bc: shared(nB, nC) };
+results.videoLeak = nB.filter((n) => /video|film|reel|highlight|footage/i.test(n));
+results.consumerLeak = idsC.filter((i) =>
+  /parent|athlete|player|hobbyist|individual|families|households/i.test(i.name + " " + (i.customer ?? ""))).map((i) => i.name);
+results.supplyUnderConstraints = { b: nB.length, c: nC.length };
+
 results.weights = SCORING_WEIGHTS;
 results.ideaCount = ideas.length;
 results.ideaName = ideas[0]?.name ?? "";
@@ -249,6 +281,17 @@ check("ten ideas were asked for and ten came back, whatever the interest",
 check("a stated interest still leads the shortlist", r.interestLeads);
 check("two batches from one profile do not repeat", r.repeatAcrossBatches === 0, `${r.repeatAcrossBatches} repeated`);
 check("a batch spans several business models", r.distinctModels >= 4, `${r.distinctModels} distinct`);
+
+const d = r.differentiation;
+check("three founders differing only in constraints get different shortlists",
+  d.ab <= 2 && d.ac <= 2 && d.bc <= 2, JSON.stringify(d));
+check("a refusal to do video work is honoured",
+  r.videoLeak.length === 0, JSON.stringify(r.videoLeak));
+check("a refusal to serve individual consumers is honoured",
+  r.consumerLeak.length === 0, JSON.stringify(r.consumerLeak));
+check("constraints narrow the answer without starving it",
+  r.supplyUnderConstraints.b === 8 && r.supplyUnderConstraints.c === 8,
+  JSON.stringify(r.supplyUnderConstraints));
 
 console.log(`\n${failures === 0 ? "ALL SCORING TESTS PASSED" : `${failures} FAILURES`}`);
 process.exit(failures ? 1 : 0);

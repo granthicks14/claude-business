@@ -28,7 +28,7 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:scoring   # 27 scoring + idea-diversity calibration tests
+npm run test:scoring   # 31 scoring, diversity and refusal calibration tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
 npm run test:product   # 60 quality/consistency/variant/intake/sample tests
@@ -280,6 +280,30 @@ reads differently from "outside what you listed — matched to your skills".
 `test:scoring` holds the line with five checks, including that naming an
 interest never reduces how many ideas come back, that a stated interest still
 leads, and that two batches from one profile never repeat.
+
+### A refusal is a promise
+
+`wontDo` is a field literally labelled "things I won't do", so everything in it
+is a prohibition however it is phrased. `violatesConstraint` used to require
+the clause itself to contain a negative word, which meant a founder who typed
+"making videos, filming, video editing" there was recommended a highlight-reel
+business — the app failing to read its own form.
+
+`constraints` is different: it is free text that may equally be a preference
+("I want local work"), so it still has to be negated to block anything. The two
+lists are kept apart in `FounderSignals` for exactly that reason.
+
+Two more holes were found the same way. The constraint haystack omitted the
+*problem*, which is usually the most descriptive part of what a business does —
+"highlight reels" lives there, not on the industry or the model. And a refusal
+to serve consumers had no structural representation at all, so "no individual
+consumers" still returned businesses aimed at parents, athletes and hobbyists.
+Term matching cannot bridge "video editing" to "highlight reels" either, so
+`CAMERA_WORK` reads that refusal structurally rather than lexically.
+
+Three founders who differ only after the word "sports" — one bare, one who
+refuses video work, one who refuses consumers — now share **no** ideas at all,
+and neither refusal leaks. `test:scoring` holds all of it.
 
 ### The niche catalogue
 

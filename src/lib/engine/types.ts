@@ -185,6 +185,8 @@ export interface FounderSignals {
   wantsLocal: boolean;
   preferredKinds: Set<ModelKind>;
   avoid: string[];
+  /** Clauses from `wontDo`, which are prohibitions whatever their wording. */
+  refuse: string[];
   wantsFast: boolean;
   wantsScale: boolean;
   risk: "low" | "medium" | "high";

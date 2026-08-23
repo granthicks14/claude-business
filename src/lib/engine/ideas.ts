@@ -17,6 +17,14 @@ import type { BusinessModel, CustomerSegment, FounderSignals, Industry, Industry
  * two founders with different profiles cannot receive the same set.
  */
 
+/**
+ * Problems that inherently involve being behind or in front of a camera.
+ *
+ * Kept as one expression so the "I won't do video work" refusal has a single
+ * definition rather than being re-guessed at each call site.
+ */
+const CAMERA_WORK = /\b(video|videos|film|filming|footage|highlight reel|highlight reels|reels|youtube|tiktok|vlog|livestream|stream production|on camera)\b/i;
+
 /** Local id generator — the engine stays decoupled from the React store. */
 function newId(prefix: string): string {
   const rand =
@@ -234,6 +242,16 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
 
   for (const industry of searchSpace) {
     for (const segment of industry.segments) {
+      /*
+       * Somebody who refuses consumer work has ruled out every segment that
+       * sells to individuals, which is roughly half the catalogue. That is a
+       * structural choice rather than a preference to be scored down, so it
+       * removes the segment entirely — before this, a founder who said "no
+       * individual consumers" was still shown four businesses out of eight
+       * aimed at parents, athletes and hobbyists.
+       */
+      if (blocks.noConsumers && !segment.business) continue;
+
       for (const problem of industry.problems) {
         for (const model of usable) {
           // Not every segment in a market has every problem in it. Pairing
@@ -245,11 +263,28 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
           const { fit, notes } = scoreCandidate(base, signals, options.angle);
           if (fit < 0) continue;
 
+          /*
+           * The problem belongs in the constraint haystack.
+           *
+           * It was missing, and the problem is often the most descriptive part
+           * of what the business actually does: a founder who refused video
+           * work was offered "Highlight reels care plan", because "highlight
+           * reels" lives on the problem and only the industry, segment and
+           * model were being checked.
+           */
           const blocked = violatesConstraint(
             signals,
-            `${industry.label} ${segment.label} ${model.label} ${model.mechanism} ${model.kind}`,
+            `${industry.label} ${segment.label} ${problem.label} ${problem.statement} ${model.label} ${model.mechanism} ${model.kind}`,
           );
           if (blocked) continue;
+
+          /*
+           * Some problems cannot be solved without a camera whatever model is
+           * pointed at them. Term matching alone will not catch that — "video
+           * editing" and "highlight reels" share no words — so the refusal has
+           * to be read structurally rather than lexically.
+           */
+          if (blocks.noCamera && CAMERA_WORK.test(`${problem.label} ${problem.statement}`)) continue;
 
           candidates.push({
             ...base,

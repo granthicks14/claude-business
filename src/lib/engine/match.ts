@@ -121,7 +121,23 @@ export function analyseFounder(profile: FounderProfile): FounderSignals {
     for (const kind of PREFERENCE_KINDS[pref] ?? []) preferredKinds.add(kind);
   }
 
-  const avoid = [...clauses(profile.wontDo), ...profile.constraints.map((c) => c.toLowerCase())];
+  /*
+   * Two different kinds of statement, and they cannot share a rule.
+   *
+   * `wontDo` is a field literally labelled "things I won't do", so everything
+   * in it is a prohibition however it is phrased — somebody who types "making
+   * videos" there has refused to make videos, and demanding they also type the
+   * word "no" is the app failing to read its own form. `constraints` is free
+   * text that may equally be a preference ("I want local work"), so it still
+   * has to be negated to block anything.
+   *
+   * Getting this wrong was not cosmetic: a founder who wrote "making videos,
+   * filming, video editing" under things-I-won't-do was recommended a
+   * highlight-reel business. An ignored refusal costs more trust than a weak
+   * recommendation, because it proves the app was not listening.
+   */
+  const refuse = clauses(profile.wontDo);
+  const avoid = [...refuse, ...profile.constraints.map((c) => c.toLowerCase())];
 
   const age = ageContext(profile.ageBand);
 
@@ -152,6 +168,7 @@ export function analyseFounder(profile: FounderProfile): FounderSignals {
     wantsLocal: profile.preferences.includes("local") || profile.preferences.includes("physical"),
     preferredKinds,
     avoid,
+    refuse,
     wantsFast: /7|14|30|week|asap|immediate/i.test(profile.firstDollarTarget) || profile.payoffStyle === "fast",
     wantsScale: profile.wantsScalable || profile.payoffStyle === "moonshot",
     risk: profile.risk,
@@ -195,6 +212,8 @@ export function violatesConstraint(signals: FounderSignals, haystack: string): s
   const text = haystack.toLowerCase();
   const NEGATIVE = /\b(no|not|without|never|avoid|don'?t|dont|can'?t|cant|hate|won'?t|wont)\b/;
 
+  const refuse = new Set(signals.refuse ?? []);
+
   for (const clause of signals.avoid) {
     if (!clause) continue;
     const negated = NEGATIVE.test(clause);
@@ -204,9 +223,12 @@ export function violatesConstraint(signals: FounderSignals, haystack: string): s
       .filter((t) => t.length > 3 && !STOPWORDS.has(t));
     if (!terms.length) continue;
 
-    // Only a negated clause blocks anything: "I want local work" is a preference,
-    // "no cold calling" is a prohibition.
-    if (!negated && !clause.startsWith("no ")) continue;
+    /*
+     * A clause from `wontDo` is prohibitive by virtue of the field it came
+     * from. A clause from `constraints` has to say so: "I want local work" is
+     * a preference, "no cold calling" is a prohibition.
+     */
+    if (!refuse.has(clause) && !negated && !clause.startsWith("no ")) continue;
     if (terms.some((t) => text.includes(t))) return clause;
   }
   return null;
@@ -222,11 +244,27 @@ const STOPWORDS = new Set([
 export function structuralAvoidance(signals: FounderSignals) {
   const h = signals.haystack;
   return {
-    noCamera: /(no|not|without|don'?t|dont|hate|won'?t|wont)[^.]{0,30}(face|camera|on video|filming|being filmed|showing myself)/.test(h),
+    /*
+     * `wontDo` text is folded into the haystack without a negative word in
+     * front of it, so each of these also matches the bare phrase. "video
+     * editing" typed under things-I-won't-do has to block camera work exactly
+     * as "I don't want to be on video" does.
+     */
+    noCamera: /(no|not|without|don'?t|dont|hate|won'?t|wont)[^.]{0,30}(face|camera|on video|filming|being filmed|showing myself)/.test(h)
+      || /\b(making videos|video editing|editing video|filming|video work|be on camera|highlight reel)\b/.test(h),
     noCalls: /(no|not|without|don'?t|dont|hate|won'?t|wont)[^.]{0,30}(cold call|phone call|calls|talking on the phone|sales call)/.test(h),
     noInventory: /(no|not|without|don'?t|dont|won'?t|wont)[^.]{0,40}(physical product|inventory|stock|shipping|posting parcels)/.test(h),
     noPeople: /(no|not|without|don'?t|dont|hate)[^.]{0,30}(dealing with people|customer service|face to face|in person)/.test(h),
     noCode: /(no|not|without|don'?t|dont|can'?t|cant)[^.]{0,25}(code|coding|programming|technical)/.test(h),
     noDriving: /(no|not|without|don'?t|dont|can'?t|cant)[^.]{0,25}(drive|driving|car|travel)/.test(h),
+    /*
+     * Refusing consumer work is a structural choice, not a taste: it rules out
+     * every segment that sells to individuals, which is roughly half the
+     * catalogue. It was not represented at all, so a founder who said "no
+     * individual consumers" was still shown businesses selling to parents,
+     * athletes and hobbyists.
+     */
+    noConsumers: /(no|not|without|don'?t|dont|won'?t|wont|avoid)[^.]{0,40}(individual consumer|consumers|general public|b2c|members of the public|everyday people)/.test(h)
+      || /\b(individual consumers|consumer work|b2c work)\b/.test(h),
   };
 }
