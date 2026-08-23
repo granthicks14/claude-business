@@ -565,7 +565,13 @@ export function EmptyState({
   return (
     <div className="text-center py-12 px-6">
       {icon && <div className="text-3xl mb-3 opacity-80">{icon}</div>}
-      <h3 className="font-semibold text-base">{title}</h3>
+      {/*
+        An h2, not an h3. An empty state is the entire content of the page it
+        appears on, so it is that page's first section — and as an h3 it landed
+        directly after the h1, which is a level skip on nine routes and the
+        exact thing a screen-reader user navigating by heading trips over.
+      */}
+      <h2 className="font-semibold text-base">{title}</h2>
       <p className="text-sm text-muted mt-1.5 max-w-md mx-auto">{description}</p>
       {action && <div className="mt-5 flex flex-wrap gap-2 justify-center">{action}</div>}
     </div>
@@ -1381,7 +1387,18 @@ export function ErrorPanel({
 }) {
   const noProvider = error.code === "no_provider";
   return (
-    <div className="rounded-xl border border-bad/30 bg-bad-soft px-4 py-3.5" role="alert">
+    /*
+     * An error says three things, in this order: what happened, what happens
+     * to your work, and what you can do about it.
+     *
+     * The middle one was missing and it is the one that matters most here.
+     * Everything a founder types lives in their own browser, so a failed
+     * generation never costs them anything — but "Generation failed" in red,
+     * with no reassurance, reads exactly like the message that loses your
+     * afternoon. The heading was also implementation language: nobody came
+     * here to run a generation, they came to get a plan written.
+     */
+    <div className="rail rail-bad py-1" role="alert">
       <div className="flex items-start gap-3">
         <svg viewBox="0 0 24 24" className="size-5 text-bad shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <circle cx="12" cy="12" r="9" />
@@ -1389,9 +1406,13 @@ export function ErrorPanel({
         </svg>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-text">
-            {noProvider ? "That needs an optional AI provider" : "Generation failed"}
+            {noProvider ? "That part needs an optional AI provider" : "That didn't come back"}
           </p>
           <p className="text-sm text-muted mt-1 break-words">{error.message}</p>
+          <p className="text-caption text-muted mt-1.5">
+            Nothing you&apos;ve entered was lost — it&apos;s saved in this browser.
+            {error.retryable ? " Trying again costs nothing." : ""}
+          </p>
           <div className="flex flex-wrap gap-2 mt-3">
             {error.retryable && onRetry && (
               <Button size="sm" variant="secondary" onClick={onRetry} loading={retrying}>

@@ -5,6 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Icon } from "./icons";
 import { SampleBanner } from "./sample-banner";
+import { useSectionLabel } from "@/lib/nav";
 import { AILoading, Button, Card, EmptyState, ErrorPanel, Eyebrow, LinkButton, SectionHeader, Skeleton } from "./ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
@@ -156,8 +157,15 @@ export function PageHero({
   action,
 }: {
   title: string;
-  /** A mono label placing the page inside its section of the product. */
-  eyebrow?: string;
+  /**
+   * A mono label placing the page inside its section of the product.
+   *
+   * Left unset it is derived from the navigation, so every page says where it
+   * is without seventeen call sites each having to remember to. Pass a string
+   * to override, or `null` on the rare page that genuinely sits outside the
+   * sections.
+   */
+  eyebrow?: string | null;
   description?: ReactNode;
   /** An illustration from `components/art`. Rendered without a label — the
       heading beside it already says what the page is. */
@@ -174,11 +182,16 @@ export function PageHero({
    * is set large in the display face and does the work the box was pretending
    * to do.
    */
+  const section = useSectionLabel();
+  // `undefined` means "derive it"; an explicit `null` means "this page has no
+  // section", which is different and has to stay expressible.
+  const label = eyebrow === undefined ? section : eyebrow;
+
   return (
     <header className="mb-8 animate-in">
       <div className="flex items-start justify-between gap-8">
         <div className="min-w-0 flex-1">
-          {eyebrow && <Eyebrow className="mb-3">{eyebrow}</Eyebrow>}
+          {label && <Eyebrow className="mb-3">{label}</Eyebrow>}
           <h1 className="text-h1">{title}</h1>
           {description && (
             <p className="text-body-lg text-muted mt-3 max-w-prose leading-relaxed">{description}</p>

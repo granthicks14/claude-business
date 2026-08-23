@@ -78,7 +78,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
         <div className="animate-in">
           {done ? (
             <div>
-              <h3 className="text-h3 font-semibold text-good">Done — that&apos;s logged.</h3>
+              <h2 className="text-h3 font-semibold text-good">Done — that&apos;s logged.</h2>
               <p className="text-muted mt-2 leading-relaxed max-w-prose">
                 Record what actually happened (who replied, who didn&apos;t, what they said) and the next step will
                 take it into account.
@@ -89,7 +89,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
             </div>
           ) : (
             <>
-              <h3 className="text-h2">{action.title}</h3>
+              <h2 className="text-h2">{action.title}</h2>
               <p className="text-body-lg mt-3 leading-relaxed max-w-prose">{action.detail}</p>
 
               <div className="flex flex-wrap gap-2 mt-5">

@@ -581,6 +581,48 @@ haloes on five pages, sixty pills, and illustrations bobbing on infinite loops.
 - A low score never blocks a choice. Say what's weak, then get out of the way:
   the profile was written in five minutes and the user knows more than it does.
 
+## Content and layout
+
+A content audit across 37 routes measured heading structure, reading width,
+paragraph length and how many equal-weight primary actions competed on each
+page. It found body text set between 96 and 160 characters per line on 33 of
+them, heading-level skips on 11, and 14 filled primary buttons on one page.
+
+- **The measure is a token, applied once.** `--measure` (68ch) and
+  `--measure-heading` (45ch) cap prose in the base layer via `:where()`, so the
+  rule can only ever narrow a paragraph, never widen one, and any component
+  that genuinely needs full width overrides it with a plain utility. Tables and
+  grid cells are exempt — structured data wants the width.
+- **Never set a reading width in pixels.** `max-w-2xl` on 12px text is 93
+  characters a line, because a px width does not track font size. That was the
+  single paragraph left over after the measure went in.
+- **One `h1` per page, and it answers "what am I doing here?"** Section titles
+  are questions where a question is what the reader has — "Is this a good
+  business?", "Who buys this, and what they told you". Heading levels are never
+  skipped; an `EmptyState` title is an `h2` because an empty state is the whole
+  content of its page.
+- **A label on a value is not a heading.** "Biggest threat" over a sentence is
+  an `Eyebrow`, not an `h3`. Nothing nests under it, so a reader navigating by
+  heading would land somewhere that isn't a section.
+- **One filled button per page.** Repeated per-item actions are outlined —
+  "Use this" appears a dozen times on the website builder and as a primary it
+  meant the page had fourteen equal calls to action, which is the same as
+  having none. Three filled buttons survive on that page because they are three
+  stages of one workflow, far apart, in sequence.
+- **Page context is derived, never typed.** `useSectionLabel()` in `lib/nav.ts`
+  reads the same sections the sidebar is built from, so a page header and the
+  navigation cannot disagree about where the user is.
+- **`lib/nav.ts` exists because `components/page.tsx` must not import the
+  shell.** The shell is what the root layout renders; pulling it into every
+  page module changed the client reference graph and the App Router began
+  answering sidebar clicks with a full document load — which discards the
+  vault's in-memory key and locks the app after one click. The nav model lives
+  on its own so both sides can read it without either importing the other.
+- **An error says what happened, what happened to your work, and what to do.**
+  The middle one matters most here: everything lives in the reader's own
+  browser, so a failed generation costs them nothing, and saying so is the
+  difference between an inconvenience and a message that reads like lost work.
+
 The invariants above are checked, not asserted: `visual-qa.mjs` measures
 contrast from painted pixels in both themes and fails the build on any gradient
 background, any blurred pseudo-element, more than three shadowed elements, or

@@ -98,8 +98,21 @@ export function RecommendationCard({
 
       {!editing && (
         <div className="flex flex-wrap gap-2 mt-3">
+          {/*
+            Outlined, not filled.
+            This card repeats a dozen times on the website builder, and as a
+            filled button "Use this" put fourteen equal-weight primary actions
+            on one page — which is the same as having none, because nothing
+            tells the reader where to start. The page has one filled button,
+            "accept all the confident ones", and these are the per-item
+            actions underneath it.
+
+            The editor's "Save this" below stays primary: only one editor is
+            open at a time, so it is genuinely the primary action in its own
+            context rather than one of a dozen.
+          */}
           {!isAccepted && (
-            <Button size="sm" variant="primary" onClick={() => onAccept(rec.value)}>
+            <Button size="sm" variant="secondary" onClick={() => onAccept(rec.value)}>
               Use this
             </Button>
           )}

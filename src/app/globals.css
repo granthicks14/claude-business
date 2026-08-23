@@ -122,6 +122,23 @@
   --space-8: 4.5rem;
   --space-section: clamp(2.5rem, 6vw, 4.5rem);
 
+  /*
+   * The measure — how many characters fit on one line of prose.
+   *
+   * A content audit across 37 routes found 33 of them setting body text
+   * between 96 and 160 characters per line, because the workspace column is
+   * wide and nothing was stopping a paragraph from filling it. Anything past
+   * about 80 costs the reader the return sweep: the eye loses the next line,
+   * and long analysis reads as heavy when it is merely wide.
+   *
+   * 68ch for prose, 45ch for headings. Applied as a cap in the base layer, so
+   * it can only ever narrow a paragraph and never widen one — a paragraph in a
+   * 300px column is untouched. Tables, grids and diagrams are exempt: they are
+   * structured data and genuinely want the width.
+   */
+  --measure: 68ch;
+  --measure-heading: 45ch;
+
   /* Motion. Short, and the same easing everywhere. */
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   --dur-fast: 0.14s;
@@ -323,6 +340,24 @@
 
   p, li {
     text-wrap: pretty;
+  }
+
+  /*
+   * The measure, applied once rather than as `max-w-prose` on several hundred
+   * elements. `:where()` keeps specificity at zero, so any component that
+   * genuinely needs the full width overrides it with a plain utility class and
+   * wins without a fight.
+   *
+   * Scoped to `main` so navigation, the footer and dialog chrome are untouched,
+   * and `td`/`th` are excluded because a table cell is structured data whose
+   * width is set by its column, not by comfortable reading.
+   */
+  main :where(p, li, dd, blockquote):not(:where(td *, th *, .measure-full, .measure-full *)) {
+    max-width: var(--measure);
+  }
+
+  main :where(h1, h2, h3):not(:where(.measure-full, .measure-full *)) {
+    max-width: var(--measure-heading);
   }
 
   /* A single, always-visible focus treatment. */

@@ -342,7 +342,10 @@ export default function HomePage() {
             )}
           </div>
         </div>
-        <p className="text-caption text-faint mt-8 max-w-2xl leading-relaxed">
+        {/* No `max-w-2xl` here: a fixed pixel width does not track font size, so
+            672px of 12px text is 93 characters a line. The global `ch`-based
+            measure gets this right at every size. */}
+        <p className="text-caption text-faint mt-8 leading-relaxed">
           Educational business planning tool. Estimates are illustrative scenarios with their assumptions stated,
           not financial advice and not promises. Verify licences, tax and insurance requirements with a qualified
           professional in your area.

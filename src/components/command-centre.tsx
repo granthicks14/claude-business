@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { Icon } from "./icons";
-import { Badge, Card, Hi, LinkButton } from "./ui";
+import { Badge, Card, Eyebrow, Hi, LinkButton } from "./ui";
 import { CALL_LABEL, CALL_TONE, STATE_LABEL, STATE_TONE, useIntel } from "@/lib/intel";
 import { QUALITY_BAND_LABEL, businessQuality } from "@/lib/quality";
 import { checkConsistency } from "@/lib/consistency";
@@ -61,19 +61,25 @@ export function CommandCentre() {
 
       <div className="grid sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
         <div>
-          <h3 className="text-xs uppercase tracking-wide text-faint font-medium flex items-center gap-1.5">
+          {/*
+            A label on a value, not a section heading. As an h3 straight after
+            the page h1 it was both a level skip and a lie about the document
+            structure: nothing is nested under it, and a reader navigating by
+            heading would land here expecting a section.
+          */}
+          <Eyebrow className="flex items-center gap-1.5">
             <Icon.radar className="size-3.5" />
             Biggest threat
-          </h3>
+          </Eyebrow>
           <p className="text-sm mt-1 leading-relaxed">
             {threat ? threat.threat : "Nothing alarming in what you've recorded — which may mean there isn't much recorded."}
           </p>
         </div>
         <div>
-          <h3 className="text-xs uppercase tracking-wide text-faint font-medium flex items-center gap-1.5">
+          <Eyebrow className="flex items-center gap-1.5">
             <Icon.search className="size-3.5" />
             Biggest unknown
-          </h3>
+          </Eyebrow>
           <p className="text-sm mt-1 leading-relaxed">
             {unknown ? unknown.question : redTeam.mostDangerousUnknown}
           </p>

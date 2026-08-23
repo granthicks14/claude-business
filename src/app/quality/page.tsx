@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { GrowthArt } from "@/components/art";
-import { Badge, Card, Hi, LinkButton, Meter, ScoreRing, SectionHeader, Tabs } from "@/components/ui";
+import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, SectionHeader, Tabs } from "@/components/ui";
 import { PositionMap, type MapPoint } from "@/components/position-map";
 import { CONSISTENCY_NOTE, SEVERITY_LABEL, SEVERITY_TONE, checkConsistency } from "@/lib/consistency";
 import { QUALITY_HELP, QUALITY_LABEL, QUALITY_BAND_LABEL, QUALITY_NOTE, businessQuality } from "@/lib/quality";
@@ -97,8 +97,10 @@ function Quality({ business }: { business: SelectedBusiness }) {
           <div className="flex-1 min-w-[15rem]">
             <p className="text-[15px] leading-relaxed">{quality.summary}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {/* Sentence case, not raw enum. Badges stopped being uppercased
+                  by CSS, which left "high confidence" reading as a typo. */}
               <Badge tone={quality.confidence === "high" ? "good" : quality.confidence === "medium" ? "accent" : "neutral"}>
-                {quality.confidence} confidence
+                {quality.confidence.charAt(0).toUpperCase() + quality.confidence.slice(1)} confidence
               </Badge>
               {consistency.contradictions.length > 0 && (
                 <Badge tone="warn">
@@ -110,16 +112,21 @@ function Quality({ business }: { business: SelectedBusiness }) {
           </div>
         </div>
 
+        {/* A rail, not a tinted box inside a box. The card already groups this
+            with the score; a second bordered rectangle inside the first was
+            drawing a boundary the spacing had already drawn. */}
         {quality.fastestImprovement && (
-          <div className="mt-5 rounded-lg border border-accent-border bg-accent-soft p-4">
-            <p className="text-xs font-medium text-accent-text uppercase tracking-wide">Fastest way to improve this</p>
-            <p className="text-sm mt-1 leading-relaxed">{quality.fastestImprovement.what}</p>
-            <p className="text-xs text-muted mt-1 leading-relaxed">{quality.fastestImprovement.why}</p>
-            <div className="mt-3">
-              <LinkButton href={quality.fastestImprovement.where} size="sm" variant="primary">
-                Go and do it
-              </LinkButton>
-            </div>
+          <div className="mt-5 rule pt-5">
+            <Rail tone="mark">
+              <Eyebrow className="text-mark">Fastest way to improve this</Eyebrow>
+              <p className="text-body-lg mt-1.5 leading-relaxed">{quality.fastestImprovement.what}</p>
+              <p className="text-small text-muted mt-1.5 leading-relaxed">{quality.fastestImprovement.why}</p>
+              <div className="mt-3">
+                <LinkButton href={quality.fastestImprovement.where} size="sm" variant="primary">
+                  Go and do it
+                </LinkButton>
+              </div>
+            </Rail>
           </div>
         )}
       </Card>

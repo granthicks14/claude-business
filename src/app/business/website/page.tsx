@@ -411,7 +411,14 @@ function Website({ business }: { business: SelectedBusiness }) {
               aria-label="What would you like to change?"
             />
           </div>
-          <Button onClick={applyRequest} variant="primary">
+          {/*
+            Secondary: this is the submit control for one small text field, not
+            a call to action. The three filled buttons left on this page are the
+            three stages of the actual workflow — write the plan, open the
+            builder, mark it live — and they are far enough apart on a long page
+            to read as a sequence rather than as competition.
+          */}
+          <Button onClick={applyRequest} variant="secondary">
             Apply
           </Button>
         </div>
