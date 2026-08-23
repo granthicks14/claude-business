@@ -29,7 +29,7 @@ npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
 npm run test:accounts  # 26 account-isolation and vault-registry tests
-npm run test:scoring   # 43 scoring, title, diversity and refusal tests
+npm run test:scoring   # 52 scoring, title, diversity, memory and refusal tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
 npm run test:product   # 78 quality/consistency/variant/intake/sample tests
@@ -64,6 +64,8 @@ src/lib/idea-summary.ts What it is, who pays, how you earn — derived, never st
 src/lib/engine/naming.ts Titles that describe the business rather than sell it.
 src/lib/engine/topics.ts What a business is about, keyed on the problem.
 src/components/reveal.tsx Scroll-triggered entrance. Visible by default, always.
+src/components/lab/dials.tsx  Which way to push the next batch, and what it remembers.
+src/components/lab/guide.tsx  Four questions before the first batch. Skippable.
 src/lib/analyze/        The existing-business analyser. Reads a page, works out
                         what kind of business it is, scores fifteen dimensions.
 src/lib/competition.ts  How crowded is this, and what does that mean. Two-sided.
@@ -347,6 +349,62 @@ shape the order but not the size.
 matches. It used to return two industries, which is why a founder who listed no
 skills received eight ideas that were all admin support and callouts.
 
+### The app remembers what you turned down
+
+Diversity caps stop one batch being the same business five times. They do
+nothing for the founder who has turned down five variations across five
+batches — that person is being asked the same question repeatedly and watching
+the app fail to notice, which is the single most common reason to stop trusting
+a recommender.
+
+`AppState.ideaFeedback` holds *signatures*, not ideas: model kind, topic,
+segment, industry. Enough to recognise "another one of those" and nothing more,
+so the record cannot grow without bound or drift from the generator's own
+vocabulary. Capped at 40, newest first.
+
+**A rejection is evidence, not a rule.** `feedbackAdjustment` in `ideas.ts`
+drops a candidate matching on *both* what is sold and how it is sold, and only
+lowers one matching on a single axis. Get that wrong in either direction and it
+fails: act on one rejection as a rule and a founder loses a whole model kind to
+an impatient click; ignore the fifth and the app is the thing they came here to
+escape. Likes are weighted more gently than rejections, because people click
+"more like this" out of mild interest and "not interested" out of certainty.
+
+The feedback is read inside `useIdeaGeneration` rather than passed by each
+caller — three components generate ideas and a fourth will exist eventually, and
+a generation that silently ignores rejections because a new call site forgot an
+argument is exactly the failure this exists to fix.
+
+**Everything inferred is visible and clearable.** `lab/dials.tsx` shows the
+count of what has been passed on and offers to forget all of it. A recommender
+that quietly narrows with no way to see or undo it is how somebody ends up in a
+corner wondering why the ideas got worse.
+
+`test:scoring` holds the line: rejected shapes do not return, five rejections
+visibly change the batch, one rejection does not eliminate a model kind
+(asserted against the candidate pool, since a batch of ten is also shaped by
+caps), dials never shrink the batch, and no feedback behaves exactly as before.
+
+### The guided questions, and the one that matters
+
+`lab/guide.tsx` asks four questions before a founder's first batch, one at a
+time. Not a chat: the engine is deterministic and there is no required
+provider, so parsing open prose would feel intelligent only for people who
+configured a key — the group who need it least. `/coach` is the free-text
+surface and stays that.
+
+The question worth the whole component is **"you mentioned sport — do you want
+the business to involve sport, or is that just something you enjoy?"**
+`match.ts` treats every stated interest as a market signal, so those two answers
+produced the same shortlist, and the founder who meant the second got a list
+built on a premise they would have rejected out loud. Answering "no" clears the
+interest rather than down-weighting it: leaving it in at reduced weight keeps
+seeding the same markets, and the founder asks once, sees the same list, and
+stops believing the question did anything.
+
+Shown once, when the shortlist is empty. Re-asking somebody who already has
+ideas is the repetitive questioning this pass removed.
+
 ### The niche catalogue
 
 "A cleaning business" isn't a business, it's a category. Post-construction
@@ -517,6 +575,45 @@ all** — their own `PageHero` sits inside the render prop and never ran. Both
 gates now carry the page's `h1`, titled from `useSectionLabel()` so it cannot
 drift from the sidebar. Measured in Chromium: 22 routes, one `h1` each, no
 skipped levels, in both the gated and the business-selected branch.
+
+### The sidebar answers "where is my business?"
+
+Two questions were answerable only by navigating somewhere and reading the
+answer: what did I pick, and is my profile good enough. Fine once, friction on
+every visit. `WhereYouAre` in `shell.tsx` puts both at the top of the one thing
+on screen regardless of route — business name, stage read off recorded facts,
+and the same next action the journey spine computes, because two places on one
+screen suggesting different next steps is worse than either alone.
+
+Neither block renders with nothing to say. An empty "current business" card
+would be a permanent reminder of a decision not yet made, sitting above the
+navigation on every screen.
+
+**Mobile is a bar, not a drawer.** A drawer costs two taps for every move and
+hides "where am I" behind the first. Four destinations cover almost every
+journey; More opens the full list. It is a second *presentation* of `useNav`,
+never a second model — the active state comes from the same `sectionFor` the
+sidebar uses, so they cannot disagree. The header's menu button went with it:
+two controls opening one drawer is the clutter this pass removed.
+
+`useBreadcrumbs` in `nav.ts` derives the trail from the same sections, and stops
+at the section rather than repeating the page's own `h1` immediately above it.
+Under `sm` it collapses to one "← parent" link, because on a phone the question
+is "how do I get out of here", which one link answers better than three.
+
+### One founder profile, not two
+
+`/settings` carried a second full profile editor — the same twenty-six fields,
+a different layout, a different save button, and no way to tell which was
+authoritative. `/profile` is the one that stays, because it deep-links by field
+(`/profile#skills`) and that is what score factors and the sidebar prompt link
+into. Settings now signposts it.
+
+`profileCompleteness` is **weighted, not counted**: twenty-six fields answered
+equally would let somebody reach "80% complete" having skipped their budget and
+their hours, and the figure would be reassuring and wrong. Required means the
+scoring genuinely cannot work without it. The prompt names **one** field with
+the reason it matters — a list of six gaps is a chore, one is a decision.
 
 ### Four scores, never merged
 

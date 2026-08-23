@@ -4,11 +4,11 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { Icon } from "./icons";
-import { Badge, Card, ScoreRing } from "./ui";
+import { Badge, Card, ScoreRing, useToast } from "./ui";
 import { currency } from "@/lib/finance";
 import { BAND_LABEL, computeFit } from "@/lib/fit";
 import { useReveal } from "./reveal";
-import { ideaSummary } from "@/lib/idea-summary";
+import { ideaSummary, signatureFor } from "@/lib/idea-summary";
 import { useFitWeights } from "@/lib/intel";
 import { actions, useAppState } from "@/lib/store";
 import { LEVEL_LABEL, type BusinessIdea } from "@/lib/types";
@@ -38,6 +38,8 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
    * left waiting seconds after the first.
    */
   const reveal = useReveal(index !== undefined ? Math.min(index, 8) * 55 : 0);
+  const signature = useMemo(() => signatureFor(idea), [idea]);
+  const toast = useToast();
 
   return (
     <Card
@@ -128,6 +130,43 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
         >
           <Icon.scales className="size-4" />
         </IconAction>
+        {/*
+          The two clicks that teach the app something.
+
+          Both are outlined, quiet and sit at the end of the row — a founder
+          scanning a shortlist is choosing, not training a model, and making
+          "not interested" loud would turn every card into a survey. But they
+          are the only controls here that change what happens next, so they say
+          so on hover rather than being unexplained icons.
+
+          Hidden entirely for an idea with no engine block: there would be
+          nothing for the generator to match a reaction against, and a button
+          that silently does nothing is worse than no button. See
+          `signatureFor`.
+        */}
+        {signature && (
+          <>
+            <IconAction
+              label="More like this — rank similar ideas higher next time"
+              onClick={() => {
+                actions.recordIdeaFeedback(signature, "liked");
+                toast("Noted — more like this next time", "good");
+              }}
+            >
+              <Icon.thumbUp className="size-4" />
+            </IconAction>
+            <IconAction
+              label="Not interested — stop showing ideas like this"
+              onClick={() => {
+                actions.recordIdeaFeedback(signature, "rejected");
+                actions.deleteIdea(idea.id);
+                toast("Removed, and noted for next time", "good");
+              }}
+            >
+              <Icon.thumbDown className="size-4" />
+            </IconAction>
+          </>
+        )}
       </div>
     </Card>
   );

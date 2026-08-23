@@ -1,6 +1,7 @@
 import { BUSINESS_MODELS } from "./engine/knowledge/models";
 import { INDUSTRIES } from "./engine/knowledge/industries";
-import type { BusinessIdea } from "./types";
+import { topicForProblem } from "./engine/topics";
+import type { BusinessIdea, IdeaSignature } from "./types";
 
 /**
  * The four things a founder needs before they will open an idea at all.
@@ -156,4 +157,28 @@ export function ideaSummary(idea: BusinessIdea): IdeaSummary {
 /** Capitalises a fragment for display without touching the rest of it. */
 export function upperFirst(text: string): string {
   return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}
+
+/**
+ * The shape of an idea, for remembering a reaction to it.
+ *
+ * Built from the `engine` block rather than the prose, so the vocabulary
+ * matches exactly what the generator compares against. An idea with no engine
+ * block — from the AI path, the intake or a pivot — cannot be turned into a
+ * signature, and returning null is the honest answer: there is nothing the
+ * generator could match it to, so pretending otherwise would record a
+ * preference that silently never applied.
+ */
+export function signatureFor(idea: BusinessIdea): IdeaSignature | null {
+  if (!idea.engine) return null;
+  const model = BUSINESS_MODELS.find((m) => m.id === idea.engine!.modelId);
+  const industry = INDUSTRIES.find((i) => i.id === idea.engine!.industryId);
+  if (!model || !industry) return null;
+  return {
+    modelKind: model.kind,
+    topic: topicForProblem(idea.engine.problemId, industry.label),
+    segmentId: idea.engine.segmentId,
+    industryId: idea.engine.industryId,
+    at: Date.now(),
+  };
 }

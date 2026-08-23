@@ -24,6 +24,9 @@ import type {
   BusinessIdentity,
   FounderProfile,
   ID,
+  IdeaDial,
+  IdeaFeedback,
+  IdeaSignature,
   Interview,
   JournalEntry,
   MoneyModelInputs,
@@ -40,6 +43,16 @@ import { SAMPLE_BUSINESS_ID, sampleProfile } from "./sample";
 import { isUnlocked, saveState } from "./vault";
 
 export const STATE_VERSION = 1;
+
+/**
+ * How many reactions are remembered.
+ *
+ * Enough to see a pattern, small enough that the record stays a preference
+ * rather than a history. Past this the oldest go: what somebody rejected forty
+ * ideas ago is a worse guide to what they want now than what they rejected
+ * this morning.
+ */
+const FEEDBACK_LIMIT = 40;
 
 export function emptyProfile(): FounderProfile {
   return {
@@ -134,6 +147,7 @@ export function emptyState(): AppState {
     businesses: [],
     activeBusinessId: null,
     previousBusinessId: null,
+    ideaFeedback: { rejected: [], liked: [], dials: [] },
     journal: [],
     conversations: [],
     niches: [],
@@ -321,6 +335,13 @@ function migrate(raw: unknown): AppState {
     settings: { ...base.settings, ...(parsed.settings ?? {}) },
     profile: { ...base.profile, ...(storedProfile ?? {}) },
     stats: { ...base.stats, ...(parsed.stats ?? {}) },
+    ideaFeedback: {
+      // Bounded on read as well as on write: a corrupt or hand-edited backup
+      // should not be able to put an unbounded array into every generation.
+      rejected: list<IdeaSignature>(parsed.ideaFeedback?.rejected).slice(0, FEEDBACK_LIMIT),
+      liked: list<IdeaSignature>(parsed.ideaFeedback?.liked).slice(0, FEEDBACK_LIMIT),
+      dials: list<IdeaDial>(parsed.ideaFeedback?.dials),
+    },
     // `?? []` only defends against missing. A field that arrived as a string
     // passed straight through and blew up on the first `.map` in a page, which
     // is a blank screen the user can't get out of.
@@ -532,6 +553,62 @@ export const actions = {
         previousBusinessId: null,
       };
     });
+  },
+
+  /* ------------------------------------------------ reacting to an idea --- */
+
+  /**
+   * Records what the founder thought of an idea they were shown.
+   *
+   * Signatures rather than ideas, newest first, and capped — see
+   * `types.ts:IdeaFeedback`. Re-reacting to the same shape replaces the old
+   * entry instead of stacking, so holding "less like this" on one card cannot
+   * quietly outweigh everything else the founder has said.
+   */
+  recordIdeaFeedback(signature: IdeaSignature, verdict: "liked" | "rejected") {
+    update((s) => {
+      const feedback = s.ideaFeedback ?? { rejected: [], liked: [], dials: [] };
+      const same = (a: IdeaSignature) =>
+        !(a.modelKind === signature.modelKind && a.topic === signature.topic && a.segmentId === signature.segmentId);
+      const next = { ...feedback, rejected: feedback.rejected.filter(same), liked: feedback.liked.filter(same) };
+      next[verdict] = [signature, ...next[verdict]].slice(0, FEEDBACK_LIMIT);
+      return { ...s, ideaFeedback: next };
+    });
+  },
+
+  /** Toggles a direction. Opposites cancel — "more local" clears "more online". */
+  toggleIdeaDial(dial: IdeaDial) {
+    /*
+     * Only local and online genuinely exclude each other.
+     *
+     * "Cheaper" and "ambitious" look like opposites and are not: the most
+     * scalable models here are digital, and digital is the cheapest thing to
+     * start, so somebody can honestly want both. Cancelling them would be the
+     * app overruling a coherent preference on the strength of the words.
+     */
+    const OPPOSITE: Partial<Record<IdeaDial, IdeaDial>> = {
+      local: "online",
+      online: "local",
+    };
+    update((s) => {
+      const feedback = s.ideaFeedback ?? { rejected: [], liked: [], dials: [] };
+      const on = feedback.dials.includes(dial);
+      const opposite = OPPOSITE[dial];
+      return {
+        ...s,
+        ideaFeedback: {
+          ...feedback,
+          dials: on
+            ? feedback.dials.filter((d) => d !== dial)
+            : [...feedback.dials.filter((d) => d !== opposite), dial],
+        },
+      };
+    });
+  },
+
+  /** Forgets everything the app has inferred from reactions. */
+  clearIdeaFeedback() {
+    update((s) => ({ ...s, ideaFeedback: { rejected: [], liked: [], dials: [] } }));
   },
 
   /* --------------------------------------------------- research & customers */

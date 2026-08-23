@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Why } from "@/components/teach";
-import { Badge, Button, Card, Meter, ScoreRing, SectionHeader } from "@/components/ui";
+import { Badge, Button, Card, Eyebrow, Meter, ScoreRing, SectionHeader } from "@/components/ui";
 import {
   BAND_LABEL,
   FACTOR_HELP,
@@ -26,6 +26,56 @@ import { VALIDATION_BLURB, VALIDATION_LABEL, VALIDATION_TONE, VERDICT_LABEL } fr
 
 const CONFIDENCE_TONE = { low: "warn", medium: "accent", high: "good" } as const;
 const BAND_TONE = { best: "good", good: "accent", possible: "neutral", poor: "warn" } as const;
+
+/**
+ * The three factors lifting a score and the ones holding it down.
+ *
+ * Ranked by weighted distance from the middle, not by raw score: a factor
+ * weighted 1.5 sitting at 70 is doing more to this number than one weighted 0.5
+ * sitting at 90, and listing the 90 first would explain the score wrongly while
+ * looking authoritative.
+ */
+function WhyThisNumber({ fit }: { fit: FitResult }) {
+  const ranked = [...fit.factors]
+    .map((f) => ({ ...f, pull: (f.score - 50) * f.weight }))
+    .sort((a, b) => b.pull - a.pull);
+
+  const up = ranked.filter((f) => f.pull > 6).slice(0, 3);
+  const down = ranked.filter((f) => f.pull < -6).reverse().slice(0, 3);
+
+  // Nothing is pulling it anywhere: an evenly middling score is a real result
+  // and inventing a "strength" to fill the block would misrepresent it.
+  if (!up.length && !down.length) return null;
+
+  return (
+    <div className="mt-5 pt-4 border-t border-border">
+      <Eyebrow className="mb-3">Why this number</Eyebrow>
+      <ul className="space-y-1.5">
+        {up.map((f) => (
+          <li key={f.factor} className="flex gap-2.5 text-[13px] leading-relaxed">
+            <span className="text-good font-mono shrink-0" aria-hidden="true">+</span>
+            <span>
+              <span className="font-medium">{FACTOR_LABEL[f.factor]}</span>
+              <span className="text-muted"> — {f.reason}</span>
+            </span>
+          </li>
+        ))}
+        {down.map((f) => (
+          <li key={f.factor} className="flex gap-2.5 text-[13px] leading-relaxed">
+            <span className="text-warn font-mono shrink-0" aria-hidden="true">−</span>
+            <span>
+              <span className="font-medium">{FACTOR_LABEL[f.factor]}</span>
+              <span className="text-muted"> — {f.reason}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="sr-only">
+        Factors marked plus are raising this score; factors marked minus are lowering it.
+      </p>
+    </div>
+  );
+}
 
 export function FitScoreCard({
   fit,
@@ -70,6 +120,17 @@ export function FitScoreCard({
           </p>
         </div>
       )}
+
+      {/*
+        Why the number is the number, before the ten factors that produced it.
+
+        Every factor already carried a reason and a "what would change it"
+        panel, so the detail was never missing — but a reader had to open ten
+        things and hold them in their head to answer "why 83". The weighted
+        extremes answer it at a glance, and the factors underneath are still
+        there for anyone who wants to check the working.
+      */}
+      <WhyThisNumber fit={fit} />
 
       <p className="text-xs text-faint mt-5 pt-4 border-t border-border mb-2">
         Tap any factor to see why it scored that, and what would change it.

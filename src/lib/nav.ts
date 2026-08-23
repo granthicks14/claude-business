@@ -101,7 +101,10 @@ export function useNav(): NavSection[] {
         badge: state.ideas.length || undefined,
         blurb: "Options, not recommendations. Widen first, then narrow.",
         items: [
-          { href: "/lab", label: "The lab", badge: state.ideas.length || undefined },
+          { href: "/lab", label: "The lab" },
+          // Its own entry rather than a tab a founder has to know is there —
+          // "where are my saved ideas" was not answerable from the sidebar.
+          { href: "/lab?tab=shortlist", label: "Saved ideas", badge: state.ideas.length || undefined },
           { href: "/explore", label: "Which industry?" },
           { href: "/opportunity", label: "Best opportunity near me" },
           { href: "/analyze", label: "Score a business I already run" },
@@ -205,4 +208,44 @@ export function useSectionLabel(): string | null {
   const sections = useNav();
   const pathname = usePathname() ?? "/";
   return sectionFor(sections, pathname)?.label ?? null;
+}
+
+export interface Crumb {
+  label: string;
+  href?: string;
+}
+
+/**
+ * Where you are, as a trail.
+ *
+ * Derived from the same sections the sidebar is built from, for the reason
+ * `useSectionLabel` lives here: two descriptions of the user's location that
+ * are written separately eventually disagree, and the one that disagrees is
+ * always the one nobody is looking at.
+ *
+ * The trail stops at the section. A page's own title is already its `h1`
+ * directly underneath, and repeating it in the crumb immediately above is the
+ * kind of duplication that makes a breadcrumb feel like chrome rather than
+ * orientation — so the last crumb is the section, and the current item is
+ * carried by the heading.
+ */
+export function useBreadcrumbs(): Crumb[] {
+  const sections = useNav();
+  const pathname = usePathname() ?? "/";
+  const section = sectionFor(sections, pathname);
+
+  if (pathname === "/" || !section) return [];
+
+  const crumbs: Crumb[] = [{ label: "Home", href: "/" }];
+  if (section.href !== "/") crumbs.push({ label: section.label, href: section.href });
+
+  /*
+   * A sub-page inside a section gets one more level, but only when the section
+   * link is not already the page you are on — a crumb that points at the
+   * current URL is a dead control.
+   */
+  const item = section.items.find((i) => i.href.split("?")[0] === pathname);
+  if (item && item.href.split("?")[0] !== section.href) crumbs.push({ label: item.label });
+
+  return crumbs;
 }

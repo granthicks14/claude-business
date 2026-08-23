@@ -18,6 +18,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { WhatIf } from "@/components/what-if";
+import { Dials } from "./dials";
 import { DEFAULT_ANGLES, ideaSourceNote, useIdeaGeneration } from "@/lib/ideas";
 import { actions, useAppState } from "@/lib/store";
 import { rescore } from "@/lib/scoring";
@@ -130,6 +131,16 @@ export function Shortlist() {
           />
         </Card>
       )}
+
+      {/*
+        Direction before constraints.
+
+        A dial is a preference the app weighs; a constraint is a hard limit it
+        will not break. Putting the softer control first matches how somebody
+        actually narrows down — nudge, look, nudge again — and keeps the
+        typed-constraints box for the cases a chip cannot express.
+      */}
+      {ideas.length > 0 && <Dials />}
 
       {(ideas.length > 0 || showConstraints) && (
         <Card className="p-4">

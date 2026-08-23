@@ -22,8 +22,12 @@ writeFileSync(
   `
 import { computeFit, SCORING_WEIGHTS } from "../src/lib/fit.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
+import { buildCandidates } from "../src/lib/engine/ideas.ts";
 import { emptyProfile } from "../src/lib/store.ts";
 import { SLOP } from "../src/lib/engine/naming.ts";
+import { topicForProblem } from "../src/lib/engine/topics.ts";
+import { BUSINESS_MODELS } from "../src/lib/engine/knowledge/models.ts";
+const MODEL_KIND = Object.fromEntries(BUSINESS_MODELS.map((m) => [m.id, m.kind]));
 import type { FounderProfile } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -287,6 +291,95 @@ results.diversity = {
   categoriesForBlankProfile: new Set(batches.find((b) => b.label === "no interests")!.ideas.map((i) => i.category)).size,
 };
 
+
+/* ------------------------------------------------------- idea memory --- */
+
+/*
+ * The point of the whole feature: a founder who says "not interested" should
+ * stop being shown the same shape of business.
+ *
+ * Signatures are built the way the UI builds them, from the engine block, so
+ * this exercises the same vocabulary the real controls write.
+ */
+const memProfile = profile({ interests: ["sports"], skills: ["video editing"] });
+const firstBatch = generateIdeas(memProfile, { angle: "balanced", count: 10, seed: 2 });
+
+const sig = (i) => ({
+  modelKind: MODEL_KIND[i.engine.modelId],
+  topic: topicForProblem(i.engine.problemId, "x"),
+  segmentId: i.engine.segmentId,
+  industryId: i.engine.industryId,
+  at: Date.now(),
+});
+
+const rejectTwo = firstBatch.slice(0, 2).map(sig);
+const afterReject = generateIdeas(memProfile, {
+  angle: "balanced", count: 10, seed: 2,
+  feedback: { rejected: rejectTwo, liked: [], dials: [] },
+});
+
+const rejectedShape = (i) =>
+  rejectTwo.some((r) => r.modelKind === MODEL_KIND[i.engine.modelId] && r.topic === topicForProblem(i.engine.problemId, "x"));
+
+/* Five rejections in a row, all of one model kind. */
+const fiveKind = firstBatch.slice(0, 5).map(sig);
+const afterFive = generateIdeas(memProfile, {
+  angle: "balanced", count: 10, seed: 2,
+  feedback: { rejected: fiveKind, liked: [], dials: [] },
+});
+
+/*
+ * One rejection must NOT wipe out a whole model kind.
+ *
+ * Asserted against the candidate pool rather than the ten ideas that come back:
+ * a batch of ten is shaped by caps and ordering as well as by feedback, so a
+ * kind missing from it is not evidence that the kind was eliminated. The pool
+ * is where "still available, just ranked lower" is actually visible.
+ */
+const oneOff = [{ ...sig(firstBatch[0]), topic: "something else entirely" }];
+const poolAfterOne = buildCandidates(memProfile, {
+  angle: "balanced",
+  feedback: { rejected: oneOff, liked: [], dials: [] },
+});
+const kindSurvives = poolAfterOne.some((c) => c.model.kind === oneOff[0].modelKind);
+
+/* Dials must reorder without shrinking the batch. */
+const cheap = generateIdeas(memProfile, {
+  angle: "balanced", count: 10, seed: 2, feedback: { rejected: [], liked: [], dials: ["cheaper"] },
+});
+const ambitious = generateIdeas(memProfile, {
+  angle: "balanced", count: 10, seed: 2, feedback: { rejected: [], liked: [], dials: ["ambitious"] },
+});
+const local = generateIdeas(memProfile, {
+  angle: "balanced", count: 10, seed: 2, feedback: { rejected: [], liked: [], dials: ["local"] },
+});
+const avgCost = (b) => b.reduce((t, i) => t + i.startupCost, 0) / b.length;
+const localShare = (b) => b.filter((i) => i.mode === "local").length / b.length;
+
+results.memory = {
+  rejectedShapesGone: !afterReject.some(rejectedShape),
+  stillFullAfterTwo: afterReject.length === 10,
+  stillFullAfterFive: afterFive.length === 10,
+  fiveRejectionsChangeTheBatch:
+    afterFive.filter((i) => firstBatch.some((j) => j.name === i.name)).length < firstBatch.length,
+  oneRejectionKeepsTheKind: kindSurvives,
+  /* Compared against the opposite dial: "no more expensive than the default"
+     passes trivially when the default is already cheap, and proves nothing. */
+  cheaperIsCheaper: avgCost(cheap) < avgCost(firstBatch),
+  cheapCost: Math.round(avgCost(cheap)),
+  ambitiousCost: Math.round(avgCost(ambitious)),
+  baseCost: Math.round(avgCost(firstBatch)),
+  dialsProduceDifferentBatches:
+    JSON.stringify(cheap.map((i) => i.name)) !== JSON.stringify(ambitious.map((i) => i.name)),
+  localIsMoreLocal: localShare(local) >= localShare(firstBatch),
+  localShares: [localShare(firstBatch).toFixed(2), localShare(local).toFixed(2)],
+  dialsKeepBatchFull: cheap.length === 10 && local.length === 10,
+  /* No feedback must behave exactly as before. */
+  emptyFeedbackIsANoOp:
+    JSON.stringify(generateIdeas(memProfile, { angle: "balanced", count: 10, seed: 2, feedback: { rejected: [], liked: [], dials: [] } }).map((i) => i.name))
+    === JSON.stringify(firstBatch.map((i) => i.name)),
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -411,6 +504,17 @@ check(
   r.diversity.categoriesForBlankProfile >= 5,
   `${r.diversity.categoriesForBlankProfile} categories`,
 );
+
+console.log("\n--- the app remembers what you turned down ---");
+check("ideas shaped like the ones you rejected do not come back", r.memory.rejectedShapesGone);
+check("and the batch is still full", r.memory.stillFullAfterTwo && r.memory.stillFullAfterFive);
+check("five rejections visibly change what you are shown", r.memory.fiveRejectionsChangeTheBatch);
+check("but one rejection does not wipe out a whole kind of business", r.memory.oneRejectionKeepsTheKind);
+check("asking for cheaper really does cost less to start", r.memory.cheaperIsCheaper, `${r.memory.baseCost} -> ${r.memory.cheapCost}`);
+check("opposite dials produce different shortlists", r.memory.dialsProduceDifferentBatches);
+check("asking for local gets more local", r.memory.localIsMoreLocal, r.memory.localShares.join(" -> "));
+check("dials never shrink the batch", r.memory.dialsKeepBatchFull);
+check("no feedback behaves exactly as before", r.memory.emptyFeedbackIsANoOp);
 
 console.log(`\n${failures === 0 ? "ALL SCORING TESTS PASSED" : `${failures} FAILURES`}`);
 process.exit(failures ? 1 : 0);

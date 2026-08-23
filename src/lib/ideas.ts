@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { stagesFor } from "./ai/stages";
 import { computeScore } from "./scoring";
-import { actions, newId } from "./store";
+import { actions, newId, snapshot } from "./store";
 import { currentIntelligence, type AIMeta } from "./useAI";
 import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type ScoreDimension } from "./types";
 
@@ -219,6 +219,17 @@ export function useIdeaGeneration() {
     const produced = { engine: 0, ai: 0, fellBack: 0 };
     let providerInfo: { provider?: string; model?: string } = {};
 
+    /*
+     * Read here rather than passed in by each caller.
+     *
+     * Three components call this and a fourth will exist eventually; a
+     * generation that silently ignores what the founder rejected because a new
+     * call site forgot one argument is exactly the failure this feature is
+     * meant to fix. Reading it at the one place generation happens makes
+     * forgetting impossible.
+     */
+    const feedback = snapshot().ideaFeedback;
+
     const runBatch = async (angle: { brief: string; count: number; angleId?: Angle["angleId"] }, index: number) => {
       // --- Built-in engine: instant, local, free -------------------------
       if (mode === "engine") {
@@ -229,6 +240,7 @@ export function useIdeaGeneration() {
           constraints: options.constraints,
           avoid: [...seen],
           seed: Math.floor(Math.random() * 1000) + index * 7,
+          feedback,
         });
 
         const fresh: BusinessIdea[] = [];
@@ -284,6 +296,7 @@ export function useIdeaGeneration() {
           constraints: options.constraints,
           avoid: [...seen],
           seed: Math.floor(Math.random() * 1000) + index * 7,
+          feedback,
         });
         const recovered: BusinessIdea[] = [];
         for (const idea of generated) {

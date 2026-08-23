@@ -20,6 +20,25 @@ function Base({ children, ...props }: SVGProps<SVGSVGElement> & { children: Reac
 }
 
 export const Icon = {
+  /*
+   * Thumbs, for the two controls that teach the generator something.
+   *
+   * Drawn rather than imported: the set is inline SVG on `currentColor` so one
+   * drawing serves both themes and nothing is fetched, and adding an icon
+   * library for two glyphs would be a download on every page load.
+   */
+  thumbUp: (p: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M7 10v10H4V10z" />
+      <path d="M7 10l4.2-6.4a1.6 1.6 0 0 1 2.9 1.1L13.4 9H19a1.8 1.8 0 0 1 1.75 2.24l-1.6 6.4A2.2 2.2 0 0 1 17 19.4H7" />
+    </svg>
+  ),
+  thumbDown: (p: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M7 14V4H4v10z" />
+      <path d="M7 14l4.2 6.4a1.6 1.6 0 0 0 2.9-1.1L13.4 15H19a1.8 1.8 0 0 0 1.75-2.24l-1.6-6.4A2.2 2.2 0 0 0 17 4.6H7" />
+    </svg>
+  ),
   chevron: (p: SVGProps<SVGSVGElement>) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="m6 9 6 6 6-6" />

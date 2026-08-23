@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { PageHeader, Ready } from "@/components/page";
@@ -16,7 +16,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { computeFit } from "@/lib/fit";
-import { FIELD_GROUPS, PROFILE_FIELDS, type ProfileField } from "@/lib/profile-fields";
+import { FIELD_GROUPS, PROFILE_FIELDS, profileCompleteness, type ProfileField } from "@/lib/profile-fields";
 import { rescore } from "@/lib/scoring";
 import { actions, useAppState } from "@/lib/store";
 import { AGE_BANDS, PREFERENCE_LABEL, type BusinessPreference, type FounderProfile } from "@/lib/types";
@@ -125,7 +125,7 @@ function Profile() {
     requestAnimationFrame(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }));
   };
 
-  const missing = PROFILE_FIELDS.filter((f) => f.isEmpty(state.profile));
+  const completeness = useMemo(() => profileCompleteness(state.profile), [state.profile]);
 
   return (
     <div className="space-y-6">
@@ -140,28 +140,45 @@ function Profile() {
         </div>
       )}
 
-      {missing.length > 0 && (
-        <Card className="p-4 border-accent-border bg-accent-soft/40">
-          <p className="text-sm font-semibold text-accent-text mb-1">
-            {missing.length} {missing.length === 1 ? "thing is" : "things are"} still blank
-          </p>
-          <p className="text-sm leading-relaxed">
-            Each one makes the score sharper and the confidence higher. The most useful right now:{" "}
-            {missing.slice(0, 3).map((f, i) => (
-              <span key={f.id}>
-                {i > 0 && ", "}
-                <button
-                  onClick={() => {
-                    setEditing(f.id);
-                    document.getElementById(f.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                  }}
-                  className="underline underline-offset-2 decoration-accent/60 hover:decoration-accent font-medium"
-                >
-                  {f.label.toLowerCase()}
-                </button>
-              </span>
-            ))}
-            .
+      {/*
+        One figure and one suggestion, not a list of everything blank.
+
+        This used to say "eleven things are still blank" and name three. That is
+        a chore presented as a prompt, and it treats every field as equally
+        overdue when four of them do most of the work — somebody can reach a
+        confident-looking profile having skipped their budget and their hours.
+        The percentage is weighted by what the scoring actually reads (see
+        `profileCompleteness`), and the ask is a single field with the reason it
+        matters, because one decision is actionable and eleven is a backlog.
+      */}
+      {completeness.percent < 100 && (
+        <Card className="p-5">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="font-semibold">
+              {completeness.requiredMissing > 0 ? "Worth filling in" : "Your profile is in good shape"}
+            </h2>
+            <span className="font-mono text-sm tabular-nums text-muted">{completeness.percent}%</span>
+          </div>
+          <div className="h-1 bg-border mt-3" aria-hidden="true">
+            <div className="h-full bg-accent" style={{ width: `${completeness.percent}%` }} />
+          </div>
+          {completeness.next && (
+            <p className="text-sm mt-3 leading-relaxed">
+              The one that would help most is{" "}
+              <button
+                onClick={() => {
+                  setEditing(completeness.next!.id);
+                  document.getElementById(completeness.next!.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+                className="underline underline-offset-2 decoration-accent/60 hover:decoration-accent font-medium"
+              >
+                {completeness.next.label.toLowerCase()}
+              </button>{" "}
+              — {completeness.next.affects}
+            </p>
+          )}
+          <p className="text-caption text-faint mt-3 leading-relaxed">
+            Nothing here is compulsory. Skipping a field lowers the confidence on a score, never the score itself.
           </p>
         </Card>
       )}

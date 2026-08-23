@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { PageHeader, Ready } from "@/components/page";
@@ -10,7 +10,9 @@ import {
   Card,
   Dialog,
   Field,
+  Hi,
   Input,
+  LinkButton,
   NumberInput,
   SectionHeader,
   Select,
@@ -34,6 +36,7 @@ import {
 } from "@/lib/intel/priorities";
 import { rescore } from "@/lib/scoring";
 import { actions, snapshot, useAppState } from "@/lib/store";
+import { profileCompleteness } from "@/lib/profile-fields";
 import {
   PREFERENCE_LABEL,
   AGE_BANDS,
@@ -74,7 +77,7 @@ function Settings() {
         ]}
       />
 
-      {tab === "profile" && <ProfileEditor />}
+      {tab === "profile" && <ProfileSignpost />}
       {tab === "mode" && <ExperienceSetting />}
       {tab === "priorities" && <PrioritiesSetting />}
       {tab === "ai" && <AISetup />}
@@ -85,225 +88,48 @@ function Settings() {
 
 /* -------------------------------------------------------------------- profile */
 
-function ProfileEditor() {
-  const stored = useAppState((s) => s.profile);
-  const state = useAppState((s) => s);
-  const toast = useToast();
-  const [draft, setDraft] = useState<FounderProfile>(stored);
-  const [dirty, setDirty] = useState(false);
-
-  const set = (patch: Partial<FounderProfile>) => {
-    setDraft((d) => ({ ...d, ...patch }));
-    setDirty(true);
-  };
-
-  const save = () => {
-    actions.saveProfile({ ...draft, completedOnboarding: true });
-    setDirty(false);
-    toast("Profile saved", "good");
-  };
-
-  const saveAndRescore = () => {
-    actions.saveProfile({ ...draft, completedOnboarding: true });
-    const rescored = rescore(state.ideas, { ...draft, completedOnboarding: true });
-    for (const idea of rescored) {
-      actions.updateIdea(idea.id, {
-        scores: idea.scores,
-        opportunityScore: idea.opportunityScore,
-        scoreExplanation: idea.scoreExplanation,
-      });
-    }
-    setDirty(false);
-    toast(`Saved and re-scored ${rescored.length} ideas`, "good");
-  };
+/**
+ * Settings does not edit the profile any more.
+ *
+ * There were two full founder-profile editors — this one and `/profile` — with
+ * different layouts, different save buttons and no way for a user to know which
+ * was authoritative. They were the same twenty-six fields written twice, which
+ * is how a field gets added to one and forgotten in the other.
+ *
+ * `/profile` is the one that stays: it deep-links by field (`/profile#skills`),
+ * which is what the score factors and the sidebar's completeness prompt link
+ * into. This is a signpost, not a second front door.
+ */
+function ProfileSignpost() {
+  const profile = useAppState((s) => s.profile);
+  const completeness = useMemo(() => profileCompleteness(profile), [profile]);
 
   return (
-    <div className="space-y-4">
-      <Card className="p-5">
-        <SectionHeader
-          title="Founder profile"
-          description="Everything is scored against this. Change it whenever your situation changes — re-scoring is instant and costs nothing."
-        />
-
-        <div className="grid gap-5">
-          <Field label="Your name" htmlFor="p-name">
-            <Input id="p-name" value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Optional" />
-          </Field>
-
-          <Field
-            label="Your age"
-            hint="A range, never a date of birth. It decides what's practical — never what you're allowed to do."
-          >
-            <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Your age">
-              {AGE_BANDS.map((band) => {
-                const active = draft.ageBand === band.id;
-                return (
-                  <button
-                    key={band.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => set({ ageBand: band.id })}
-                    className={`min-h-11 px-3.5 rounded-xl border text-sm font-medium transition-all ${
-                      active
-                        ? "border-accent bg-accent-soft text-accent-text"
-                        : "border-border bg-surface hover:border-accent-border hover:bg-surface-2"
-                    }`}
-                  >
-                    {band.label}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-
-          <Field label="Skills" htmlFor="p-skills">
-            <TagInput id="p-skills" value={draft.skills} onChange={(skills) => set({ skills })} placeholder="Add a skill" />
-          </Field>
-
-          <Field label="Interests" htmlFor="p-interests">
-            <TagInput id="p-interests" value={draft.interests} onChange={(interests) => set({ interests })} placeholder="Add an interest" />
-          </Field>
-
-          <Field label="Hobbies" htmlFor="p-hobbies">
-            <TagInput id="p-hobbies" value={draft.hobbies} onChange={(hobbies) => set({ hobbies })} placeholder="Add a hobby" />
-          </Field>
-
-          <Field label="Subjects you understand well" htmlFor="p-subjects">
-            <TagInput
-              id="p-subjects"
-              value={draft.subjectsUnderstood}
-              onChange={(subjectsUnderstood) => set({ subjectsUnderstood })}
-              placeholder="Add a subject"
-            />
-          </Field>
-
-          <Field label="Equipment you own" htmlFor="p-equipment">
-            <TagInput id="p-equipment" value={draft.equipment} onChange={(equipment) => set({ equipment })} placeholder="Add equipment" />
-          </Field>
-
-          <Field label="Experience" htmlFor="p-exp">
-            <Textarea id="p-exp" value={draft.experience} onChange={(e) => set({ experience: e.target.value })} />
-          </Field>
-
-          <Field label="What people ask you for help with" htmlFor="p-help">
-            <Input id="p-help" value={draft.askedForHelpWith} onChange={(e) => set({ askedForHelpWith: e.target.value })} />
-          </Field>
-
-          <Field label="What you enjoy" htmlFor="p-enjoys">
-            <Textarea id="p-enjoys" value={draft.enjoys} onChange={(e) => set({ enjoys: e.target.value })} />
-          </Field>
-
-          <Field label="What you won't do" hint="A hard limit — ideas matching this get pushed down." htmlFor="p-wont">
-            <Textarea id="p-wont" value={draft.wontDo} onChange={(e) => set({ wontDo: e.target.value })} />
-          </Field>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Starting budget" htmlFor="p-budget">
-              <NumberInput id="p-budget" value={draft.startingBudget} onChange={(startingBudget) => set({ startingBudget })} prefix="$" label="Starting budget" />
-            </Field>
-            <Field label="Monthly budget" htmlFor="p-monthly">
-              <NumberInput id="p-monthly" value={draft.monthlyBudget} onChange={(monthlyBudget) => set({ monthlyBudget })} prefix="$" label="Monthly budget" />
-            </Field>
-            <Field label="Hours per week" htmlFor="p-hours">
-              <NumberInput id="p-hours" value={draft.hoursPerWeek} onChange={(hoursPerWeek) => set({ hoursPerWeek })} suffix="hrs" max={168} label="Hours per week" />
-            </Field>
-            <Field label="Income goal" htmlFor="p-goal">
-              <NumberInput id="p-goal" value={draft.incomeGoal} onChange={(incomeGoal) => set({ incomeGoal })} prefix="$" suffix="/mo" label="Income goal" />
-            </Field>
-            <Field label="Location" htmlFor="p-location">
-              <Input id="p-location" value={draft.location} onChange={(e) => set({ location: e.target.value })} placeholder="City, region" />
-            </Field>
-            <Field label="Social following" htmlFor="p-followers">
-              <NumberInput id="p-followers" value={draft.followers} onChange={(followers) => set({ followers })} label="Social following" />
-            </Field>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Field label="Risk tolerance" htmlFor="p-risk">
-              <Select id="p-risk" value={draft.risk} onChange={(e) => set({ risk: e.target.value as RiskTolerance })}>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </Select>
-            </Field>
-            <Field label="Payoff preference" htmlFor="p-payoff">
-              <Select id="p-payoff" value={draft.payoffStyle} onChange={(e) => set({ payoffStyle: e.target.value as PayoffStyle })}>
-                <option value="fast">Fast, lower ceiling</option>
-                <option value="balanced">Balanced</option>
-                <option value="moonshot">Slow, big potential</option>
-              </Select>
-            </Field>
-            <Field label="Commitment" htmlFor="p-commit">
-              <Select id="p-commit" value={draft.commitment} onChange={(e) => set({ commitment: e.target.value as Commitment })}>
-                <option value="side">Side hustle</option>
-                <option value="fulltime">Full-time</option>
-                <option value="undecided">Undecided</option>
-              </Select>
-            </Field>
-          </div>
-
-          <Field label="First dollar target" htmlFor="p-first">
-            <Select id="p-first" value={draft.firstDollarTarget} onChange={(e) => set({ firstDollarTarget: e.target.value })}>
-              <option value="7 days">Within 7 days</option>
-              <option value="30 days">Within 30 days</option>
-              <option value="90 days">Within 90 days</option>
-              <option value="6 months">Within 6 months</option>
-              <option value="no rush">No rush</option>
-            </Select>
-          </Field>
-
-          <Field label="Preferred business types">
-            <div className="flex flex-wrap gap-2">
-              {PREFERENCES.map((pref) => {
-                const on = draft.preferences.includes(pref);
-                return (
-                  <button
-                    key={pref}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() =>
-                      set({ preferences: on ? draft.preferences.filter((p) => p !== pref) : [...draft.preferences, pref] })
-                    }
-                    className={`px-3.5 py-2 rounded-full border text-sm font-medium transition-all min-h-10
-                      ${on ? "border-accent bg-accent-soft text-accent-text" : "border-border bg-surface text-muted hover:border-accent-border hover:text-text"}`}
-                  >
-                    {PREFERENCE_LABEL[pref]}
-                  </button>
-                );
-              })}
-            </div>
-          </Field>
-
-          <Field label="Hard constraints" hint="One per line." htmlFor="p-constraints">
-            <Textarea
-              id="p-constraints"
-              value={draft.constraints.join("\n")}
-              onChange={(e) => set({ constraints: e.target.value.split("\n").map((c) => c.trim()).filter(Boolean) })}
-            />
-          </Field>
-
-          <div className="space-y-1">
-            <Toggle checked={draft.wantsScalable} onChange={(wantsScalable) => set({ wantsScalable })} label="I want something scalable" />
-            <Toggle checked={draft.wantsPassive} onChange={(wantsPassive) => set({ wantsPassive })} label="I want passive or semi-passive income" />
-            <Toggle checked={draft.wantsSellable} onChange={(wantsSellable) => set({ wantsSellable })} label="I'd like to sell it one day" />
-            <Toggle checked={draft.hasTransportation} onChange={(hasTransportation) => set({ hasTransportation })} label="I have reliable transportation" />
-            <Toggle checked={draft.hasWebsite} onChange={(hasWebsite) => set({ hasWebsite })} label="I have a website or domain" />
-          </div>
-        </div>
-      </Card>
-
-      <div className="sticky bottom-0 bg-bg/90 backdrop-blur-sm py-3 flex flex-wrap gap-2 items-center">
-        <Button variant="primary" onClick={save} disabled={!dirty}>
-          {dirty ? "Save changes" : "Saved"}
-        </Button>
-        {state.ideas.length > 0 && (
-          <Button onClick={saveAndRescore} disabled={!dirty} icon={<Icon.refresh className="size-4" />}>
-            Save and re-score {state.ideas.length} ideas
-          </Button>
-        )}
+    <Card className="p-5">
+      <SectionHeader
+        title="Your founder profile"
+        description="Everything the app recommends is scored against this. It lives on its own page, where each field can be linked to directly."
+      />
+      <div className="flex items-baseline justify-between gap-4 mb-2">
+        <span className="text-sm text-muted">Filled in</span>
+        <span className="font-mono text-sm tabular-nums">{completeness.percent}%</span>
       </div>
-    </div>
+      <div className="h-1 bg-border" aria-hidden="true">
+        <div className="h-full bg-accent" style={{ width: `${completeness.percent}%` }} />
+      </div>
+      {completeness.next && (
+        <p className="text-sm text-muted mt-3 leading-relaxed">
+          The next thing that would most improve your recommendations is{" "}
+          <Hi>{completeness.next.label.toLowerCase()}</Hi> — {completeness.next.affects}
+        </p>
+      )}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <LinkButton href="/profile" variant="primary">
+          Open my profile
+        </LinkButton>
+        {completeness.next && <LinkButton href={`/profile#${completeness.next.id}`}>Go straight to it</LinkButton>}
+      </div>
+    </Card>
   );
 }
 

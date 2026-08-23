@@ -838,6 +838,56 @@ export interface SelectedBusiness {
   demoProfile?: FounderProfile;
 }
 
+/* -------------------------------------------------------------------------- */
+/* What the founder has told us about the ideas they were shown               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The shape of a business, without the business.
+ *
+ * Enough to recognise "another one of those" and nothing more — no name, no
+ * scores, no prose. A rejection is a statement about a *kind* of work, and
+ * storing the whole idea to express that would mean the record grew without
+ * bound and drifted from the generator's own vocabulary.
+ */
+export interface IdeaSignature {
+  /** Service, agency, digital product… the machine, not the market. */
+  modelKind: string;
+  /** "highlight reels", "invoice chasing" — what is actually sold. */
+  topic: string;
+  segmentId: string;
+  industryId: string;
+  at: number;
+}
+
+/** Which way the founder wants the next batch pushed. */
+export type IdeaDial =
+  | "cheaper"
+  | "faster"
+  | "local"
+  | "online"
+  | "scalable"
+  | "ambitious";
+
+/**
+ * What the app has learned from the founder reacting to ideas.
+ *
+ * Deliberately separate from `ideas`, and deliberately small. The generator
+ * caps repetition *within* one batch, which does nothing for the founder who
+ * has turned down five variations of the same thing across five batches —
+ * that person is being asked the same question repeatedly and watching the app
+ * fail to notice. This is the memory that makes "not interested" mean
+ * something after the click.
+ *
+ * A rejection is evidence, not a rule: see `ideas.ts` for why matching one axis
+ * only lowers a candidate rather than removing it.
+ */
+export interface IdeaFeedback {
+  rejected: IdeaSignature[];
+  liked: IdeaSignature[];
+  dials: IdeaDial[];
+}
+
 /** Which system answers generation requests. */
 export type Intelligence = "engine" | "ai";
 
@@ -871,6 +921,11 @@ export interface AppState {
   ideas: BusinessIdea[];
   businesses: SelectedBusiness[];
   activeBusinessId: ID | null;
+  /**
+   * How the founder has reacted to what they were shown. Shapes the next batch.
+   * Optional so a vault written before this existed still loads.
+   */
+  ideaFeedback?: IdeaFeedback;
   /**
    * What was active before the worked example was opened.
    *

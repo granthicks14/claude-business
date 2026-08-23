@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Icon } from "./icons";
 import { SampleBanner } from "./sample-banner";
-import { useSectionLabel } from "@/lib/nav";
+import { useBreadcrumbs, useSectionLabel } from "@/lib/nav";
 import { AILoading, Button, Card, EmptyState, ErrorPanel, Eyebrow, LinkButton, SectionHeader, Skeleton } from "./ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
@@ -178,6 +178,51 @@ export function PageHeader({
  * reader place it before reading a word. The art is decorative and hidden on
  * small screens, where the space is better spent on the text.
  */
+/**
+ * The trail above the page title.
+ *
+ * On a phone it collapses to a single "← back to <parent>" link rather than a
+ * chain. A three-level breadcrumb on a 320px screen either wraps to two lines
+ * or truncates into uselessness, and on a phone the question people actually
+ * have is "how do I get out of here", which one link answers better than three.
+ */
+function Breadcrumbs() {
+  const crumbs = useBreadcrumbs();
+  if (crumbs.length < 2) return null;
+
+  const parent = crumbs.filter((c) => c.href).at(-1);
+
+  return (
+    <nav aria-label="Breadcrumb" className="mb-4 no-print">
+      {parent && (
+        <Link
+          href={parent.href!}
+          className="sm:hidden inline-flex items-center gap-1.5 min-h-8 text-small text-muted hover:text-accent-text transition-colors"
+        >
+          <Icon.arrowRight className="size-3.5 rotate-180" aria-hidden="true" />
+          {parent.label}
+        </Link>
+      )}
+      <ol className="hidden sm:flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-faint">
+        {crumbs.map((crumb, i) => (
+          <li key={`${crumb.label}-${i}`} className="flex items-center gap-2">
+            {i > 0 && <span aria-hidden="true">/</span>}
+            {crumb.href ? (
+              <Link href={crumb.href} className="hover:text-accent-text transition-colors">
+                {crumb.label}
+              </Link>
+            ) : (
+              <span aria-current="page" className="text-muted">
+                {crumb.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
 export function PageHero({
   title,
   eyebrow,
@@ -218,6 +263,7 @@ export function PageHero({
 
   return (
     <header className="mb-8 animate-in">
+      <Breadcrumbs />
       <div className="flex items-start justify-between gap-8">
         <div className="min-w-0 flex-1">
           {label && <Eyebrow className="mb-3">{label}</Eyebrow>}

@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { Footer } from "./footer";
-import { Icon } from "./icons";
-import { ToastProvider } from "./ui";
+import { Icon, type IconName } from "./icons";
+import { Eyebrow, ToastProvider } from "./ui";
 import { AccountGate } from "./account-gate";
-import { activeBusiness, useAppState } from "@/lib/store";
-import type { AppState } from "@/lib/types";
+import { actions, activeBusiness, useAppState } from "@/lib/store";
+import { profileCompleteness } from "@/lib/profile-fields";
+import type { AppState, SelectedBusiness } from "@/lib/types";
 import { sectionFor, useNav, type NavSection } from "@/lib/nav";
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -43,17 +44,86 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </a>
 
       <div className="min-h-dvh lg:grid lg:grid-cols-[248px_1fr]">
-        <MobileBar onOpen={() => setMobileOpen(true)} />
+        <MobileBar />
         <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
         <div className="min-w-0 flex flex-col">
-          <main id="main" className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-5xl w-full mx-auto">
+          {/* pb-20 on mobile clears the bottom bar, which is fixed. Without it
+              the last control on every page sits underneath the navigation. */}
+          <main id="main" className="flex-1 px-4 sm:px-6 lg:px-8 py-6 lg:py-8 pb-24 lg:pb-8 max-w-5xl w-full mx-auto">
             {children}
           </main>
           <Footer />
         </div>
+        <BottomBar onMore={() => setMobileOpen(true)} />
       </div>
       </AccountGate>
     </ToastProvider>
+  );
+}
+
+/**
+ * Mobile navigation, as a bar rather than a drawer.
+ *
+ * A drawer costs two taps for every move — open it, then choose — and hides the
+ * answer to "where am I" behind the first one. The four destinations below
+ * cover almost every journey through this app, so they are one tap and always
+ * visible, and the full section list stays one tap away behind More for
+ * everything else.
+ *
+ * Deliberately a second *presentation* of `useNav`, never a second model: the
+ * active state comes from the same `sectionFor` the sidebar uses, so the bar
+ * and the sidebar can never disagree about which section you are in.
+ */
+const BOTTOM_BAR: { href: string; label: string; icon: IconName }[] = [
+  { href: "/", label: "Home", icon: "home" },
+  { href: "/lab", label: "Ideas", icon: "spark" },
+  { href: "/business", label: "Business", icon: "building" },
+  { href: "/tasks", label: "Make it", icon: "bolt" },
+];
+
+function BottomBar({ onMore }: { onMore: () => void }) {
+  const sections = useNav();
+  const pathname = usePathname() ?? "/";
+  const current = sectionFor(sections, pathname);
+
+  return (
+    <nav
+      aria-label="Primary"
+      className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-bg/95 backdrop-blur-md border-t border-border no-print"
+      /* Sits above the home indicator on iOS rather than under it. */
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <ul className="grid grid-cols-5">
+        {BOTTOM_BAR.map((item) => {
+          const section = sectionFor(sections, item.href);
+          const active = current !== null && section !== null && current.href === section.href;
+          const IconComponent = Icon[item.icon];
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`flex flex-col items-center justify-center gap-1 min-h-14 text-[11px] transition-colors
+                  ${active ? "text-accent-text font-medium" : "text-muted"}`}
+              >
+                <IconComponent className="size-5" />
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+        <li>
+          <button
+            onClick={onMore}
+            aria-label="More sections"
+            className="w-full flex flex-col items-center justify-center gap-1 min-h-14 text-[11px] text-muted"
+          >
+            <Icon.menu className="size-5" />
+            More
+          </button>
+        </li>
+      </ul>
+    </nav>
   );
 }
 
@@ -80,20 +150,16 @@ function Wordmark() {
   );
 }
 
-function MobileBar({ onOpen }: { onOpen: () => void }) {
+function MobileBar() {
   return (
     <header className="lg:hidden sticky top-0 z-30 bg-bg/85 backdrop-blur-md border-b border-border no-print">
       <div className="flex items-center justify-between gap-3 px-4 h-14">
         <Wordmark />
+        {/* No menu button: the bottom bar's More opens the same drawer, and two
+            controls for one action is the clutter this pass is removing. */}
         <div className="flex items-center gap-1">
+          <ModeToggle />
           <ThemeToggle />
-          <button
-            onClick={onOpen}
-            aria-label="Open navigation"
-            className="size-10 grid place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
-          >
-            <Icon.menu className="size-5" />
-          </button>
         </div>
       </div>
     </header>
@@ -119,7 +185,10 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       >
         <div className="hidden lg:flex items-center justify-between gap-2 px-4 h-16 shrink-0">
           <Wordmark />
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <ModeToggle />
+            <ThemeToggle />
+          </div>
         </div>
 
         <div className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
@@ -136,6 +205,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          <WhereYouAre />
           <ul className="space-y-1">
             {sections.map((section) => {
               const open = section === current;
@@ -210,6 +280,106 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       </nav>
     </>
   );
+}
+
+/**
+ * The two facts a founder looks for first, at the top of the sidebar.
+ *
+ * WHY IT IS HERE AND NOT ON A PAGE
+ *
+ * "Where is my business?" and "is my profile good enough?" were both answerable
+ * only by navigating somewhere and reading it. That is fine once; it is friction
+ * on every visit, and it is the reason people lose track of what they picked.
+ * The sidebar is the one thing on screen no matter which page they are on, so
+ * it is where a persistent answer belongs.
+ *
+ * Neither block appears with nothing to say. An empty "current business" card
+ * would be a permanent reminder of a decision not yet made, sitting above the
+ * navigation on every screen — the sections already say what is waiting.
+ */
+function WhereYouAre() {
+  const business = useAppState(activeBusiness);
+  const profile = useAppState((s) => s.profile);
+  const next = useAppState(nextActionFor);
+  const completeness = useMemo(() => profileCompleteness(profile), [profile]);
+  const revenue = business?.revenue.reduce((sum, r) => sum + r.amount, 0) ?? 0;
+
+  if (!business && completeness.percent >= 90) return null;
+
+  return (
+    <div className="mb-3 space-y-3">
+      {business && (
+        <div className="rail rail-accent py-1">
+          <Eyebrow className="text-faint">Current business</Eyebrow>
+          <Link
+            href="/business"
+            className="block text-[13px] font-medium leading-snug mt-1 hover:text-accent-text transition-colors"
+          >
+            {business.idea.name}
+          </Link>
+          <p className="text-[11px] text-faint mt-1">
+            {stageLabel(business, revenue)}
+          </p>
+          {next && (
+            <Link
+              href={next.href}
+              className="flex items-center min-h-8 text-[12px] leading-snug text-muted mt-1 hover:text-accent-text transition-colors"
+            >
+              {next.label} →
+            </Link>
+          )}
+        </div>
+      )}
+
+      {completeness.percent < 90 && (
+        <div className="px-1">
+          <div className="flex items-baseline justify-between gap-2">
+            <Eyebrow className="text-faint">Your profile</Eyebrow>
+            <span className="font-mono text-[11px] tabular-nums text-muted">{completeness.percent}%</span>
+          </div>
+          {/* A hairline, not a bar in a box. Same treatment as the journey
+              spine below it, so the sidebar reads as one thing. */}
+          <div className="h-0.5 bg-border mt-1.5" aria-hidden="true">
+            <div className="h-full bg-accent" style={{ width: `${completeness.percent}%` }} />
+          </div>
+          {completeness.next && (
+            <Link
+              href={`/profile#${completeness.next.id}`}
+              className="flex items-center min-h-8 text-[12px] leading-snug text-muted mt-1 hover:text-accent-text transition-colors"
+            >
+              Add {completeness.next.label.toLowerCase()} →
+            </Link>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Which phase the business is in, in one short line.
+ *
+ * Read off the same recorded facts the journey spine uses rather than a stored
+ * field, so it cannot claim a stage the evidence does not support.
+ */
+function stageLabel(business: SelectedBusiness, revenue: number): string {
+  if (revenue >= 1000) return "Trading";
+  if (revenue > 0) return "First customers";
+  if ((business.tasks?.filter((t) => t.done).length ?? 0) >= 3) return "Building";
+  if (business.plan || business.validation) return "Validating";
+  return "Just started";
+}
+
+/**
+ * The single next thing, for the sidebar.
+ *
+ * Deliberately a thin reading of the journey already computed below rather than
+ * a second opinion: two places on one screen suggesting different next steps is
+ * worse than either of them alone.
+ */
+function nextActionFor(s: AppState): { label: string; href: string } | null {
+  const journey = selectJourney(s);
+  return journey.done === journey.total ? null : { label: journey.next, href: journey.nextHref };
 }
 
 /**
@@ -381,6 +551,34 @@ function JourneySpine() {
         })}
       </ol>
     </div>
+  );
+}
+
+/**
+ * How much the app explains, as a control rather than a setting.
+ *
+ * `experienceMode` already existed and already drove `AdvancedOnly`, but it
+ * lived three clicks deep in Settings — so the people it was built for, the
+ * ones finding a page too dense right now, were the least likely to find it.
+ * A preference about the page you are reading belongs on the page you are
+ * reading.
+ */
+function ModeToggle() {
+  const mode = useAppState((s) => s.settings.experienceMode);
+  const advanced = mode === "advanced";
+  return (
+    <button
+      onClick={() => actions.setExperienceMode(advanced ? "beginner" : "advanced")}
+      aria-pressed={advanced}
+      title={
+        advanced
+          ? "Showing the full detail. Switch to plain explanations."
+          : "Showing plain explanations. Switch to the full detail."
+      }
+      className="h-9 px-2.5 grid place-items-center rounded-lg text-[11px] font-mono uppercase tracking-wide text-muted hover:bg-surface-2 hover:text-text transition-colors"
+    >
+      {advanced ? "Detail" : "Simple"}
+    </button>
   );
 }
 

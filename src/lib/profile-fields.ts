@@ -25,12 +25,67 @@ export interface ProfileField {
   /** True when the user hasn't answered. Drives the "add this" prompts. */
   isEmpty: (p: FounderProfile) => boolean;
   group: "about" | "resources" | "goals" | "preferences";
+  /**
+   * How much this field matters to the recommendations.
+   *
+   * "required" means the engine genuinely cannot do its job without it — hours,
+   * money and what you can do are all read directly by the scoring. Everything
+   * else is honest about being optional, because a profile that marks
+   * twenty-six fields as essential is a form, and people abandon forms.
+   *
+   * Unset is treated as "optional", so a field added later is never silently
+   * promoted into something that nags.
+   */
+  importance?: "required" | "recommended" | "optional";
   /** Number fields only. */
   prefix?: string;
   suffix?: string;
   max?: number;
   /** Choice/multi fields only. */
   options?: { value: string; label: string }[];
+}
+
+/**
+ * How complete the profile is, and the one thing that would help most.
+ *
+ * Weighted, not counted. Twenty-six fields answered equally would let somebody
+ * reach "80% complete" while leaving out their budget and their hours — the two
+ * numbers almost every score depends on — and the figure would be reassuring
+ * and wrong. Required fields carry most of the weight, so the percentage tracks
+ * how well the app can actually reason rather than how much typing was done.
+ *
+ * `next` is deliberately a single field. A list of six gaps is a chore; one
+ * named gap with the reason it matters is a decision somebody can make now.
+ */
+export function profileCompleteness(profile: FounderProfile): {
+  percent: number;
+  next: ProfileField | null;
+  requiredMissing: number;
+} {
+  const weightFor = (f: ProfileField) =>
+    f.importance === "required" ? 5 : f.importance === "recommended" ? 2 : 1;
+
+  let total = 0;
+  let filled = 0;
+  for (const field of PROFILE_FIELDS) {
+    const weight = weightFor(field);
+    total += weight;
+    if (!field.isEmpty(profile)) filled += weight;
+  }
+
+  // The most valuable unanswered field, strongest tier first, then in the order
+  // the profile page presents them so the suggestion matches what they'd see.
+  const order = { required: 0, recommended: 1, optional: 2 } as const;
+  const next =
+    PROFILE_FIELDS.filter((f) => f.isEmpty(profile)).sort(
+      (a, b) => order[a.importance ?? "optional"] - order[b.importance ?? "optional"],
+    )[0] ?? null;
+
+  return {
+    percent: total ? Math.round((filled / total) * 100) : 100,
+    next,
+    requiredMissing: PROFILE_FIELDS.filter((f) => f.importance === "required" && f.isEmpty(profile)).length,
+  };
 }
 
 export const FIELD_GROUPS: { id: ProfileField["group"]; title: string; blurb: string }[] = [
@@ -45,6 +100,7 @@ const list = (v: string[]) => (v.length ? v.join(", ") : "Not set");
 export const PROFILE_FIELDS: ProfileField[] = [
   {
     id: "name",
+    importance: "optional",
     label: "Your name",
     affects: "Only how the app addresses you. Nothing is scored on it.",
     kind: "text",
@@ -54,6 +110,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "age",
+    importance: "recommended",
     label: "Your age",
     affects: "Which businesses are practical — accounts, contracts, transport, and how much time school leaves.",
     kind: "age",
@@ -63,6 +120,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "skills",
+    importance: "required",
     label: "Skills",
     affects: "Skill fit, and which business models are even offered to you.",
     kind: "tags",
@@ -72,6 +130,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "experience",
+    importance: "recommended",
     label: "Experience",
     affects: "How confident the score is, and how hard things are rated for you.",
     kind: "textarea",
@@ -81,6 +140,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "interests",
+    importance: "recommended",
     label: "Interests",
     affects: "Personal fit — whether you'd still care about this in six months.",
     kind: "tags",
@@ -90,6 +150,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "hobbies",
+    importance: "optional",
     label: "Hobbies",
     affects: "Which markets you already understand from the inside.",
     kind: "tags",
@@ -100,6 +161,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
 
   {
     id: "budget",
+    importance: "required",
     label: "Starting budget",
     affects: "Affordability, and which businesses appear at all.",
     kind: "number",
@@ -111,6 +173,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "monthlyBudget",
+    importance: "recommended",
     label: "Monthly budget",
     affects: "What you can keep spending, on top of what you start with.",
     kind: "number",
@@ -123,6 +186,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "hours",
+    importance: "required",
     label: "Available time",
     affects: "Time fit, how fast plans are paced, and revenue estimates.",
     kind: "number",
@@ -134,6 +198,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "transport",
+    importance: "optional",
     label: "Transportation",
     affects: "Whether local businesses are realistic, and how far customers can be.",
     kind: "toggle",
@@ -143,6 +208,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "location",
+    importance: "recommended",
     label: "Where you are",
     affects: "Customer access for anything local. A town or city is enough.",
     kind: "text",
@@ -152,6 +218,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "equipment",
+    importance: "optional",
     label: "Equipment you own",
     affects: "Startup cost — things you already have don't need buying.",
     kind: "tags",
@@ -161,6 +228,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "followers",
+    importance: "optional",
     label: "Audience size",
     affects: "Whether audience-led businesses are realistic yet.",
     kind: "number",
@@ -172,6 +240,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
 
   {
     id: "incomeGoal",
+    importance: "required",
     label: "Income goal",
     affects: "Money potential is scored against this, not in the abstract.",
     kind: "number",
@@ -184,6 +253,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "firstDollarTarget",
+    importance: "recommended",
     label: "How soon you want the first money",
     affects: "How heavily speed to first payment is weighted.",
     kind: "choice",
@@ -199,6 +269,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "payoffStyle",
+    importance: "optional",
     label: "What matters most",
     affects: "Whether fast money or a bigger ceiling is weighted higher.",
     kind: "choice",
@@ -219,6 +290,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
 
   {
     id: "risk",
+    importance: "optional",
     label: "Comfort with risk",
     affects: "How much weight goes on low cost and predictability.",
     kind: "choice",
@@ -233,6 +305,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "preferences",
+    importance: "recommended",
     label: "Kinds of business you'd like",
     affects: "Personal fit. Anything matching gets a boost; anything not gets a penalty.",
     kind: "multi",
@@ -242,6 +315,7 @@ export const PROFILE_FIELDS: ProfileField[] = [
   },
   {
     id: "wontDo",
+    importance: "recommended",
     label: "Things you won't do",
     affects: "A hard limit. Anything matching this is filtered out, not just ranked down.",
     kind: "textarea",

@@ -1,5 +1,5 @@
 import { computeScore } from "../scoring";
-import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type Level, type ScoreDimension } from "../types";
+import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type IdeaFeedback, type Level, type ScoreDimension } from "../types";
 import { ratePracticality, type Practicality } from "./knowledge/age";
 import { INDUSTRIES } from "./knowledge/industries";
 import { BUSINESS_MODELS } from "./knowledge/models";
@@ -58,6 +58,13 @@ export interface GenerateOptions {
   avoid?: string[];
   /** Keeps repeat generations from returning an identical set. */
   seed?: number;
+  /**
+   * What the founder has already said about ideas like these.
+   *
+   * Optional so every existing call site keeps working and so the pure
+   * generator can be exercised without it.
+   */
+  feedback?: IdeaFeedback;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -207,6 +214,107 @@ function scoreCandidate(c: Omit<Candidate, "fit" | "notes">, s: FounderSignals, 
   return { fit, notes };
 }
 
+/* -------------------------------------------------------------------------- */
+/* What the founder has already turned down                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * How much a candidate is moved by what the founder has reacted to.
+ *
+ * A REJECTION IS EVIDENCE, NOT A RULE.
+ *
+ * Somebody who turns down one editing service has told us something small.
+ * Somebody who turns down five has told us something large, and an app that
+ * keeps offering a sixth is not listening — that is the whole reason this
+ * exists. But the two are not the same statement, and treating them alike
+ * fails in both directions: act on one rejection as though it were a rule and
+ * a founder loses a whole model kind for a single impatient click; ignore the
+ * fifth and the app is the thing they came here to escape.
+ *
+ * So: matching on BOTH what is sold and how it is sold is a strong signal and
+ * the candidate is dropped. Matching on one axis is a weak signal and only
+ * lowers it — it can still surface if nothing better exists. Repeat rejections
+ * of the same axis compound, which is what makes the fifth one decisive without
+ * the first one being.
+ *
+ * Likes work the same way in reverse, and deliberately more gently: saying yes
+ * to a thing is a weaker instruction than saying no to it, because people click
+ * "more like this" out of mild interest and "not interested" out of certainty.
+ */
+function feedbackAdjustment(c: Omit<Candidate, "fit" | "notes">, feedback: IdeaFeedback | undefined): { delta: number; drop: boolean; note?: string } {
+  if (!feedback) return { delta: 0, drop: false };
+
+  const topic = topicForProblem(c.problem.id, c.industry.label);
+  let delta = 0;
+  let drop = false;
+  let sameShape = 0;
+
+  for (const signature of feedback.rejected) {
+    const sameKind = signature.modelKind === c.model.kind;
+    const sameTopic = signature.topic === topic;
+    const sameSegment = signature.segmentId === c.segment.id && signature.industryId === c.industry.id;
+
+    if (sameKind && sameTopic) {
+      drop = true;
+      sameShape++;
+      continue;
+    }
+    if (sameTopic) delta -= 14;
+    else if (sameKind) delta -= 8;
+    if (sameSegment) delta -= 6;
+  }
+
+  for (const signature of feedback.liked) {
+    if (signature.modelKind === c.model.kind && signature.topic === topic) delta += 10;
+    else if (signature.topic === topic) delta += 6;
+    else if (signature.modelKind === c.model.kind) delta += 4;
+  }
+
+  for (const dial of feedback.dials) {
+    switch (dial) {
+      case "cheaper": {
+        /*
+         * Scored on the midpoint of the range, not its floor.
+         *
+         * Almost every model in the catalogue *can* be started for very little,
+         * so a threshold on `startupCost[0]` gave nearly everything the same
+         * bonus and the dial did close to nothing. The midpoint is what the
+         * founder will actually spend, and it separates a £0 newsletter from a
+         * £900 kit-heavy local service the way the label promises.
+         */
+        const mid = (c.model.startupCost[0] + c.model.startupCost[1]) / 2;
+        delta += Math.max(-24, Math.min(16, (150 - mid) / 12));
+        break;
+      }
+      case "faster":
+        delta += c.model.timeToRevenueDays <= 14 ? 12 : c.model.timeToRevenueDays >= 45 ? -10 : 0;
+        break;
+      case "local":
+        delta += c.model.mode === "local" ? 14 : c.model.mode === "online" ? -10 : 0;
+        break;
+      case "online":
+        delta += c.model.mode === "online" ? 14 : c.model.mode === "local" ? -10 : 0;
+        break;
+      case "scalable":
+        delta += (c.model.scalability - 50) / 4;
+        break;
+      case "ambitious":
+        delta += (c.model.scalability + c.model.margin - 100) / 6;
+        break;
+    }
+  }
+
+  return {
+    delta,
+    drop,
+    note: drop
+      ? undefined
+      : sameShape || delta < -10
+        ? "Ranked lower because you passed on something similar"
+        : undefined,
+  };
+}
+
 export function buildCandidates(profile: FounderProfile, options: GenerateOptions = {}): Candidate[] {
   const signals = analyseFounder(profile);
   const blocks = structuralAvoidance(signals);
@@ -288,10 +396,25 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
            */
           if (blocks.noCamera && CAMERA_WORK.test(`${problem.label} ${problem.statement}`)) continue;
 
+          /*
+           * What the founder already said about ideas shaped like this one.
+           *
+           * Applied here rather than at selection time so the adjustment is
+           * carried by `fit` and everything downstream — the caps, the ordering,
+           * the relaxed second pass — sees one consistent number.
+           */
+          const reaction = feedbackAdjustment(base, options.feedback);
+          if (reaction.drop) continue;
+
+          const withHours = stretchedHours ? fit - (model.minHoursPerWeek - signals.hours) : fit;
+          const extra = [
+            ...(stretchedHours ? [`needs about ${model.minHoursPerWeek} hours a week`] : []),
+            ...(reaction.note ? [reaction.note] : []),
+          ];
           candidates.push({
             ...base,
-            fit: stretchedHours ? fit - (model.minHoursPerWeek - signals.hours) : fit,
-            notes: stretchedHours ? [...notes, `needs about ${model.minHoursPerWeek} hours a week`] : notes,
+            fit: withHours + reaction.delta,
+            notes: extra.length ? [...notes, ...extra] : notes,
           });
         }
       }

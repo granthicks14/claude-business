@@ -20,6 +20,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
+import { Guide } from "./guide";
 import { DEFAULT_ANGLES, EXPLORE_ANGLES, ideaSourceNote, useIdeaGeneration } from "@/lib/ideas";
 import { actions, useAppState } from "@/lib/store";
 import type { BusinessIdea, NicheReport } from "@/lib/types";
@@ -143,6 +144,20 @@ function StartHere() {
   const state = useAppState((s) => s);
   const { generate, loading, stage, stages, stageIndex, progress, error, retry, clearError } = useIdeaGeneration();
   const toast = useToast();
+  /*
+   * The questions come first for somebody with nothing yet, and never again.
+   *
+   * A founder with an empty shortlist has no basis for any of the choices on
+   * this page, and four questions gets them a batch worth reacting to. A
+   * founder who already has ideas has moved past that — re-asking would be the
+   * repetitive questioning this pass is meant to remove — so the guide is shown
+   * once and the dials on the shortlist carry steering from then on.
+   */
+  const [guided, setGuided] = useState(state.ideas.length > 0);
+
+  if (!guided) {
+    return <Guide onDone={() => setGuided(true)} />;
+  }
 
   const run = async () => {
     clearError();
