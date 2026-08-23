@@ -104,7 +104,6 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
   const sections = useNav();
   const pathname = usePathname() ?? "/";
   const current = sectionFor(sections, pathname);
-  const progress = useAppState(selectProgress);
 
   return (
     <>
@@ -198,25 +197,16 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
               );
             })}
           </ul>
+
+          {/*
+            The spine sits directly under the sections, inside the same
+            scrolling column, so it occupies the space the nav was leaving
+            empty rather than being pinned to the bottom with a gap above it.
+          */}
+          <div className="rule mt-4 pt-1" />
+          <JourneySpine />
         </div>
 
-        {progress.total > 0 && (
-          <div className="px-4 py-3 border-t border-border shrink-0">
-            <div className="flex items-center justify-between mb-2">
-              <span className="eyebrow">Journey</span>
-              <span className="font-mono text-[11px] tabular-nums text-muted">
-                {progress.done}/{progress.total}
-              </span>
-            </div>
-            <div className="h-0.5 bg-border overflow-hidden">
-              <div
-                className="h-full bg-accent transition-[width] duration-500"
-                style={{ width: `${(progress.done / progress.total) * 100}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-faint mt-1.5 leading-snug">{progress.next}</p>
-          </div>
-        )}
       </nav>
     </>
   );
@@ -226,24 +216,172 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
  * The journey milestones from the spec, tracked quietly. Deliberately
  * understated — this is a business, not a game.
  */
-function selectProgress(s: AppState): { done: number; total: number; next: string } {
+/**
+ * The journey, derived from what is actually recorded.
+ *
+ * Ten steps grouped into five phases. Every one of them is read off real
+ * state — a profile that exists, ideas that were generated, a payment that was
+ * logged — so the spine can never congratulate somebody for work they have not
+ * done. That matters more here than anywhere: a progress bar that inflates
+ * itself is worse than no progress bar, because the whole product is built on
+ * refusing to flatter the founder.
+ *
+ * This used to be reduced to "4/10" and a single line of text at the bottom of
+ * the sidebar, with 346px of empty space above it. The information was already
+ * being computed; it just wasn't being shown.
+ */
+interface JourneyStep {
+  label: string;
+  done: boolean;
+  next: string;
+  href: string;
+}
+
+interface JourneyPhase {
+  name: string;
+  steps: JourneyStep[];
+}
+
+function selectJourney(s: AppState): {
+  phases: JourneyPhase[];
+  done: number;
+  total: number;
+  next: string;
+  nextHref: string;
+  currentPhase: string;
+} {
   const business = activeBusiness(s);
   const revenue = business?.revenue.reduce((sum, r) => sum + r.amount, 0) ?? 0;
-  const steps: { label: string; done: boolean; next: string }[] = [
-    { label: "Profile", done: s.profile.completedOnboarding, next: "Finish your founder profile" },
-    { label: "Ideas", done: s.ideas.length > 0, next: "Generate your first ideas" },
-    { label: "Chosen", done: !!business, next: "Pick a business to build" },
-    { label: "Validated", done: !!business?.validation, next: "Run the Validation Lab" },
-    { label: "Planned", done: !!business?.plan, next: "Build your business plan" },
-    { label: "Tasks", done: (business?.tasks.length ?? 0) > 0, next: "Generate your 90-day plan" },
-    { label: "Launched", done: (business?.tasks.filter((t) => t.done).length ?? 0) >= 3, next: "Complete your first tasks" },
-    { label: "Customer", done: (business?.customers.filter((c) => c.status === "customer").length ?? 0) > 0, next: "Land your first customer" },
-    { label: "First $100", done: revenue >= 100, next: "Earn your first $100" },
-    { label: "First $1,000", done: revenue >= 1000, next: "Reach $1,000 in revenue" },
+
+  const phases: JourneyPhase[] = [
+    {
+      name: "Foundation",
+      steps: [
+        { label: "Founder profile", done: s.profile.completedOnboarding, next: "Finish your founder profile", href: "/onboarding" },
+      ],
+    },
+    {
+      name: "Discovery",
+      steps: [
+        { label: "Ideas generated", done: s.ideas.length > 0, next: "Generate your first ideas", href: "/lab" },
+        { label: "One chosen", done: !!business, next: "Pick a business to build", href: "/lab?tab=choose" },
+      ],
+    },
+    {
+      name: "Validation",
+      steps: [
+        { label: "Evidence gathered", done: !!business?.validation, next: "Run the Validation Lab", href: "/validation" },
+        { label: "Plan written", done: !!business?.plan, next: "Build your business plan", href: "/plan" },
+      ],
+    },
+    {
+      name: "Build",
+      steps: [
+        { label: "Work broken down", done: (business?.tasks.length ?? 0) > 0, next: "Generate your 90-day plan", href: "/tasks" },
+        { label: "Started on it", done: (business?.tasks.filter((t) => t.done).length ?? 0) >= 3, next: "Complete your first tasks", href: "/tasks" },
+      ],
+    },
+    {
+      name: "Trading",
+      steps: [
+        { label: "First customer", done: (business?.customers.filter((c) => c.status === "customer").length ?? 0) > 0, next: "Land your first customer", href: "/sales" },
+        { label: "First $100", done: revenue >= 100, next: "Earn your first $100", href: "/money" },
+        { label: "First $1,000", done: revenue >= 1000, next: "Reach $1,000 in revenue", href: "/money" },
+      ],
+    },
   ];
-  const done = steps.filter((x) => x.done).length;
-  const next = steps.find((x) => !x.done)?.next ?? "You're scaling — keep going";
-  return { done, total: steps.length, next };
+
+  const all = phases.flatMap((p) => p.steps);
+  const done = all.filter((x) => x.done).length;
+
+  /*
+   * How far you have got is the LAST phase with anything finished, not the
+   * first with anything missing.
+   *
+   * Those are different, and the difference is not hypothetical: someone who
+   * arrives through the analyser, or opens the worked example, has a business
+   * with logged payments and no generated ideas at all. Taking the first gap
+   * put them in "Discovery" and told them to go and generate their first
+   * ideas — advice for a person who does not have customers yet, given to a
+   * person who does. Phases are a description of progress here, not a gate.
+   */
+  let currentIndex = 0;
+  phases.forEach((phase, i) => {
+    if (phase.steps.some((x) => x.done)) currentIndex = i;
+  });
+  // Within or after the phase reached, so the suggestion is always forward.
+  const reachable = phases.slice(currentIndex).flatMap((p) => p.steps);
+  const pending = reachable.find((x) => !x.done) ?? all.find((x) => !x.done);
+
+  return {
+    phases,
+    done,
+    total: all.length,
+    next: pending?.next ?? "You're scaling — keep going",
+    nextHref: pending?.href ?? "/money",
+    currentPhase: phases[currentIndex].name,
+  };
+}
+
+/**
+ * The journey spine.
+ *
+ * Phases read top to bottom, each with a hairline that fills as its steps are
+ * finished. The phase you are in is marked in clay and carries the one thing
+ * to do next; the phases behind you are spruce; the ones ahead are hairlines.
+ * Position is carried by weight, colour and the words "You are here" together,
+ * so it survives greyscale and colour blindness.
+ */
+function JourneySpine() {
+  const journey = useAppState(selectJourney);
+
+  return (
+    <div className="px-1 pb-4 pt-3">
+      <div className="flex items-baseline justify-between mb-3">
+        <span className="eyebrow">Your journey</span>
+        <span className="font-mono text-[11px] tabular-nums text-muted">
+          {journey.done}/{journey.total}
+        </span>
+      </div>
+
+      <ol className="space-y-3">
+        {journey.phases.map((phase) => {
+          const doneCount = phase.steps.filter((x) => x.done).length;
+          const complete = doneCount === phase.steps.length;
+          const current = phase.name === journey.currentPhase;
+          return (
+            <li key={phase.name}>
+              <div
+                className={`h-0.5 ${complete ? "bg-accent" : current ? "bg-mark" : "bg-border"}`}
+                aria-hidden="true"
+              />
+              <div className="flex items-baseline justify-between gap-2 mt-1.5">
+                <span
+                  className={`eyebrow ${current ? "text-mark" : complete ? "text-accent-text" : ""}`}
+                >
+                  {phase.name}
+                </span>
+                <span className="font-mono text-[10px] tabular-nums text-faint">
+                  {doneCount}/{phase.steps.length}
+                </span>
+              </div>
+              {current && (
+                /* min-h-8 because this is a real navigation target: at its
+                   natural 17px it failed the 32px minimum the rest of the nav
+                   holds to, and it is the one link in the spine anybody taps. */
+                <Link
+                  href={journey.nextHref}
+                  className="flex items-center min-h-8 text-[12px] leading-snug text-muted mt-0.5 hover:text-accent-text transition-colors"
+                >
+                  {journey.next} →
+                </Link>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 function ThemeToggle() {

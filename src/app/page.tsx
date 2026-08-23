@@ -170,29 +170,43 @@ export default function HomePage() {
                 <Hi tone="mark">arguing the other side</Hi> before you spend anything.
               </p>
 
-              {ready && (
-                <div className="mt-8 flex flex-wrap items-center gap-3">
-                  {business ? (
-                    <>
-                      <LinkButton href="/business" variant="primary" size="lg" icon={<Icon.building />}>
-                        Open {business.idea.name.length > 24 ? "my business" : business.idea.name}
-                      </LinkButton>
-                      <Link href="/tasks" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
-                        What should I do today?
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <LinkButton href="/start" variant="primary" size="lg">
-                        Start with what you have
-                      </LinkButton>
-                      <Link href="/start" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
-                        Or open a worked example
-                      </Link>
-                    </>
-                  )}
-                </div>
-              )}
+              {/*
+                Never gated on `ready`.
+
+                This block used to be, and the cost was invisible from inside a
+                browser: `ready` is false on the server and on the first client
+                pass, so the front page shipped its whole argument with no way
+                to act on it. Anything reading the HTML before hydration — a
+                crawler, a link preview, a slow phone — got the pitch and no
+                button, which is exactly the "it's only a shell" impression the
+                page kept making on people.
+
+                The first-visit version is the correct default, so it renders
+                unconditionally and the returning-founder version replaces it
+                once the store has actually loaded. Same pattern as everywhere
+                else: assume the visitor is new, upgrade when you know better.
+              */}
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                {ready && business ? (
+                  <>
+                    <LinkButton href="/business" variant="primary" size="lg" icon={<Icon.building />}>
+                      Open {business.idea.name.length > 24 ? "my business" : business.idea.name}
+                    </LinkButton>
+                    <Link href="/tasks" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
+                      What should I do today?
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <LinkButton href="/start" variant="primary" size="lg">
+                      Start with what you have
+                    </LinkButton>
+                    <Link href="/start" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
+                      Or open a worked example
+                    </Link>
+                  </>
+                )}
+              </div>
 
               <p className="text-small text-muted mt-6 leading-relaxed max-w-md">
                 No account on a server, no API key, no cost.{" "}
