@@ -47,9 +47,11 @@ const themeScript = `
 }catch(e){}})();
 `;
 
+import { body, display } from "@/lib/fonts";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className={`${body.variable} ${display.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

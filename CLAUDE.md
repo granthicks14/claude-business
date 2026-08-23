@@ -349,7 +349,18 @@ would mean shipping WASM to every visitor), that key encrypts the whole state
 with AES-GCM, and several accounts can sit side by side in one browser. The
 key is held in memory; `resumeInTab` optionally keeps it in `sessionStorage`
 when the user ticks "stay unlocked in this tab", which is off by default and
-explains its own trade on screen.
+explains its own trade on screen. Both the unlock form and the create form
+offer it — the create form did not, which made the one route everybody takes
+exactly once the only one that couldn't make the choice.
+
+**The gate keeps `children` mounted while it prompts.** Swapping them out
+unmounts the route's page segment, and the App Router then answers the next
+link click with a full document load rather than a client-side navigation.
+That discards an in-memory key, so unlocking, clicking once and being asked to
+unlock again was the entire experience of using the app. The subtree stays
+mounted behind the prompt under `hidden` and `inert` — invisible, out of the
+accessibility tree, out of the tab order — and holds the segment open. It is
+empty anyway: the store has nothing in it until a key exists.
 
 **It is called a vault, never a login.** There is no server, so the passphrase
 proves nothing to anybody — it decrypts local data. That means no password
@@ -489,9 +500,31 @@ These are product requirements, not style preferences:
 
 ## Look and feel
 
+The audit that produced this section found four tells of a generated
+interface: the framework's default font stack, an accent at hue 275 — the
+violet every AI product ships — cool blue-grey neutrals, and six radius values
+with no rule about which went where.
+
+- **Two typefaces, self-hosted.** Fraunces for headings, IBM Plex Sans for
+  everything you read and operate, both emitted at build time by `next/font`
+  (`lib/fonts.ts`). No runtime request, so `font-src 'self'` holds and nothing
+  is fetched from another company's server. Both are open-licensed; no paid
+  font is used anywhere.
+- **The accent is a blueprint teal, not violet.** Neutrals are warm paper
+  rather than blue-grey. `--mark` is one warm ochre reserved for the single
+  most important figure on a page — a highlighter, not a second brand colour.
+- **Three radii, and Tailwind's scale is mapped onto them.** `--radius-card`,
+  `--radius-control`, `--radius-pill`. `rounded-lg`, `rounded-md` and the rest
+  are redefined in `@theme` so 219 existing call sites land on a chosen value
+  and there is no fourth radius to reach for.
+- **A type scale, not sizes chosen one at a time.** `--text-display` down to
+  `--text-label`, each with its own line height and tracking. Figures are
+  tabular wherever they are a metric.
 - **Colour is a signal, never decoration.** Emphasis goes through `<Hi>`, which
   has four tones and no more: `accent` (the subject), `good` (something earned),
-  `warn` (needs attention), `mark` (the one key figure on the page).
+  `warn` (needs attention), `mark` (the one key figure on the page). All four
+  must be visibly different: `mark` was painted in the accent's own colours for
+  a while, which quietly made the four-tone system a three-tone one.
 - **Illustrations are inline SVG** in `components/art.tsx`. There is no
   `public/` and no CDN, so nothing is fetched. Strokes use `currentColor` and
   details use the accent tokens, so one drawing serves both themes.

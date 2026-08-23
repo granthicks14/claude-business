@@ -780,26 +780,82 @@ export function Meter({
   );
 }
 
+/**
+ * A figure that is meant to be read as a figure.
+ *
+ * Nearly every screen in this product exists to put a number in front of
+ * somebody — a fit score, a price, a month of runway — and the previous
+ * version set all of them at `text-xl` with the label above in small caps,
+ * which is the treatment every dashboard template uses and which makes a
+ * decisive number look like a table cell.
+ *
+ * The order is inverted here: the label sits underneath in the tracked label
+ * token, and the figure leads at display weight. Digits are tabular so a
+ * column of scores lines up on the decimal, and `size` exists because a
+ * headline metric and a supporting one should not compete.
+ */
 export function Stat({
   label,
   value,
   hint,
   tone,
+  size = "md",
 }: {
   /** ReactNode so a label can embed an inline <Explain> definition. */
   label: ReactNode;
   value: ReactNode;
   hint?: ReactNode;
-  tone?: "good" | "warn" | "bad";
+  tone?: "good" | "warn" | "bad" | "mark";
+  /** `lg` is for the one figure a page is actually about. */
+  size?: "sm" | "md" | "lg";
 }) {
-  const color = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : "";
+  const color =
+    tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : tone === "bad" ? "text-bad" : tone === "mark" ? "text-mark" : "";
+  const figure =
+    size === "lg"
+      ? "text-[2.75rem] leading-[1.05]"
+      : size === "sm"
+        ? "text-lg leading-tight"
+        : "text-[1.75rem] leading-[1.1]";
   return (
-    <div className="min-w-0">
-      <div className="text-xs text-muted font-medium uppercase tracking-wide">{label}</div>
-      <div className={`text-xl font-semibold tabular-nums mt-0.5 truncate ${color}`}>{value}</div>
-      {hint && <div className="text-xs text-muted mt-0.5 truncate">{hint}</div>}
+    <div className="min-w-0" data-metric>
+      <div className={`font-semibold tabular-nums tracking-[-0.02em] truncate ${figure} ${color}`}>{value}</div>
+      <div className="text-label font-medium uppercase text-muted mt-1 truncate">{label}</div>
+      {hint && <div className="text-xs text-faint mt-1 leading-snug">{hint}</div>}
     </div>
   );
+}
+
+/**
+ * A section that is not a card.
+ *
+ * The visual audit counted 393 `<Card>` usages across 55 files — roughly seven
+ * per screen, frequently nested. Wrapping every group of related things in a
+ * bordered rounded rectangle is the most reliable way to make an interface
+ * look generated: it flattens hierarchy, because when everything is elevated
+ * nothing is, and it fills the page with borders that carry no information.
+ *
+ * `Panel` separates content the way print does — with space, a heading and a
+ * background shift — and keeps `Card` for the things that genuinely are
+ * discrete objects you might pick up and move.
+ */
+export function Panel({
+  children,
+  tone = "plain",
+  className = "",
+}: {
+  children: ReactNode;
+  /** `sunken` steps back from the page; `raised` steps toward it. */
+  tone?: "plain" | "sunken" | "raised";
+  className?: string;
+}) {
+  const surface =
+    tone === "sunken"
+      ? "bg-bg-subtle rounded-card px-4 py-4 sm:px-5"
+      : tone === "raised"
+        ? "bg-surface rounded-card px-4 py-4 sm:px-5 shadow-sm"
+        : "";
+  return <section className={`min-w-0 ${surface} ${className}`}>{children}</section>;
 }
 
 /* -------------------------------------------------------------------------- */

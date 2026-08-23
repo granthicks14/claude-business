@@ -80,12 +80,47 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
   if (!needsAccount(pathname)) return <>{children}</>;
 
   /*
-   * A private route, still locked. Until the storage check finishes, keep
-   * rendering the page rather than blanking it — the store is empty, so this
-   * is the same empty-state view the page shows a new user.
+   * A private route, still locked.
+   *
+   * Nothing is rendered for the instant the storage check takes. Showing the
+   * page first and swapping to the prompt a moment later flashed an empty
+   * workspace at everybody — and showing the prompt first would flash a
+   * sign-in screen at the people who ticked "stay unlocked in this tab", who
+   * are precisely the ones who asked not to see it. Blank is the only state
+   * that is not wrong for somebody, and it lasts one storage read.
+   *
+   * This is safe here in a way it was not on the public routes: a private
+   * route has no content a scanner should see anyway, so there is no cloaking
+   * signal in it. See `lib/routes.ts`.
    */
-  if (!ready) return <>{children}</>;
-  return <SignIn />;
+  if (!ready) return null;
+
+  /*
+   * `children` stays mounted behind the prompt, hidden, and this is load
+   * bearing rather than tidiness.
+   *
+   * Replacing them outright unmounts the route's page segment, and the App
+   * Router then cannot navigate away from a segment it never committed: the
+   * next link click was answered with a full document load. That threw away
+   * the decryption key, which lives in memory unless the visitor asked for it
+   * to survive the tab — so unlocking, clicking once, and being asked to
+   * unlock again was the entire experience of using the app. Keeping the
+   * subtree mounted keeps navigation client-side, and the key with it.
+   *
+   * `hidden` keeps it out of the picture and out of the accessibility tree;
+   * `inert` keeps it out of the tab order, so nothing behind the prompt can
+   * be reached by keyboard. The store is empty while locked, so what renders
+   * underneath is the same first-visit page any locked visitor already gets
+   * on a public route — no data, encrypted or otherwise, is in it.
+   */
+  return (
+    <>
+      <div hidden inert aria-hidden="true">
+        {children}
+      </div>
+      <SignIn />
+    </>
+  );
 }
 
 type Mode = "pick" | "create" | "unlock";
@@ -349,6 +384,7 @@ function CreateAccount({
   const [confirm, setConfirm] = useState("");
   const [claim, setClaim] = useState(true);
   const [acknowledged, setAcknowledged] = useState(false);
+  const [stay, setStay] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -376,7 +412,13 @@ function CreateAccount({
      * back successfully, never on the strength of the write alone.
      */
     const initial = legacy && claim ? legacy : emptyState();
-    const result = await createAccount(label, passphrase, initial);
+    /*
+     * The same tab choice the unlock screen offers. It was missing here, which
+     * meant the one route into the app that everybody takes exactly once — the
+     * first one — was also the only one that could not make the choice, and
+     * new accounts were pinned to the stricter setting without being asked.
+     */
+    const result = await createAccount(label, passphrase, initial, stay);
 
     if (!result.ok) {
       setError(result.error ?? "That didn't work.");
@@ -447,6 +489,24 @@ function CreateAccount({
           </label>
         )}
 
+        <label className="flex gap-2.5 items-start cursor-pointer">
+          <input
+            type="checkbox"
+            checked={stay}
+            onChange={(e) => setStay(e.target.checked)}
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span className="text-sm leading-relaxed">
+            Stay unlocked in this tab
+            <span className="block text-xs text-muted mt-0.5">
+              Saves retyping this on every refresh. Closing the tab still locks it, so the next person to open the app
+              needs your passphrase. Leave it off on a device you don&apos;t control.
+            </span>
+          </span>
+        </label>
+
+        {/* The consent sits last, against the button, rather than above a
+            preference someone can skim past on the way to it. */}
         <label className="flex gap-2.5 items-start cursor-pointer">
           <input
             type="checkbox"

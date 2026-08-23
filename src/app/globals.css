@@ -9,21 +9,47 @@
    expressed as a token so a theme change never means hunting through markup.
    -------------------------------------------------------------------------- */
 :root {
-  --bg: oklch(99% 0.003 260);
-  --bg-subtle: oklch(97.2% 0.005 265);
+  /*
+   * Neutrals are warm, not blue.
+   *
+   * Every neutral used to sit at hue 265 — the cool blue-grey that ships as
+   * the default in most component libraries and reads instantly as "template".
+   * Moving the ramp to hue 75 at very low chroma gives paper rather than
+   * screen: the difference is subtle per-swatch and unmistakable across a
+   * whole page, and it costs nothing.
+   */
+  --bg: oklch(99% 0.004 85);
+  --bg-subtle: oklch(97.4% 0.006 80);
   --surface: oklch(100% 0 0);
-  --surface-2: oklch(98.2% 0.004 265);
-  --border: oklch(91% 0.006 265);
-  --border-strong: oklch(85% 0.009 265);
-  --text: oklch(22% 0.015 265);
-  --text-muted: oklch(50% 0.014 265);
-  --text-faint: oklch(62% 0.012 265);
+  --surface-2: oklch(98.3% 0.005 80);
+  --border: oklch(91.5% 0.007 78);
+  --border-strong: oklch(85% 0.010 78);
+  --text: oklch(21% 0.012 75);
+  --text-muted: oklch(49% 0.011 75);
+  --text-faint: oklch(62% 0.010 75);
 
-  --accent: oklch(54% 0.19 275);
-  --accent-hover: oklch(48% 0.19 275);
-  --accent-soft: oklch(95% 0.03 275);
-  --accent-border: oklch(85% 0.07 275);
-  --accent-text: oklch(45% 0.19 275);
+  /*
+   * The accent was oklch(54% 0.19 275) — high-chroma violet, which is the
+   * single most recognisable "AI product" signal there is. This is a deep
+   * blueprint teal instead: far enough from `info` (235) to stay distinct,
+   * nowhere near `good` (155), `warn` (78) or `bad` (25), and cool enough to
+   * hold its own against the warm paper without fighting it.
+   */
+  --accent: oklch(48% 0.098 205);
+  --accent-hover: oklch(41% 0.100 205);
+  --accent-soft: oklch(95.5% 0.022 200);
+  --accent-border: oklch(84% 0.052 202);
+  --accent-text: oklch(42% 0.098 205);
+
+  /*
+   * One warm ochre, reserved for the single most important figure on a page.
+   * Not a second brand colour — a highlighter.
+   */
+  --mark: oklch(58% 0.115 62);
+  --mark-soft: oklch(95% 0.035 70);
+  /* Darker than `--mark` because this one is only ever read as text, and it
+     sits on `--mark-soft` rather than on the page. */
+  --mark-text: oklch(41% 0.098 60);
 
   --good: oklch(58% 0.14 155);
   --good-soft: oklch(95% 0.04 155);
@@ -40,21 +66,29 @@
 }
 
 .dark {
-  --bg: oklch(17% 0.012 265);
-  --bg-subtle: oklch(20% 0.014 265);
-  --surface: oklch(21.5% 0.015 265);
-  --surface-2: oklch(25% 0.016 265);
-  --border: oklch(30% 0.016 265);
-  --border-strong: oklch(38% 0.018 265);
-  --text: oklch(96% 0.004 265);
-  --text-muted: oklch(74% 0.012 265);
-  --text-faint: oklch(60% 0.012 265);
+  /*
+   * Dark is a warm ink, not an inverted grey and emphatically not #000. The
+   * surfaces step in even increments so elevation reads without borders.
+   */
+  --bg: oklch(16.5% 0.008 75);
+  --bg-subtle: oklch(19.5% 0.009 75);
+  --surface: oklch(21.5% 0.010 75);
+  --surface-2: oklch(25% 0.011 75);
+  --border: oklch(30% 0.011 75);
+  --border-strong: oklch(38% 0.013 75);
+  --text: oklch(96% 0.004 80);
+  --text-muted: oklch(74% 0.009 78);
+  --text-faint: oklch(60% 0.009 78);
 
-  --accent: oklch(68% 0.16 275);
-  --accent-hover: oklch(74% 0.16 275);
-  --accent-soft: oklch(28% 0.05 275);
-  --accent-border: oklch(40% 0.09 275);
-  --accent-text: oklch(80% 0.12 275);
+  --accent: oklch(72% 0.098 200);
+  --accent-hover: oklch(78% 0.095 200);
+  --accent-soft: oklch(27% 0.032 202);
+  --accent-border: oklch(40% 0.055 202);
+  --accent-text: oklch(82% 0.085 200);
+
+  --mark: oklch(76% 0.105 68);
+  --mark-soft: oklch(29% 0.040 68);
+  --mark-text: oklch(85% 0.090 70);
 
   --good: oklch(72% 0.15 155);
   --good-soft: oklch(28% 0.05 155);
@@ -93,14 +127,74 @@
   --color-bad-soft: var(--bad-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
+  --color-mark: var(--mark);
+  --color-mark-soft: var(--mark-soft);
+  --color-mark-text: var(--mark-text);
 
   --shadow-card: var(--shadow);
   --shadow-pop: var(--shadow-lg);
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /*
+   * Two typefaces, both self-hosted by next/font at build time — no runtime
+   * request, so `font-src 'self'` stays intact and nothing is fetched from
+   * another company's server.
+   *
+   * IBM Plex Sans for everything you read and operate: engineered rather than
+   * neutral, with numerals that hold a column. Fraunces for headings: a
+   * variable serif with real warmth, which is what stops an analytical tool
+   * reading as cold — and which no template ships with.
+   */
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-display-face), Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  --radius-card: 0.875rem;
+  /*
+   * A type scale, so sizes stop being chosen one at a time. Ratios are close
+   * to a minor third at the top and tighten toward the body, which keeps
+   * headings dramatic without making paragraphs shout.
+   */
+  --text-display: 3.25rem;
+  --text-display--line-height: 1.04;
+  --text-display--letter-spacing: -0.028em;
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.024em;
+  --text-h2: 1.5rem;
+  --text-h2--line-height: 1.2;
+  --text-h2--letter-spacing: -0.018em;
+  --text-h3: 1.125rem;
+  --text-h3--line-height: 1.35;
+  --text-body-lg: 1.0625rem;
+  --text-body-lg--line-height: 1.6;
+  --text-label: 0.6875rem;
+  --text-label--line-height: 1.3;
+  --text-label--letter-spacing: 0.07em;
+
+  /*
+   * Three radii, not six. The audit found rounded-sm through rounded-3xl in
+   * use across the app with no rule behind which went where; inconsistent
+   * radius is one of the reliable tells of a generated interface.
+   */
+  --radius-card: 0.75rem;
+  --radius-control: 0.5rem;
+  --radius-pill: 999px;
+
+  /*
+   * Tailwind's own radius scale is redefined onto those three rather than the
+   * 219 call sites being edited one at a time. `rounded-lg` and `rounded-md`
+   * were never deliberate choices here — they are whatever was typed that day,
+   * which is precisely the problem — so mapping the scale means every existing
+   * utility lands on a chosen value and any new one does too. There is no
+   * fourth radius available to reach for.
+   */
+  --radius-xs: var(--radius-control);
+  --radius-sm: var(--radius-control);
+  --radius-md: var(--radius-control);
+  --radius-lg: var(--radius-card);
+  --radius-xl: var(--radius-card);
+  --radius-2xl: var(--radius-card);
+  --radius-3xl: var(--radius-card);
+  --radius-4xl: var(--radius-card);
 }
 
 @layer base {
@@ -125,8 +219,26 @@
   }
 
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    /*
+     * Fraunces is a variable font: SOFT rounds the terminals slightly and
+     * WONK allows its more characterful alternates. Both are dialled well
+     * back — enough to be recognisably itself, not enough to be a costume.
+     */
+    font-variation-settings: "SOFT" 12, "WONK" 1;
     letter-spacing: -0.021em;
     text-wrap: balance;
+  }
+
+  /*
+   * Every figure in this product is meant to be compared with another figure —
+   * scores against scores, prices against prices — so digits are tabular and
+   * same-width by default rather than per-component.
+   */
+  :where(.tabular-nums, table, [data-metric]) {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
   p, li {
@@ -314,10 +426,10 @@
   /* A tinted wash behind a phrase — heavier than colour alone, for the single
      most important number on a page. */
   .hl-mark {
-    background: var(--accent-soft);
-    color: var(--accent-text);
+    background: var(--mark-soft);
+    color: var(--mark-text);
     font-weight: 550;
-    border-radius: 0.3rem;
+    border-radius: var(--radius-control);
     padding: 0.05em 0.32em;
     box-decoration-break: clone;
   }

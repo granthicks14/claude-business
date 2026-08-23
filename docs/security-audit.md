@@ -223,7 +223,15 @@ are followed one hop at a time with the same check applied to each.
   account so it can be raised later without locking anyone out.
 - The derived key is non-extractable and held in memory. `sessionStorage` is
   used only when the user explicitly ticks "stay unlocked in this tab", which is
-  off by default and states its trade-off on screen.
+  off by default and states its trade-off on screen. Both the unlock form and
+  the create form offer the choice; the create form previously did not, so new
+  accounts were held to the stricter setting without being asked.
+- The gate keeps the route's subtree mounted behind the prompt (`hidden`,
+  `inert`, `aria-hidden`). Unmounting it made the App Router fall back to a
+  full document load on the next link click, which discarded the in-memory key
+  and re-locked the vault after a single navigation. Nothing sensitive renders
+  underneath — the store is empty until a key exists — and it is unreachable by
+  pointer, keyboard and screen reader alike.
 - The account registry is intentionally unencrypted, and holds only a label,
   timestamps and KDF parameters. No passphrase, no key, no verifier.
 - Wrong passphrase, missing vault and corrupt vault all return the same message.
