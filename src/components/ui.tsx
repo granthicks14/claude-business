@@ -17,6 +17,8 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 
+import { useReveal } from "./reveal";
+
 /* -------------------------------------------------------------------------- */
 /* Button                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -135,8 +137,11 @@ export function Card({
   className = "",
   as: Tag = "div",
   interactive,
-  /** Entrance delay in ms, for staggering a list. */
+  /** Entrance delay in ms, for staggering a list on mount. */
   delay,
+  /** For callers that drive their own entrance — see `useReveal`. */
+  ref,
+  style,
 }: {
   children: ReactNode;
   className?: string;
@@ -144,11 +149,16 @@ export function Card({
   /** Adds the hover lift. Only for cards that lead somewhere when clicked. */
   interactive?: boolean;
   delay?: number;
+  ref?: Ref<HTMLElement>;
+  style?: React.CSSProperties;
 }) {
   return (
     <Tag
+      ref={ref as Ref<never>}
       className={`card ${interactive ? "hover-lift" : ""} ${delay !== undefined ? "animate-stagger" : ""} ${className}`}
-      style={delay !== undefined ? ({ ["--d"]: `${delay}ms` } as React.CSSProperties) : undefined}
+      style={
+        delay !== undefined ? ({ ...style, ["--d"]: `${delay}ms` } as React.CSSProperties) : style
+      }
     >
       {children}
     </Tag>
@@ -320,8 +330,17 @@ export function Section({
   className?: string;
 }) {
   const Tag = `h${level}` as "h2" | "h3";
+  /*
+   * Every section on every page reveals as it is scrolled to.
+   *
+   * Put here rather than at ~200 call sites because `Section` is already the
+   * default container for this app — one change covers the whole product, and
+   * nothing can drift out of step with it. The hook attaches to the element
+   * that already exists, so no wrapper appears in the DOM and no layout moves.
+   */
+  const reveal = useReveal();
   return (
-    <section className={`${ruled ? "rule pt-7" : ""} ${className}`}>
+    <section ref={reveal.ref} className={`${ruled ? "rule pt-7" : ""} ${reveal.className} ${className}`}>
       {(eyebrow || title || action) && (
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 mb-5">
           <div className="min-w-0">

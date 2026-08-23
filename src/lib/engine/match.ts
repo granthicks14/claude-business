@@ -1,6 +1,6 @@
 import type { BusinessPreference, FounderProfile } from "../types";
 import { ageContext } from "./knowledge/age";
-import { GENERAL_INDUSTRY, INDUSTRIES } from "./knowledge/industries";
+import { INDUSTRIES } from "./knowledge/industries";
 import { detectCapabilities, detectEquipment } from "./knowledge/skills";
 import type { FounderSignals, Industry, ModelKind } from "./types";
 
@@ -114,7 +114,32 @@ export function analyseFounder(profile: FounderProfile): FounderSignals {
         ? "outside what you listed — matched to your skills"
         : "matched to your skills rather than a stated interest",
     }));
-  const industries = [...matched, ...topUp];
+  /*
+   * And if that still leaves a narrow field, widen it deliberately.
+   *
+   * A founder who says "food" and "cooking" matches food and home-life and
+   * nothing else, so every idea they were offered came from two markets — the
+   * app agreeing with them rather than helping them. Stated interests should
+   * lead a shortlist, not define its boundaries, so the search space is topped
+   * up to six markets with a spread across categories nothing else reached.
+   * Each carries its own reason, so a founder can see which suggestions came
+   * from what they said and which came from somewhere else entirely.
+   */
+  const covered = new Set([...matched, ...topUp].map((s) => s.industry.id));
+  const categories = new Set([...matched, ...topUp].map((s) => s.industry.category));
+  const contrast: typeof matched = [];
+  for (const industry of INDUSTRIES) {
+    if (covered.size + contrast.length >= 6) break;
+    if (covered.has(industry.id) || categories.has(industry.category)) continue;
+    categories.add(industry.category);
+    contrast.push({
+      industry,
+      strength: 4,
+      reason: "a different field entirely — worth seeing before you narrow down",
+    });
+  }
+
+  const industries = [...matched, ...topUp, ...contrast];
 
   const preferredKinds = new Set<ModelKind>();
   for (const pref of profile.preferences) {
@@ -204,7 +229,32 @@ function fallbackIndustries(capabilities: Set<string>): Industry[] {
     for (const id of byCapability[cap] ?? []) ids.add(id);
   }
   const matched = INDUSTRIES.filter((i) => ids.has(i.id));
-  return matched.length ? matched.slice(0, 4) : [GENERAL_INDUSTRY, INDUSTRIES.find((i) => i.id === "home-services")!];
+  if (matched.length) return matched.slice(0, 4);
+
+  /*
+   * Nothing matched, so give them a spread rather than a corner.
+   *
+   * This used to return exactly two industries — professional services and home
+   * services — which is why a founder who listed no skills at all got eight
+   * ideas that were all admin support and callouts. Not wrong, exactly, but it
+   * presented one narrow corner of the catalogue as though it were the whole
+   * answer, and the two profiles least able to judge that (somebody with no
+   * stated skills, and somebody who just wants the highest income) were the two
+   * most likely to see it.
+   *
+   * One industry per category, so the spread is across genuinely different
+   * kinds of work rather than four flavours of the same one. Ordering is fixed,
+   * so this stays deterministic.
+   */
+  const spread: Industry[] = [];
+  const categories = new Set<string>();
+  for (const industry of INDUSTRIES) {
+    if (categories.has(industry.category)) continue;
+    categories.add(industry.category);
+    spread.push(industry);
+    if (spread.length >= 8) break;
+  }
+  return spread;
 }
 
 /** True when a constraint clause forbids something the idea involves. */

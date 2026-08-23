@@ -147,8 +147,51 @@ function isAccountRecord(v: unknown): v is AccountRecord {
   );
 }
 
-function writeAccounts(accounts: AccountRecord[]): void {
-  window.localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+function writeAccounts(accounts: AccountRecord[]): boolean {
+  return trySet(ACCOUNTS_KEY, JSON.stringify(accounts));
+}
+
+/**
+ * A write that can fail without taking the caller down with it.
+ *
+ * localStorage throws on a full quota, and every throw in here happens after an
+ * `await`, so it escaped as an unhandled rejection and left the create form
+ * spinning on a button that would never come back. A storage failure is a thing
+ * to tell the user about, not an exception.
+ */
+function trySet(key: string, value: string): boolean {
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Case- and whitespace-insensitive, so "  Sam" cannot shadow "sam". */
+function sameLabel(a: string, b: string): boolean {
+  return a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
+}
+
+/**
+ * An id that belongs to nobody else.
+ *
+ * `newAccountId` is 12 random bytes, so a collision is not a practical worry —
+ * but the consequence if one ever happened is that `createAccount` writes its
+ * vault blob over a stranger's, destroying data that cannot be recovered. That
+ * is worth a loop and a lookup. Both the registry and the raw storage key are
+ * checked, because an orphaned blob with no registry row is exactly the state
+ * an interrupted create leaves behind.
+ */
+function freshAccountId(taken: AccountRecord[]): string | null {
+  const ids = new Set(taken.map((a) => a.id));
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const id = newAccountId();
+    if (ids.has(id)) continue;
+    if (window.localStorage.getItem(VAULT_PREFIX + id) !== null) continue;
+    return id;
+  }
+  return null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -356,19 +399,47 @@ export async function createAccount(label: string, passphrase: string, initialSt
   const problem = passphraseProblem(passphrase);
   if (problem) return { ok: false, error: problem };
 
-  const accounts = listAccounts();
-  if (accounts.some((a) => a.label.toLowerCase() === trimmed.toLowerCase())) {
+  // Checked once here so a duplicate name is rejected before a second of key
+  // derivation, and again below against a fresh read — see the note there.
+  if (listAccounts().some((a) => sameLabel(a.label, trimmed))) {
     return { ok: false, error: "There's already an account with that name on this browser." };
   }
 
   const salt = randomBytes(SALT_BYTES);
   const key = await deriveKey(passphrase, salt, KDF_ITERATIONS);
-  const id = newAccountId();
+
+  /*
+   * Everything from here reads the registry AS IT IS NOW, not as it was before
+   * the key derivation.
+   *
+   * `deriveKey` is 600k PBKDF2 iterations — roughly a second, sometimes several
+   * on a phone. The old code captured `listAccounts()` before that and wrote
+   * `[...accounts, record]` afterwards, so any account created in another tab
+   * during that window was erased from the registry by this write: its row
+   * vanished from the sign-in screen and its vault blob was left orphaned with
+   * nothing pointing at it. The passphrase still existed, and the data was
+   * still on disk, and the person could never get to it again.
+   *
+   * A read-modify-write over shared storage has to do its read at the last
+   * possible moment. The label check moves with it, because the same window let
+   * two tabs both pass a uniqueness test that was true when they started.
+   */
+  const accounts = listAccounts();
+  if (accounts.some((a) => sameLabel(a.label, trimmed))) {
+    return { ok: false, error: "There's already an account with that name on this browser." };
+  }
+
+  const id = freshAccountId(accounts);
+  if (!id) {
+    return { ok: false, error: "Couldn't allocate storage for a new account. Reload and try again." };
+  }
 
   // Write the vault before the registry entry: an account row pointing at a
   // vault that does not exist would be an account nobody can ever open.
   const blob = await encryptWith(key, JSON.stringify(initialState));
-  window.localStorage.setItem(VAULT_PREFIX + id, JSON.stringify(blob));
+  if (!trySet(VAULT_PREFIX + id, JSON.stringify(blob))) {
+    return { ok: false, error: "This browser is out of storage space, so the account wasn't created. Free some space and try again." };
+  }
 
   const record: AccountRecord = {
     id,
@@ -377,7 +448,18 @@ export async function createAccount(label: string, passphrase: string, initialSt
     lastSeenAt: Date.now(),
     kdf: { name: "PBKDF2-SHA256", iterations: KDF_ITERATIONS, salt: toBase64(salt) },
   };
-  writeAccounts([...accounts, record]);
+  // Re-read once more rather than reusing `accounts`: the blob write above is
+  // another moment another tab could have used.
+  if (!trySet(ACCOUNTS_KEY, JSON.stringify([...listAccounts(), record]))) {
+    // The blob is unreachable without a registry row, so take it back out
+    // rather than leaving a stranded copy of the user's data behind.
+    try {
+      window.localStorage.removeItem(VAULT_PREFIX + id);
+    } catch {
+      /* Nothing more to do — the account was not created either way. */
+    }
+    return { ok: false, error: "This browser is out of storage space, so the account wasn't created. Free some space and try again." };
+  }
 
   if (stayInTab) await rememberInTab(id, passphrase, salt, KDF_ITERATIONS);
 
@@ -480,14 +562,26 @@ export async function changePassphrase(current: string, next: string): Promise<V
   const newKey = await deriveKey(next, salt, KDF_ITERATIONS);
   const reblob = await encryptWith(newKey, plaintext);
 
-  window.localStorage.setItem(VAULT_PREFIX + accountId, JSON.stringify(reblob));
-  writeAccounts(
+  /*
+   * The salt is what the new passphrase will be derived from next time, so if
+   * the registry write fails after the blob write succeeds, the account is
+   * encrypted under a key nothing can reproduce. Written in that order and
+   * rolled back on failure: the old blob still opens with the old passphrase.
+   */
+  if (!trySet(VAULT_PREFIX + accountId, JSON.stringify(reblob))) {
+    return { ok: false, error: "This browser is out of storage space, so the passphrase wasn't changed." };
+  }
+  const saved = writeAccounts(
     listAccounts().map((a) =>
       a.id === accountId
         ? { ...a, kdf: { name: "PBKDF2-SHA256" as const, iterations: KDF_ITERATIONS, salt: toBase64(salt) } }
         : a,
     ),
   );
+  if (!saved) {
+    trySet(VAULT_PREFIX + accountId, JSON.stringify(blob));
+    return { ok: false, error: "This browser is out of storage space, so the passphrase wasn't changed." };
+  }
 
   // The remembered key was derived from the old passphrase, so it is stale the
   // moment this succeeds. Dropped rather than silently re-derived: staying

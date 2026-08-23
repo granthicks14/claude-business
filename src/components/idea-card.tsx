@@ -7,6 +7,8 @@ import { Icon } from "./icons";
 import { Badge, Card, ScoreRing } from "./ui";
 import { currency } from "@/lib/finance";
 import { BAND_LABEL, computeFit } from "@/lib/fit";
+import { useReveal } from "./reveal";
+import { ideaSummary } from "@/lib/idea-summary";
 import { useFitWeights } from "@/lib/intel";
 import { actions, useAppState } from "@/lib/store";
 import { LEVEL_LABEL, type BusinessIdea } from "@/lib/types";
@@ -24,22 +26,43 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
     () => computeFit(idea, profile, { withImprovements: false, weights }),
     [idea, profile, weights],
   );
+  // Derived, never stored — so ideas saved before this existed get it too.
+  const summary = useMemo(() => ideaSummary(idea), [idea]);
+  /*
+   * Staggered on scroll rather than on mount.
+   *
+   * `Card`'s own `delay` prop animates when the component mounts, which for a
+   * shortlist of twenty means the cards below the fold finish their entrance
+   * before the reader has scrolled to them — the stagger was being spent on an
+   * empty screen. Capped at eight steps so the last card in a long list is not
+   * left waiting seconds after the first.
+   */
+  const reveal = useReveal(index !== undefined ? Math.min(index, 8) * 55 : 0);
 
   return (
     <Card
       as="li"
-      className="p-4 sm:p-5 flex flex-col gap-4"
+      className={`p-4 sm:p-5 flex flex-col gap-4 ${reveal.className}`}
       interactive
-      // Capped so a long list doesn't leave the last card waiting seconds.
-      delay={index !== undefined ? Math.min(index, 8) * 55 : 0}
+      ref={reveal.ref}
+      style={reveal.style}
     >
+      {/*
+        The order is the whole point of this card.
+
+        Kind of business, then what it is, then who pays and how you earn —
+        before any score. A founder scanning ten of these is asking "what would
+        I be doing?", and the version that led with a fit score and a name was
+        answering "how well does the app rate a thing you cannot identify yet".
+      */}
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
             {rank !== undefined && (
               <span className="text-[11px] font-semibold text-faint tabular-nums">#{rank}</span>
             )}
-            <Badge tone={idea.mode === "local" ? "info" : idea.mode === "hybrid" ? "accent" : "neutral"}>
+            <Badge tone="accent">{summary.kind}</Badge>
+            <Badge tone={idea.mode === "local" ? "info" : "neutral"}>
               {idea.mode === "online" ? "Online" : idea.mode === "local" ? "Local" : "Hybrid"}
             </Badge>
             <Badge>{idea.category}</Badge>
@@ -51,12 +74,14 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
             )}
           </div>
 
-          <h3 className="font-semibold leading-snug">
+          {/* Noticeably heavier than the description under it: the title is the
+              thing being chosen between, and it now says what the business is. */}
+          <h3 className="text-h3 font-semibold leading-tight tracking-tight">
             <Link href={`/ideas/${idea.id}`} className="hover:text-accent-text transition-colors">
               {idea.name}
             </Link>
           </h3>
-          <p className="text-sm text-muted mt-1 leading-relaxed line-clamp-2">{idea.oneLiner}</p>
+          <p className="text-sm text-muted mt-1.5 leading-relaxed line-clamp-2">{summary.what}</p>
         </div>
 
         <Link href={`/ideas/${idea.id}`} aria-label={`Open ${idea.name}`} className="shrink-0">
@@ -64,14 +89,20 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
         </Link>
       </div>
 
+      {/* The two questions a beginner asks first, answered before the metrics. */}
+      <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2 text-[13px] pt-3 border-t border-border">
+        {summary.whoPays && <Metric label="Who pays" value={summary.whoPays} />}
+        <Metric label="How you earn" value={summary.howYouEarn} emphasis />
+      </div>
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-[13px] pt-3 border-t border-border">
-        <Metric label="Start cost" value={currency(idea.startupCost)} emphasis />
+        <Metric label="Start cost" value={currency(idea.startupCost)} />
         <Metric label="First $" value={`~${idea.speedToFirstRevenueDays}d`} />
         <Metric label="Difficulty" value={LEVEL_LABEL[idea.difficulty]} />
         <Metric
           label="Potential"
           value={`${currency(idea.monthlyRevenuePotential.low, { compact: true })}–${currency(idea.monthlyRevenuePotential.high, { compact: true })}`}
-          hint="Illustrative monthly range"
+          hint="Illustrative monthly range — an estimate, not a forecast"
         />
       </div>
 
@@ -119,7 +150,9 @@ function Metric({
       <div className="text-[11px] uppercase tracking-wide text-faint font-medium" title={hint}>
         {label}
       </div>
-      <div className={`font-medium tabular-nums truncate ${emphasis ? "text-accent-text" : ""}`}>{value}</div>
+      {/* Wraps rather than truncating: "parents of young athletes" is the
+          answer, and half of it is not. */}
+      <div className={`font-medium leading-snug ${emphasis ? "text-accent-text" : ""}`}>{value}</div>
     </div>
   );
 }

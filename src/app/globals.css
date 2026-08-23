@@ -395,6 +395,16 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+
+    /* Belt and braces. `Reveal` already refuses to arm under reduced motion, so
+       this class should never appear here — but the rule above kills animation
+       duration, and an element left holding the hidden state with no animation
+       to remove it would be invisible content. Never risk that on a preference
+       somebody set for medical reasons. */
+    .reveal-idle {
+      opacity: 1 !important;
+      transform: none !important;
+    }
   }
 }
 
@@ -441,6 +451,25 @@
   .animate-stagger {
     animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--d, 0ms);
+  }
+
+  /*
+     Scroll-triggered entrance. See `components/reveal.tsx` for why the hidden
+     state is applied by script rather than sitting in the markup: the class
+     below is never present unless there is an observer to remove it again.
+
+     Same easing and duration as `.animate-in`, so content that reveals on
+     scroll and content that animates on mount move identically — two entrance
+     styles on one page reads as a bug rather than as polish.
+  */
+  .reveal-idle {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  .reveal-in {
+    animation: fade-up 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--reveal-delay, 0ms);
   }
 
   .animate-pop {

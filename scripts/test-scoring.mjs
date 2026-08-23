@@ -23,6 +23,7 @@ writeFileSync(
 import { computeFit, SCORING_WEIGHTS } from "../src/lib/fit.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
 import { emptyProfile } from "../src/lib/store.ts";
+import { SLOP } from "../src/lib/engine/naming.ts";
 import type { FounderProfile } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -74,10 +75,27 @@ results.interestLeads = /food|recipe|meal|cook|cater|diet|kitchen|menu/i.test(
   foodIdeas.slice(0, 3).map((i) => i.name + " " + (i.summary ?? "")).join(" "),
 );
 
-// Two batches from one profile must not return the same businesses.
+/*
+ * "Generate more" must return businesses you have not already seen.
+ *
+ * This used to be asserted by generating twice with different seeds and no
+ * other input, and it passed for the wrong reason: the old generator picked a
+ * naming template off the seed, so the second batch was the SAME businesses
+ * wearing different names. Nothing about that helped a founder — it was variety
+ * in the label only, which is exactly what the descriptive titles removed.
+ *
+ * So it is asserted against the path every caller actually takes. Each of the
+ * generate buttons in 'components/lab/*' passes the shortlist as 'avoid', and
+ * that is what has to hold: ask again, get ideas you have not been shown.
+ */
 const b1 = generateIdeas(profile({ interests: ["sports"] }), { count: 10, seed: 1 });
-const b2 = generateIdeas(profile({ interests: ["sports"] }), { count: 10, seed: 9 });
+const b2 = generateIdeas(profile({ interests: ["sports"] }), {
+  count: 10,
+  seed: 9,
+  avoid: b1.map((i) => i.name),
+});
 results.repeatAcrossBatches = b1.filter((i) => b2.some((j) => j.name === i.name)).length;
+results.secondBatchIsFull = b2.length;
 
 // One batch must not be ten variations on one business model.
 results.distinctModels = new Set(b1.map((i) => i.model?.id ?? i.modelId ?? i.name)).size;
@@ -190,6 +208,85 @@ results.allFactorsExplained = computeFit(ideas[0], base).factors.every(
   (f) => typeof f.reason === "string" && f.reason.length > 10,
 );
 
+
+/* --------------------------------------------------- titles and diversity --- */
+
+/*
+ * The ten profiles from the brief's test matrix, generated wide.
+ *
+ * Titles are checked as a body of text rather than one at a time: a slop word
+ * that only shows up for one founder in ten is still going to show up, and a
+ * single sample would miss it.
+ */
+const MATRIX: [string, Partial<FounderProfile>][] = [
+  ["sports teenager", { ageBand: "15", interests: ["sports"], skills: ["video editing"], startingBudget: 60, hoursPerWeek: 8 }],
+  ["food", { interests: ["food", "cooking"], skills: ["cooking"] }],
+  ["developer", { interests: ["technology"], skills: ["coding", "data"] }],
+  ["creative", { interests: ["art", "design"], skills: ["design", "photography"] }],
+  ["no interests", { interests: [], hobbies: [], skills: [], experience: "" }],
+  ["no money", { interests: [], hobbies: [], skills: [], experience: "", startingBudget: 0, monthlyBudget: 0, hoursPerWeek: 5 }],
+  ["funded", { interests: [], hobbies: [], skills: [], experience: "", startingBudget: 15000, monthlyBudget: 800, hoursPerWeek: 40 }],
+  ["online", { interests: [], hobbies: [], skills: [], experience: "", preferences: ["online", "digital"] }],
+  ["local", { interests: [], hobbies: [], skills: [], experience: "", preferences: ["local", "physical"], hasTransportation: true }],
+  ["max income", { interests: [], hobbies: [], skills: [], experience: "", incomeGoal: 10000, payoffStyle: "moonshot", wantsScalable: true }],
+];
+
+const batches = MATRIX.map(([label, over]) => ({
+  label,
+  ideas: generateIdeas(profile(over), { angle: "balanced", count: 8, seed: 3 }),
+}));
+
+const allTitles = batches.flatMap((b) => b.ideas.map((i) => i.name));
+const sloppy = allTitles.filter((t) => SLOP.some((word) => t.toLowerCase().includes(word)));
+const tooLong = allTitles.filter((t) => t.length > 62);
+const doubled = allTitles.filter((t) => {
+  const words = t.toLowerCase().split(/\\s+/).filter((w) => w !== "for");
+  return new Set(words).size !== words.length;
+});
+const mistypedAcronym = allTitles.filter((t) => /\\b(Ai|Pc|Seo|Crm|Diy)\\b/.test(t));
+
+results.titles = {
+  generated: allTitles.length,
+  noSlop: sloppy.length === 0,
+  sloppyExamples: sloppy.slice(0, 3),
+  allWithinLength: tooLong.length === 0,
+  longestTitle: Math.max(...allTitles.map((t) => t.length)),
+  noRepeatedWords: doubled.length === 0,
+  doubledExamples: doubled.slice(0, 3),
+  acronymsIntact: mistypedAcronym.length === 0,
+  /* A title has to name something concrete, not just a feeling. */
+  everyTitleNamesTheBusiness: allTitles.every((t) => t.trim().split(/\\s+/).length >= 2),
+  /* Deterministic: the same profile twice gives the same titles. */
+  stable: JSON.stringify(generateIdeas(profile({ interests: ["food"] }), { angle: "balanced", count: 6, seed: 3 }).map((i) => i.name))
+    === JSON.stringify(generateIdeas(profile({ interests: ["food"] }), { angle: "balanced", count: 6, seed: 3 }).map((i) => i.name)),
+  uniqueWithinBatch: batches.every((b) => new Set(b.ideas.map((i) => i.name)).size === b.ideas.length),
+};
+
+const kindsPerBatch = batches.map((b) => new Set(b.ideas.map((i) => i.engine?.modelId)).size);
+const topicCounts = batches.map((b) => {
+  const counts = new Map<string, number>();
+  for (const i of b.ideas) {
+    const key = String(i.engine?.problemId);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return Math.max(...counts.values());
+});
+const categoriesPerBatch = batches.map((b) => new Set(b.ideas.map((i) => i.category)).size);
+
+results.diversity = {
+  everyProfileGetsAFullBatch: batches.every((b) => b.ideas.length === 8),
+  shortest: Math.min(...batches.map((b) => b.ideas.length)),
+  /* No batch may be four flavours of one business. */
+  noTopicMoreThanTwice: Math.max(...topicCounts) <= 2,
+  worstTopicRepeat: Math.max(...topicCounts),
+  spansModels: Math.min(...kindsPerBatch) >= 4,
+  fewestModels: Math.min(...kindsPerBatch),
+  /* The case that used to fail: no stated skills got two industries. */
+  spansCategories: Math.min(...categoriesPerBatch) >= 3,
+  fewestCategories: Math.min(...categoriesPerBatch),
+  categoriesForBlankProfile: new Set(batches.find((b) => b.label === "no interests")!.ideas.map((i) => i.category)).size,
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -279,7 +376,8 @@ check(
 check("ten ideas were asked for and ten came back, whatever the interest",
   Object.values(supply).every((n) => n === 10), JSON.stringify(supply));
 check("a stated interest still leads the shortlist", r.interestLeads);
-check("two batches from one profile do not repeat", r.repeatAcrossBatches === 0, `${r.repeatAcrossBatches} repeated`);
+check("asking for more never repeats what you already have", r.repeatAcrossBatches === 0, `${r.repeatAcrossBatches} repeated`);
+check("and still returns a full batch", r.secondBatchIsFull === 10, `${r.secondBatchIsFull} returned`);
 check("a batch spans several business models", r.distinctModels >= 4, `${r.distinctModels} distinct`);
 
 const d = r.differentiation;
@@ -292,6 +390,27 @@ check("a refusal to serve individual consumers is honoured",
 check("constraints narrow the answer without starving it",
   r.supplyUnderConstraints.b === 8 && r.supplyUnderConstraints.c === 8,
   JSON.stringify(r.supplyUnderConstraints));
+
+
+console.log("\n--- titles describe the business ---");
+check("no title uses a marketing slogan", r.titles.noSlop, r.titles.sloppyExamples.join(" | ") || `${r.titles.generated} titles checked`);
+check("every title fits on a card", r.titles.allWithinLength, `longest ${r.titles.longestTitle} chars`);
+check("no title repeats a word", r.titles.noRepeatedWords, r.titles.doubledExamples.join(" | ") || "clean");
+check("acronyms survive title-casing", r.titles.acronymsIntact);
+check("every title names something concrete", r.titles.everyTitleNamesTheBusiness);
+check("titles are stable across runs", r.titles.stable);
+check("no batch shows the same title twice", r.titles.uniqueWithinBatch);
+
+console.log("\n--- ideas do not collapse into one business ---");
+check("every profile gets a full batch", r.diversity.everyProfileGetsAFullBatch, `smallest ${r.diversity.shortest}`);
+check("no single problem appears more than twice", r.diversity.noTopicMoreThanTwice, `worst ${r.diversity.worstTopicRepeat}`);
+check("every batch spans several business models", r.diversity.spansModels, `fewest ${r.diversity.fewestModels}`);
+check("every batch spans several industries", r.diversity.spansCategories, `fewest ${r.diversity.fewestCategories}`);
+check(
+  "a founder who states no skills still sees a spread",
+  r.diversity.categoriesForBlankProfile >= 5,
+  `${r.diversity.categoriesForBlankProfile} categories`,
+);
 
 console.log(`\n${failures === 0 ? "ALL SCORING TESTS PASSED" : `${failures} FAILURES`}`);
 process.exit(failures ? 1 : 0);

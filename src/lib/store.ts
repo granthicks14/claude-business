@@ -32,6 +32,10 @@ import type {
   SelectedBusiness,
   StrategyVersion,
 } from "./types";
+import { BUSINESS_MODELS } from "./engine/knowledge/models";
+import { INDUSTRIES } from "./engine/knowledge/industries";
+import { businessTitle, looksAutoNamed } from "./engine/naming";
+import { topicForProblem } from "./engine/topics";
 import { SAMPLE_BUSINESS_ID, sampleProfile } from "./sample";
 import { isUnlocked, saveState } from "./vault";
 
@@ -277,6 +281,32 @@ function isSampleFounder(profile: unknown): boolean {
     .every((key) => JSON.stringify(stored[key]) === JSON.stringify(reference[key]));
 }
 
+/**
+ * Re-titles an idea the old generator named, and only one it named.
+ *
+ * Stored ideas carry whatever title they were given, and the old titles were
+ * brand names — "The Editing Desk", "Trip Planning, Done Properly" — which is
+ * the thing this release exists to fix. Leaving them means a founder's own
+ * shortlist stays unreadable until they regenerate it and lose their notes.
+ *
+ * Every engine-generated idea carries the industry, segment, problem and model
+ * it was built from, so the descriptive title can be rebuilt exactly. The guard
+ * is `looksAutoNamed`: a title the user typed in the Rename dialog will not
+ * match the old templates and is never touched, and an idea with no `engine`
+ * block (from the AI path, the intake or a pivot) has nothing to rebuild from
+ * and is left alone.
+ */
+function renameIfAutoNamed(idea: BusinessIdea): BusinessIdea {
+  if (!idea.engine || !idea.name || !looksAutoNamed(idea.name)) return idea;
+
+  const industry = INDUSTRIES.find((i) => i.id === idea.engine!.industryId);
+  const segment = industry?.segments.find((s) => s.id === idea.engine!.segmentId);
+  const model = BUSINESS_MODELS.find((m) => m.id === idea.engine!.modelId);
+  if (!industry || !segment || !model) return idea;
+
+  return { ...idea, name: businessTitle({ topic: topicForProblem(idea.engine.problemId), model, segment }) };
+}
+
 function migrate(raw: unknown): AppState {
   const base = emptyState();
   if (!raw || typeof raw !== "object") return base;
@@ -294,7 +324,9 @@ function migrate(raw: unknown): AppState {
     // `?? []` only defends against missing. A field that arrived as a string
     // passed straight through and blew up on the first `.map` in a page, which
     // is a blank screen the user can't get out of.
-    ideas: list(parsed.ideas),
+    ideas: list<AppState["ideas"][number]>(parsed.ideas)
+      .filter((i) => !!i && typeof i === "object")
+      .map(renameIfAutoNamed),
     businesses: list<AppState["businesses"][number]>(parsed.businesses)
       .filter((b) => !!b && typeof b === "object")
       .map((b) => ({

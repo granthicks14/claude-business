@@ -31,6 +31,7 @@ import {
   LinkButton,
   Meter,
   ScoreRing,
+  Section,
   SectionHeader,
   Tabs,
   Textarea,
@@ -44,6 +45,7 @@ import { useBusinessAnalysis } from "@/lib/explain";
 import { currency } from "@/lib/finance";
 import { download, ideaToMarkdown, slugify } from "@/lib/export";
 import { useIdeaGeneration } from "@/lib/ideas";
+import { ideaSummary, upperFirst } from "@/lib/idea-summary";
 import { computeScore } from "@/lib/scoring";
 import { actions, useAppState } from "@/lib/store";
 import { currentIntelligence } from "@/lib/useAI";
@@ -87,6 +89,7 @@ function IdeaDetail() {
   // Called before the early return so hook order stays stable when an idea is
   // missing — the hook itself handles null.
   const analysis = useBusinessAnalysis(idea ?? null, state.profile);
+  const summaryOrNull = useMemo(() => (idea ? ideaSummary(idea) : null), [idea]);
 
   if (!idea) {
     return (
@@ -99,6 +102,10 @@ function IdeaDetail() {
       </Card>
     );
   }
+
+  // Non-null past the guard above; the memo has to run before it, since hooks
+  // cannot be called conditionally.
+  const summary = summaryOrNull!;
 
   const existingBusiness = state.businesses.find((b) => b.ideaId === idea.id && !b.archivedAt) ?? null;
   const scoreDetail = computeScore(idea, state.profile);
@@ -192,7 +199,8 @@ function IdeaDetail() {
               {idea.pivotedFrom && <Badge tone="accent">Pivot</Badge>}
               {idea.source === "surprise" && <Badge tone="warn">Surprise me</Badge>}
             </div>
-            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">{idea.name}</h1>
+            <Badge tone="accent">{summary.kind}</Badge>
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight mt-2">{idea.name}</h1>
             <p className="text-muted mt-2 leading-relaxed">{idea.oneLiner}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -242,6 +250,35 @@ function IdeaDetail() {
           Pivot this idea
         </Button>
       </div>
+
+      {/*
+        "What is this?", above everything a reader has to opt into.
+
+        The page already held all of this — under seven tabs, behind a Deep Dive
+        toggle. That is the right structure for someone comparing two finalists
+        and the wrong one for someone who has just clicked a title and does not
+        yet know whether the business involves a van. Four facts, always
+        visible, no interaction required: what it is, who pays, how the money
+        arrives, and what you would spend a Tuesday doing.
+      */}
+      <Section eyebrow="What is this?" title="The business in four lines" ruled={false}>
+        <dl className="max-w-2xl">
+          {[
+            ["What it is", summary.what],
+            ...(summary.whoPays ? [["Who pays you", upperFirst(summary.whoPays)] as const] : []),
+            ["How you earn", summary.howYouEarn],
+            ["What you'd actually do", upperFirst(summary.how)],
+          ].map(([label, value], i) => (
+            <div key={label} className={`py-3 ${i > 0 ? "rule" : ""}`}>
+              <dt className="eyebrow">{label}</dt>
+              {/* Left-aligned prose, not right-aligned figures: these are
+                  sentences, and DataList sets its values tabular and flush
+                  right for numbers. */}
+              <dd className="text-sm leading-relaxed mt-1.5">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </Section>
 
       <QuickActions
         ideaId={idea.id}

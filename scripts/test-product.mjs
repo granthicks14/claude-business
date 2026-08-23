@@ -32,6 +32,7 @@ import { finalDecision } from "../src/lib/intel/decision.ts";
 import { analyseInterviews } from "../src/lib/customers/interviews.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
 import { actions, effectiveProfile, emptyProfile, emptyState, hydrateFrom, snapshot } from "../src/lib/store.ts";
+import { looksAutoNamed } from "../src/lib/engine/naming.ts";
 import type { FounderProfile, SelectedBusiness } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -299,6 +300,49 @@ results.additive = {
   legacySampleGetsItsFounderBack: effectiveProfile(backfilled).name === sampleProfile().name,
 };
 
+
+/* ----------------------------------------------- re-titling stored ideas --- */
+
+/*
+ * Ideas already in a vault carry the old brand-name titles, which is the thing
+ * this release exists to fix. They are rebuilt on load from the industry,
+ * segment, problem and model each idea already records — but only when the
+ * stored name is still one the old generator produced. A name the founder typed
+ * themselves is theirs.
+ */
+const engineIdea = generateIdeas(base, { angle: "balanced", count: 1, seed: 5 })[0];
+
+const stored = (name, over = {}) => ({ ...engineIdea, id: "stored_" + name.length, name, ...over });
+
+hydrateFrom({
+  ...emptyState(),
+  ideas: [
+    stored("The Editing Desk"),
+    stored("Trip Planning, Done Properly"),
+    stored("Anglers Collective"),
+    stored("Mum's Van Cleaning Round"),                       // renamed by hand
+    { ...engineIdea, id: "no_engine", name: "The Editing Desk", engine: undefined },
+  ],
+});
+const titled = snapshot().ideas;
+const byId = (id) => titled.find((i) => i.id === id);
+
+results.retitle = {
+  autoNamesRewritten: titled
+    .filter((i) => i.id !== "no_engine" && i.name !== "Mum's Van Cleaning Round")
+    .every((i) => !looksAutoNamed(i.name)),
+  rewrittenExamples: titled.slice(0, 3).map((i) => i.name),
+  /* The one the founder named must survive untouched. */
+  handNamedKept: titled.some((i) => i.name === "Mum's Van Cleaning Round"),
+  /* Nothing to rebuild from means nothing is touched. */
+  noEngineLeftAlone: byId("no_engine")?.name === "The Editing Desk",
+  everyRewriteDescribes: titled
+    .filter((i) => i.id !== "no_engine")
+    .every((i) => i.name.trim().split(" ").length >= 2),
+  countUnchanged: titled.length === 5,
+  idsUnchanged: titled.every((i) => typeof i.id === "string" && i.id.length > 0),
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -426,6 +470,13 @@ check("a profile that IS the example founder, verbatim, is cleared on load", r.a
 check("and the example still works afterwards", r.additive.repairKeepsTheSampleUsable);
 check("a profile the user has since edited is left alone", r.additive.editedProfileIsKept);
 check("an example saved before it carried a founder gets one back", r.additive.legacySampleGetsItsFounderBack);
+
+console.log("\n--- ideas already saved get readable titles ---");
+check("old auto-generated names are rebuilt", r.retitle.autoNamesRewritten, r.retitle.rewrittenExamples.join(" | "));
+check("a name the founder typed is never overwritten", r.retitle.handNamedKept);
+check("an idea with nothing to rebuild from is left alone", r.retitle.noEngineLeftAlone);
+check("every rebuilt title describes a business", r.retitle.everyRewriteDescribes);
+check("nothing is added or dropped in the process", r.retitle.countUnchanged && r.retitle.idsUnchanged);
 
 console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

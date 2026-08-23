@@ -5,6 +5,8 @@ import { INDUSTRIES } from "./knowledge/industries";
 import { BUSINESS_MODELS } from "./knowledge/models";
 import { capabilityLabel } from "./knowledge/skills";
 import { analyseFounder, structuralAvoidance, violatesConstraint } from "./match";
+import { businessTitle } from "./naming";
+import { topicForProblem } from "./topics";
 import type { BusinessModel, CustomerSegment, FounderSignals, Industry, IndustryProblem } from "./types";
 
 /**
@@ -303,117 +305,21 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
 /* Turning a candidate into a full idea                                       */
 /* -------------------------------------------------------------------------- */
 
-const NUMBER_WORDS = ["", "one", "two", "three", "four", "five", "six", "seven", "eight"];
-
-function nameFor(c: Candidate, seed: number): string {
-  const topic = topicFor(c);
-  const template = c.model.nameTemplates[seed % c.model.nameTemplates.length];
-  const segmentWord = c.segment.short;
-
-  return titleCase(
-    template
-      .replace("{topic}", topic)
-      .replace("{segment}", segmentWord)
-      .replace("{location}", "Local")
-      .replace("{n}", NUMBER_WORDS[(seed % 4) + 3] ?? "four"),
-  );
+/**
+ * The title describes the business. See `naming.ts` for why, and for the shape.
+ *
+ * Deliberately ignores `seed`: rotating between three brand-name templates was
+ * what produced "The Editing Desk" one run and "Editing, Done Properly" the
+ * next, neither of which said who it was for. There is one right way to
+ * describe a business and it should not change between runs.
+ */
+function nameFor(c: Candidate): string {
+  return businessTitle({ topic: topicFor(c), model: c.model, segment: c.segment });
 }
 
-/** A short noun phrase for what the business is about. */
+/** A short noun phrase for what the business is about. See `topics.ts`. */
 function topicFor(c: Candidate): string {
-  const map: Record<string, string> = {
-    "where-to-go": "spot guides",
-    "gear-confusion": "gear advice",
-    "skill-gap": "skills coaching",
-    "trip-planning": "trip planning",
-    "gear-maintenance": "gear care",
-    "no-time": "short-session training",
-    "no-accountability": "accountability coaching",
-    "conflicting-info": "straight-answer coaching",
-    "injury-fear": "safe-start training",
-    "gym-retention": "member retention",
-    "editing-time": "editing",
-    "no-ideas": "content planning",
-    repurposing: "clip repurposing",
-    "on-camera-fear": "on-camera coaching",
-    monetisation: "audience monetisation",
-    "no-shows": "reliable callouts",
-    "small-jobs": "small jobs",
-    "seasonal-crunch": "seasonal upkeep",
-    trust: "trusted home help",
-    "turnover-speed": "tenancy turnarounds",
-    "admin-drowning": "admin rescue",
-    "quote-slowness": "fast quoting",
-    "no-process": "process documentation",
-    "cash-visibility": "job profitability",
-    "chasing-payment": "invoice chasing",
-    "generic-teaching": "one-to-one tuition",
-    "intermediate-wall": "intermediate coaching",
-    "practice-gap": "practice accountability",
-    "exam-technique": "exam technique",
-    "training-cost": "practical training",
-    "decision-fatigue": "meal planning",
-    "restriction-cooking": "restriction-friendly cooking",
-    "small-catering": "small-event catering",
-    "menu-photos": "food photography",
-    "scaling-recipes": "recipe costing",
-    "left-alone": "midday visits",
-    "conflicting-training": "behaviour coaching",
-    "holiday-care": "holiday pet care",
-    "grooming-access": "mobile grooming",
-    "vet-costs": "preventive pet care",
-    "buying-blind": "pre-purchase inspections",
-    presentation: "vehicle presentation",
-    "garage-trust": "quote checking",
-    "project-stalls": "project rescue",
-    "fleet-downtime": "fleet upkeep",
-    "skill-plateau": "gameplay review",
-    "hardware-waste": "build advice",
-    "stream-production": "stream production",
-    "prep-time": "session prep",
-    "finding-players": "group matching",
-    "practice-plateau": "practice coaching",
-    "unfinished-tracks": "track finishing",
-    "bad-audio": "audio cleanup",
-    "booking-risk": "performer booking",
-    "gear-choices": "studio setup",
-    fit: "alterations",
-    "no-system": "wardrobe systems",
-    "listing-quality": "listing makeovers",
-    "occasion-panic": "occasion styling",
-    "adaptive-gap": "adaptive clothing",
-    "manual-work": "workflow automation",
-    "dead-website": "website rescue",
-    "tool-sprawl": "systems tidy-up",
-    "tech-helplessness": "tech support",
-    capacity: "overflow production",
-    "no-idea-where": "AI opportunity audits",
-    "bad-output": "AI workflow setup",
-    "repetitive-writing": "document automation",
-    "trust-accuracy": "AI review training",
-    "workflow-glue": "tool integration",
-    "nothing-specific": "specialist products",
-    "listing-conversion": "listing optimisation",
-    sourcing: "sourcing help",
-    margins: "margin analysis",
-    "gift-generic": "personal gifts",
-    "first-timer": "event planning",
-    "supplier-risk": "supplier vetting",
-    "day-of-chaos": "day-of coordination",
-    "photo-regret": "event photography",
-    "empty-venue": "venue bookings",
-    "no-feedback": "performance review",
-    "recruiting-maze": "recruiting guidance",
-    "club-admin": "club administration",
-    "highlight-gap": "highlight reels",
-    "injury-prevention": "injury prevention",
-    "decision-overload": "household systems",
-    stuff: "decluttering",
-    "no-village": "parent support",
-    "admin-for-others": "carer admin",
-    "home-costs": "household bill reviews",
-  };
-  return map[c.problem.id] ?? `${c.industry.label.toLowerCase()} help`;
+  return topicForProblem(c.problem.id, c.industry.label);
 }
 
 function titleCase(text: string): string {
@@ -619,7 +525,7 @@ export function materializeCandidate(c: Candidate, profile: FounderProfile, seed
 
   const idea: BusinessIdea = {
     id: newId("idea"),
-    name: nameFor(c, seed),
+    name: nameFor(c),
     oneLiner: `${titleCase(topic)} for ${c.segment.label}. In practice, ${c.model.mechanism}.`,
     whyThisFitsYou: whyThisFits(c, signals, cost),
     problem: c.problem.statement + ".",
@@ -685,9 +591,39 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
   const usedSegments = new Map<string, number>();
   const usedProblems = new Set<string>();
   const usedPairs = new Set<string>();
+  /*
+   * Two more axes, because model id and segment were not enough.
+   *
+   * Different model *ids* can be the same *kind* of business — "done-for-you",
+   * "content-service" and "setup-service" are all a person doing work for one
+   * client — so a batch could pass the per-model cap and still be six versions
+   * of "you do it for them". And the same *topic* could arrive through several
+   * industries, which is how a founder who said "sports" ended up looking at
+   * highlight reels as a service, as an agency and as a productised service and
+   * being told those were three ideas.
+   */
+  const usedKinds = new Map<string, number>();
+  const usedTopics = new Map<string, number>();
+  // And a cap per market, so one strong interest cannot fill the whole batch.
+  const usedIndustries = new Map<string, number>();
   const chosen: BusinessIdea[] = [];
 
-  // Rotate the starting point so regenerating produces a different, still-ranked set.
+  /*
+   * Rotate the starting point so regenerating lands somewhere new.
+   *
+   * Deliberately a small stride. A large one does produce a completely
+   * different batch, and it does it by rotating the founder's best matches off
+   * the front — which trades the thing the shortlist is for against the
+   * appearance of variety.
+   *
+   * Variety on regeneration is not this function's job anyway: every caller
+   * passes `avoid` with the names already on the shortlist (see
+   * `components/lab/*`), so "generate more" cannot return what you already
+   * have. The old code got that guarantee a different way — it picked a naming
+   * template off the seed, so a second batch was the same businesses under
+   * different names. That looked like variety in a test and was worth nothing
+   * to a founder reading the list.
+   */
   const offset = seed % Math.max(1, Math.min(candidates.length, 7));
   const ordered = [...candidates.slice(offset), ...candidates.slice(0, offset)];
 
@@ -699,7 +635,12 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
     const segmentKey = `${candidate.industry.id}:${candidate.segment.id}`;
     const segmentUses = usedSegments.get(segmentKey) ?? 0;
     const pairKey = `${candidate.model.id}@${segmentKey}`;
+    const kindUses = usedKinds.get(candidate.model.kind) ?? 0;
+    const topic = topicFor(candidate);
+    const topicUses = usedTopics.get(topic) ?? 0;
     if (modelUses >= 2 || segmentUses >= 2) continue;
+    const industryUses = usedIndustries.get(candidate.industry.id) ?? 0;
+    if (kindUses >= 2 || topicUses >= 2 || industryUses >= 3) continue;
     if (usedPairs.has(pairKey)) continue;
     if (usedProblems.has(`${candidate.industry.id}:${candidate.problem.id}`)) continue;
 
@@ -710,6 +651,9 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
 
     usedModels.set(candidate.model.id, modelUses + 1);
     usedSegments.set(segmentKey, segmentUses + 1);
+    usedKinds.set(candidate.model.kind, kindUses + 1);
+    usedTopics.set(topic, topicUses + 1);
+    usedIndustries.set(candidate.industry.id, industryUses + 1);
     usedPairs.add(pairKey);
     usedProblems.add(`${candidate.industry.id}:${candidate.problem.id}`);
     chosen.push(idea);
