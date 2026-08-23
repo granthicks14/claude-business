@@ -35,7 +35,7 @@ import {
   type SiteType,
   type StyleSpec,
 } from "@/lib/hostinger";
-import { actions, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, useAppState } from "@/lib/store";
 import {
   TONE_LABEL,
   auditConsistency,
@@ -69,7 +69,7 @@ export default function WebsitePage() {
 }
 
 function Website({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const toast = useToast();
 

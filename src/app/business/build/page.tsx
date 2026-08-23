@@ -25,7 +25,7 @@ import {
   toolsFor,
   type PromptKind,
 } from "@/lib/prompts";
-import { actions, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -57,7 +57,7 @@ export default function BuildPage() {
 
 function Builder({ business }: { business: SelectedBusiness }) {
   const params = useSearchParams();
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const toast = useToast();
 

@@ -8,7 +8,7 @@ import { SignArt } from "@/components/art";
 import { Badge, Card, CopyButton, EmptyState, Hi, LinkButton, Meter, SectionHeader, Tabs } from "@/components/ui";
 import { LANDING_NOTE, landingReadiness, landingVariants, type Angle } from "@/lib/landing";
 import { useBusinessAnalysis } from "@/lib/explain";
-import { useAppState } from "@/lib/store";
+import { effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -28,7 +28,7 @@ export default function LandingPage() {
 }
 
 function Landing({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const [angle, setAngle] = useState<Angle>("problem");
 

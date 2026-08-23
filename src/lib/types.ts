@@ -825,6 +825,17 @@ export interface SelectedBusiness {
   research?: ResearchRecord;
   /** Substantial strategy changes, newest first. See `strategy.ts`. */
   strategyVersions?: StrategyVersion[];
+  /**
+   * The founder this business is scored against, when it isn't the user.
+   *
+   * Only the worked example sets this. It exists because the example needs a
+   * founder to be scored against — fit, affordability, hours — and the previous
+   * way of supplying one was to write the invented founder into `AppState.profile`,
+   * which overwrote the real person's profile and could not be undone. Carrying
+   * her on the business instead means the example can be complete without ever
+   * touching the user's own work. See `effectiveProfile` in `store.ts`.
+   */
+  demoProfile?: FounderProfile;
 }
 
 /** Which system answers generation requests. */
@@ -860,6 +871,13 @@ export interface AppState {
   ideas: BusinessIdea[];
   businesses: SelectedBusiness[];
   activeBusinessId: ID | null;
+  /**
+   * What was active before the worked example was opened.
+   *
+   * So that clearing the example returns the founder to the business they were
+   * actually working on, rather than to whichever one happens to sort first.
+   */
+  previousBusinessId?: ID | null;
   journal: JournalEntry[];
   conversations: AIConversation[];
   niches: NicheReport[];

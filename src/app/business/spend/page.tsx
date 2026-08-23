@@ -22,7 +22,7 @@ import {
   startupTiers,
   type OptionLabel,
 } from "@/lib/spend";
-import { useAppState } from "@/lib/store";
+import { effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -52,7 +52,7 @@ const TONE: Record<OptionLabel, "good" | "accent" | "info" | "neutral"> = {
 };
 
 function Spend({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const [amount, setAmount] = useState(100);
 

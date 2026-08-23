@@ -7,7 +7,7 @@ import { Icon } from "@/components/icons";
 import { Markdown } from "@/components/markdown";
 import { PageHeader, Ready } from "@/components/page";
 import { Badge, Button, Card, Spinner, Textarea } from "@/components/ui";
-import { activeBusiness, newId, update, useAppState } from "@/lib/store";
+import { activeBusiness, effectiveProfile, newId, update, useAppState } from "@/lib/store";
 import type { AIMessage } from "@/lib/types";
 import { useAIStatus, useIntelligence } from "@/lib/useAI";
 
@@ -150,7 +150,7 @@ function Coach() {
         headers: { "content-type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          profile: state.profile,
+          profile: effectiveProfile(state),
           business,
           journal: state.journal.slice(0, 12),
           messages: [...messages, userMessage].map((m) => ({ role: m.role, content: m.content })),

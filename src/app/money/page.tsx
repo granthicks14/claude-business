@@ -25,7 +25,7 @@ import {
 import { Explain } from "@/components/teach";
 import { currency, customersFromTraffic, runMoneyModel } from "@/lib/finance";
 import { ECONOMICS_DISCLAIMER, SENSITIVITY_NOTE, useIntel } from "@/lib/intel";
-import { actions, newId, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
 import type { Customer, ExpenseEntry, MoneyModelInputs, RevenueEntry, SelectedBusiness } from "@/lib/types";
 
 export default function MoneyPage() {
@@ -198,7 +198,7 @@ function Levers() {
 /* ------------------------------------------------------------------ simulator */
 
 function Simulator({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const inputs = business.money;
   const result = useMemo(() => runMoneyModel(inputs, profile.incomeGoal), [inputs, profile.incomeGoal]);
 

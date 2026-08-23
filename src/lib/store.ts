@@ -32,6 +32,7 @@ import type {
   SelectedBusiness,
   StrategyVersion,
 } from "./types";
+import { SAMPLE_BUSINESS_ID, sampleProfile } from "./sample";
 import { isUnlocked, saveState } from "./vault";
 
 export const STATE_VERSION = 1;
@@ -128,6 +129,7 @@ export function emptyState(): AppState {
     ideas: [],
     businesses: [],
     activeBusinessId: null,
+    previousBusinessId: null,
     journal: [],
     conversations: [],
     niches: [],
@@ -250,10 +252,36 @@ export function looksLikeBackup(raw: unknown): boolean {
   );
 }
 
+/**
+ * Is this stored profile the worked example's founder, verbatim?
+ *
+ * It can only have got there one way: an earlier build of `loadSample` wrote
+ * the example's founder over whoever's profile was in the account, and there
+ * was no way back. Anyone who opened the demo before this fix is still carrying
+ * her — named, aged, living in Bristol with a pressure washer — and the app has
+ * been scoring their real business against her ever since.
+ *
+ * Compared field by field against the constant, ignoring only `updatedAt`. An
+ * exact match means nobody has edited it, so it is safe to clear; a profile the
+ * user has since touched will not match and is left alone. The original cannot
+ * be recovered — it was overwritten in the vault before this code existed — so
+ * clearing it hands them back the ordinary "your profile is empty" prompt,
+ * which is at least true.
+ */
+function isSampleFounder(profile: unknown): boolean {
+  if (!profile || typeof profile !== "object") return false;
+  const stored = profile as Record<string, unknown>;
+  const reference = sampleProfile() as unknown as Record<string, unknown>;
+  return Object.keys(reference)
+    .filter((key) => key !== "updatedAt")
+    .every((key) => JSON.stringify(stored[key]) === JSON.stringify(reference[key]));
+}
+
 function migrate(raw: unknown): AppState {
   const base = emptyState();
   if (!raw || typeof raw !== "object") return base;
   const parsed = raw as Partial<AppState>;
+  const storedProfile = isSampleFounder(parsed.profile) ? undefined : parsed.profile;
   // Shallow-merge against the current empty state so fields added in later
   // versions get sensible defaults instead of `undefined`.
   return {
@@ -261,7 +289,7 @@ function migrate(raw: unknown): AppState {
     ...parsed,
     version: STATE_VERSION,
     settings: { ...base.settings, ...(parsed.settings ?? {}) },
-    profile: { ...base.profile, ...(parsed.profile ?? {}) },
+    profile: { ...base.profile, ...(storedProfile ?? {}) },
     stats: { ...base.stats, ...(parsed.stats ?? {}) },
     // `?? []` only defends against missing. A field that arrived as a string
     // passed straight through and blew up on the first `.map` in a page, which
@@ -271,6 +299,10 @@ function migrate(raw: unknown): AppState {
       .filter((b) => !!b && typeof b === "object")
       .map((b) => ({
         ...b,
+        // A sample stored before `demoProfile` existed has no founder to be
+        // scored against, and the one it used to borrow has just been cleared
+        // out of `profile` above. Put hers back where she belongs.
+        demoProfile: b.id === SAMPLE_BUSINESS_ID ? (b.demoProfile ?? sampleProfile()) : b.demoProfile,
         competitors: list(b.competitors),
         models: list(b.models),
         personas: list(b.personas),
@@ -427,21 +459,29 @@ export const actions = {
   /**
    * Loads the worked example alongside the user's own work.
    *
-   * Deliberately additive: the sample is pushed onto `businesses` and made
-   * active, so nothing the user has done is touched. `clearSample` removes
-   * exactly that one entry. A sample that overwrote real work — or that
-   * couldn't be told apart from it afterwards — would be much worse than no
-   * sample at all.
+   * Additive, and now actually additive. It writes exactly two things: one
+   * entry on `businesses`, and the pointer that makes it active. `clearSample`
+   * removes exactly that one entry.
+   *
+   * It used to take a profile as well and write it to `s.profile`, guarded by
+   * `completedOnboarding`. That guard did not hold: the flag is only set by
+   * `/onboarding`, `/describe` and `/settings`, so anybody who arrived through
+   * the idea intake, the analyser, the opportunity finder or the lab had real
+   * work and a `false` flag — and opening the example replaced their founder
+   * profile with an invented one, marked it complete, and left no way back.
+   * The example's founder rides on the business now (`demoProfile`), which is
+   * where a fictional person belongs.
    */
-  loadSample(business: SelectedBusiness, profile: FounderProfile) {
+  loadSample(business: SelectedBusiness) {
     update((s) => {
       const withoutSample = s.businesses.filter((b) => b.id !== business.id);
       return {
         ...s,
-        // Only borrow the example profile when the user hasn't written their own.
-        profile: s.profile.completedOnboarding ? s.profile : profile,
         businesses: [business, ...withoutSample],
         activeBusinessId: business.id,
+        // Remembered so clearing the example puts the user back where they were
+        // rather than on whichever business happens to sort first.
+        previousBusinessId: s.activeBusinessId === business.id ? s.previousBusinessId : s.activeBusinessId,
       };
     });
   },
@@ -449,10 +489,15 @@ export const actions = {
   clearSample(sampleId: ID) {
     update((s) => {
       const businesses = s.businesses.filter((b) => b.id !== sampleId);
+      const restored =
+        s.previousBusinessId && businesses.some((b) => b.id === s.previousBusinessId)
+          ? s.previousBusinessId
+          : (businesses[0]?.id ?? null);
       return {
         ...s,
         businesses,
-        activeBusinessId: s.activeBusinessId === sampleId ? (businesses[0]?.id ?? null) : s.activeBusinessId,
+        activeBusinessId: s.activeBusinessId === sampleId ? restored : s.activeBusinessId,
+        previousBusinessId: null,
       };
     });
   },
@@ -822,4 +867,38 @@ function estimatePrice(idea: BusinessIdea): number {
 export function activeBusiness(s: AppState): SelectedBusiness | null {
   if (!s.activeBusinessId) return null;
   return s.businesses.find((b) => b.id === s.activeBusinessId) ?? null;
+}
+
+/**
+ * The profile the *active business* should be scored against.
+ *
+ * Almost always the user's own. The exception is the worked example, which
+ * carries its own invented founder on `demoProfile` — because a demo has to be
+ * scored against somebody, and the previous way of arranging that was to write
+ * her into `s.profile`, which silently replaced the real person's profile.
+ *
+ * The rule for call sites: use this on pages that read the active business, and
+ * keep `s.profile` on pages about the founder themselves (`/profile`,
+ * `/onboarding`, `/describe`, `/settings`, the homepage greeting) or about
+ * ideas not yet chosen. Getting that backwards is how a fictional founder ends
+ * up greeting somebody by name.
+ *
+ * Declared at module scope so `useAppState` can cache on a stable selector
+ * identity rather than a fresh arrow every render.
+ */
+export function effectiveProfile(s: AppState): FounderProfile {
+  return profileForBusiness(s, activeBusiness(s));
+}
+
+/**
+ * The same question for a business that isn't the active one — an archived one
+ * being retrospected, say. Kept separate because a page showing several
+ * businesses at once must read each one's founder, not whichever happens to be
+ * active behind it.
+ */
+export function profileForBusiness(
+  s: AppState,
+  business: SelectedBusiness | null | undefined,
+): FounderProfile {
+  return business?.demoProfile ?? s.profile;
 }

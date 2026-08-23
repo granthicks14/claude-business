@@ -17,7 +17,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
-import { actions, newId, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
 import type { Level, SelectedBusiness, Task } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
 
@@ -93,7 +93,7 @@ function Tasks({ business }: { business: SelectedBusiness }) {
 /* -------------------------------------------------------------------------- */
 
 function RoadmapView({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Roadmap>("roadmap");
   const toast = useToast();
   const [adding, setAdding] = useState(false);
@@ -340,7 +340,7 @@ function AddTaskDialog({ open, onClose, businessId }: { open: boolean; onClose: 
 /* -------------------------------------------------------------------------- */
 
 function FirstMoneyView({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<FirstMoney>("firstMoney");
   const [plan, setPlan] = useState<FirstMoney | null>(null);
   const toast = useToast();

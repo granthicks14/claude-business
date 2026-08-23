@@ -22,7 +22,7 @@ import {
 } from "@/components/ui";
 import { businessToMarkdown, download, slugify, toPlainText, DEFAULT_EXPORT_OPTIONS, type ExportOptions } from "@/lib/export";
 import { buildSharePayload, encodeShare, DEFAULT_SHARE, type ShareOptions } from "@/lib/share";
-import { actions, newId, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
 import type {
   Brand,
   BusinessModelOption,
@@ -86,7 +86,7 @@ function Plan({ business }: { business: SelectedBusiness }) {
 /* ------------------------------------------------------------------ blueprint */
 
 function Blueprint({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<BusinessPlan, "generatedAt">>("plan");
   const toast = useToast();
 
@@ -202,7 +202,7 @@ function Body({ body }: { body: string | string[] }) {
 /* --------------------------------------------------------------------- models */
 
 function Models({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<{ models: BusinessModelOption[] }>("businessModels");
 
   const run = async () => {
@@ -247,7 +247,7 @@ function Models({ business }: { business: SelectedBusiness }) {
 /* ---------------------------------------------------------------------- offer */
 
 function OfferSection({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<Offer, "generatedAt">>("offer");
   const [notes, setNotes] = useState("");
 
@@ -352,7 +352,7 @@ function OfferSection({ business }: { business: SelectedBusiness }) {
 /* ------------------------------------------------------------------- personas */
 
 function Personas({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<{ personas: Omit<Persona, "id">[] }>("personas");
 
   const run = async () => {
@@ -437,7 +437,7 @@ function List({ title, items }: { title: string; items: string[] }) {
 /* ---------------------------------------------------------------------- brand */
 
 function BrandSection({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<Brand, "generatedAt">>("brand");
   const [direction, setDirection] = useState("");
 
@@ -582,7 +582,7 @@ function isHex(value: string): boolean {
 /* -------------------------------------------------------------------- website */
 
 function Website({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<WebsiteSpec, "generatedAt">>("website");
   const toast = useToast();
 
@@ -749,7 +749,7 @@ function BuildIt({ business }: { business: SelectedBusiness }) {
 }
 
 function ServiceBuilder({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<ServiceSpec, "generatedAt">>("service");
 
   const run = async () => {
@@ -812,7 +812,7 @@ function ServiceBuilder({ business }: { business: SelectedBusiness }) {
 }
 
 function ProductBuilder({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<ProductSpec, "generatedAt">>("product");
   const specTask = useAITask<{ techSpec: string }>("techSpec");
   const [showSpec, setShowSpec] = useState(false);

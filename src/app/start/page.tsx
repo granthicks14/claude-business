@@ -8,7 +8,7 @@ import { Ready } from "@/components/page";
 import { IdeasArt, ShopArt, ToolboxArt } from "@/components/art";
 import { Badge, Button, Card, Hi, SectionHeader, Textarea, useToast } from "@/components/ui";
 import { INTAKE_NOTE, intakeFromText } from "@/lib/intake";
-import { SAMPLE_NOTE, sampleBusiness, sampleProfile } from "@/lib/sample";
+import { SAMPLE_NOTE, sampleBusiness } from "@/lib/sample";
 import { actions, useAppState } from "@/lib/store";
 
 /**
@@ -38,7 +38,7 @@ function Start() {
   const [mode, setMode] = useState<Mode>(null);
 
   const openSample = () => {
-    actions.loadSample(sampleBusiness(), sampleProfile());
+    actions.loadSample(sampleBusiness());
     toast("Example loaded — clear it any time", "good");
     router.push("/business");
   };

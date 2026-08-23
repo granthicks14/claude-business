@@ -31,7 +31,7 @@ npm run typecheck      # types only
 npm run test:scoring   # 31 scoring, diversity and refusal calibration tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
-npm run test:product   # 60 quality/consistency/variant/intake/sample tests
+npm run test:product   # 73 quality/consistency/variant/intake/sample tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
 npm test               # all seven
@@ -474,8 +474,38 @@ not yet paid, an objection appearing in half the conversations. The verdict
 reads *validate more*, and the interview analysis surfaces a real contradiction.
 A sample that returns BUILD would demonstrate the one thing the app is built not
 to do. `SampleBanner` rides every workspace page for as long as it's loaded,
-because people navigate away, come back tomorrow and screenshot things —
-and `loadSample` is additive, so opening it never touches the user's own work.
+because people navigate away, come back tomorrow and screenshot things.
+
+**The example carries its own founder, and this is the whole point.** A demo has
+to be scored against somebody — fit, affordability and hours are all read off a
+profile — and the way that used to be arranged was for `loadSample` to write the
+invented founder into `AppState.profile`, guarded by `completedOnboarding`.
+
+That guard did not hold. The flag is only set by `/onboarding`, `/describe` and
+`/settings`, so anyone who arrived through the idea intake, the analyser, the
+opportunity finder or the lab had real work and a `false` flag. For them,
+opening the example replaced their founder profile with a fictional person,
+marked it complete so nothing would ever offer to rebuild it, persisted that
+into the vault, and left no way back — `clearSample` removed the business and
+never restored the profile. The home page then greeted them by the fictional
+founder's name, under a badge reading "Nothing of yours is touched".
+
+She lives on the business now, as `SelectedBusiness.demoProfile`, and
+`effectiveProfile(state)` in `store.ts` is what pages read. The rule for call
+sites: **use `effectiveProfile` on pages that read the active business; keep
+`s.profile` on pages about the founder themselves** — `/profile`, `/onboarding`,
+`/describe`, `/settings`, the home page greeting — **or about ideas not yet
+chosen.** `profileForBusiness` is the same question for a business that isn't
+the active one, which is what `/graveyard` needs since it renders several at
+once. Getting this backwards is how a fictional founder ends up greeting
+somebody by name.
+
+`migrate` repairs the accounts this already damaged: a stored profile that
+matches `sampleProfile()` field for field can only have been written by the old
+code and never edited, so it is cleared. An edited one won't match and is left
+alone. The original can't be recovered — it was overwritten in the vault before
+the fix existed. `test:product` holds all of it, including the specific case the
+old guard let through.
 
 ### Two profiles, never merged
 

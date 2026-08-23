@@ -11,7 +11,7 @@ import { useBusinessAnalysis } from "@/lib/explain";
 import { currency } from "@/lib/finance";
 import { CONFIDENCE_LABEL } from "@/lib/engine/knowledge/niches";
 import { operatingSystem, operationalReadiness, unitEconomics } from "@/lib/operations";
-import { useAppState } from "@/lib/store";
+import { effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -37,7 +37,7 @@ export default function OperationsPage() {
 }
 
 function Operations({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const [target, setTarget] = useState(3000);
 

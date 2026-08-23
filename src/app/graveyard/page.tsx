@@ -17,7 +17,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { currency } from "@/lib/finance";
-import { actions, useAppState } from "@/lib/store";
+import { actions, profileForBusiness, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
 
@@ -68,7 +68,7 @@ function Graveyard() {
 }
 
 function ArchivedCard({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState((s) => profileForBusiness(s, business));
   const router = useRouter();
   const toast = useToast();
   const task = useAITask<Retrospective>("graveyard");

@@ -31,7 +31,7 @@ import {
   analyseInterviews,
   type InterviewOutcome,
 } from "@/lib/customers/interviews";
-import { actions, newId, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
 import type { Interview, SelectedBusiness } from "@/lib/types";
 
 /**
@@ -52,7 +52,7 @@ export default function CustomersPage() {
 }
 
 function Customers({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const [tab, setTab] = useState<"who" | "ask" | "recorded" | "patterns">("who");
 
   const icp = useMemo(() => idealCustomer(business, profile), [business, profile]);

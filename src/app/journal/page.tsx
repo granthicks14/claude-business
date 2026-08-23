@@ -21,7 +21,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
-import { activeBusiness, actions, newId, update, useAppState } from "@/lib/store";
+import { actions, activeBusiness, effectiveProfile, newId, update, useAppState } from "@/lib/store";
 import type {
   Assumption,
   Decision,
@@ -202,7 +202,7 @@ function Entries() {
 /* ---------------------------------------------------------------- experiments */
 
 function Experiments({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const suggest = useAITask<{ experiments: Omit<Experiment, "id" | "status" | "result" | "createdAt">[] }>("experiments");
   const judge = useAITask<Verdict>("verdict");
   const toast = useToast();
@@ -432,7 +432,7 @@ function Row({ label, value }: { label: string; value: string }) {
 /* ---------------------------------------------------------------- assumptions */
 
 function Assumptions({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<{ assumptions: { statement: string; confidence: number; evidence: string; test: string }[] }>("assumptions");
   const toast = useToast();
   const [adding, setAdding] = useState(false);

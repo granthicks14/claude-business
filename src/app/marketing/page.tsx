@@ -15,7 +15,7 @@ import {
   Tabs,
   useToast,
 } from "@/components/ui";
-import { actions, newId, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
 import type { ContentBatch, MarketingPlan, SelectedBusiness } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
 
@@ -68,7 +68,7 @@ function Marketing({ business }: { business: SelectedBusiness }) {
 }
 
 function ChannelPlan({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<MarketingPlan, "generatedAt">>("marketing");
 
   const run = async () => {
@@ -195,7 +195,7 @@ function ChannelPlan({ business }: { business: SelectedBusiness }) {
 }
 
 function ContentEngine({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<{ items: ContentBatch["items"] }>("content");
   const toast = useToast();
 

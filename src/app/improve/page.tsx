@@ -9,7 +9,7 @@ import { IdeasArt } from "@/components/art";
 import { Badge, Button, Card, Hi, SectionHeader, Tabs, useToast } from "@/components/ui";
 import { PRICING_NOTE, pricingTiers } from "@/lib/pricing";
 import { VARIANTS_NOTE, ideaVariants, type VariantAngle } from "@/lib/variants";
-import { actions, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -30,7 +30,7 @@ export default function ImprovePage() {
 }
 
 function Improve({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const router = useRouter();
   const toast = useToast();
   const [tab, setTab] = useState<"versions" | "pricing">("versions");

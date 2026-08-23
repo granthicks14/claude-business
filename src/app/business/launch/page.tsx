@@ -10,7 +10,7 @@ import { Explain } from "@/components/teach";
 import { Badge, Card, Hi, LinkButton, ScoreRing, SectionHeader } from "@/components/ui";
 import { computeFit } from "@/lib/fit";
 import { READINESS_LABEL, assessReadiness } from "@/lib/launch";
-import { useAppState } from "@/lib/store";
+import { effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -31,7 +31,7 @@ export default function LaunchPage() {
 }
 
 function Launch({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const readiness = useMemo(() => assessReadiness(business), [business]);
   const fit = useMemo(() => computeFit(business.idea, profile), [business.idea, profile]);
 

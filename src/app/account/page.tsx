@@ -18,7 +18,7 @@ import {
   Tabs,
   useToast,
 } from "@/components/ui";
-import { flushPersist, useAppState } from "@/lib/store";
+import { clearInMemoryState, flushPersist, useAppState } from "@/lib/store";
 import {
   MIN_PASSPHRASE,
   changePassphrase,
@@ -295,6 +295,18 @@ function DataTab({ account }: { account: { id: string; label: string } | null })
       setError(result.error ?? "That didn't work.");
       return;
     }
+    /*
+     * Drop the decrypted copy before navigating anywhere.
+     *
+     * `deleteAccount` clears the vault session but cannot touch the store —
+     * `vault.ts` must not import it, or the two modules form a cycle. So the
+     * store was still holding the deleted account's profile and businesses,
+     * and `/` is a public route the gate renders un-gated: for the moment
+     * before the reload, the home page greeted the user as the account they
+     * had just destroyed. The reload below is now a second line of defence
+     * rather than the thing that makes this correct.
+     */
+    clearInMemoryState();
     router.push("/");
     // A full reload guarantees no decrypted fragment of the deleted account
     // survives in any component's state.

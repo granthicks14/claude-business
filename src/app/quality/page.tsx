@@ -10,7 +10,7 @@ import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, SectionHe
 import { PositionMap, type MapPoint } from "@/components/position-map";
 import { CONSISTENCY_NOTE, SEVERITY_LABEL, SEVERITY_TONE, checkConsistency } from "@/lib/consistency";
 import { QUALITY_HELP, QUALITY_LABEL, QUALITY_BAND_LABEL, QUALITY_NOTE, businessQuality } from "@/lib/quality";
-import { useAppState } from "@/lib/store";
+import { effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -32,7 +32,7 @@ export default function QualityPage() {
 }
 
 function Quality({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const others = useAppState((s) => s.businesses);
   const [tab, setTab] = useState<"score" | "check">("score");
 

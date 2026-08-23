@@ -8,7 +8,7 @@ import { ToolboxArt } from "@/components/art";
 import { Badge, Card, Disclosure, Hi, LinkButton, SectionHeader, Stat, Tabs } from "@/components/ui";
 import { COST_BAND_DETAIL, COST_BAND_LABEL, PRICE_DISCLAIMER } from "@/lib/spend";
 import { BUCKETS, BUCKET_HELP, BUCKET_LABEL, BUCKET_TONE, MVP_NOTE, mvpPlan } from "@/lib/mvp";
-import { useAppState } from "@/lib/store";
+import { effectiveProfile, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
 
 /**
@@ -30,7 +30,7 @@ export default function MVPPage() {
 }
 
 function MVP({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const [tab, setTab] = useState<"build" | "tools" | "flow">("build");
   const plan = useMemo(() => mvpPlan(business, profile), [business, profile]);
 

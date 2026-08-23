@@ -31,7 +31,7 @@ import { snapshotEvidence, deriveLedger } from "../src/lib/intel/assumptions.ts"
 import { finalDecision } from "../src/lib/intel/decision.ts";
 import { analyseInterviews } from "../src/lib/customers/interviews.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
-import { emptyProfile } from "../src/lib/store.ts";
+import { actions, effectiveProfile, emptyProfile, emptyState, hydrateFrom, snapshot } from "../src/lib/store.ts";
 import type { FounderProfile, SelectedBusiness } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -225,6 +225,80 @@ results.sample = {
   sizingHasSource: !!sample.research?.sizing?.source?.url,
 };
 
+
+/* ------------------------------------------------- the sample is additive --- */
+
+/*
+ * The bug this block exists for.
+ *
+ * 'loadSample' used to take the example's founder and write her into
+ * 'AppState.profile', guarded by 'completedOnboarding'. That flag is only set
+ * by the questionnaire routes, so anyone who arrived through the idea intake,
+ * the analyser, the opportunity finder or the lab had real work and a false
+ * flag — and opening the demo replaced their founder profile with an invented
+ * one, marked it complete, and left no way back. The homepage then greeted
+ * them by the fictional founder's name.
+ *
+ * 'persist()' is a no-op under Node (no 'window'), so the store is exercised
+ * here as the reducer it is.
+ */
+const mine = profile({ name: "Real Person", location: "Sheffield", skills: ["welding"] });
+const myBusiness = business({ id: "mine_1" });
+
+function freshStore(over = {}) {
+  hydrateFrom({ ...emptyState(), profile: mine, businesses: [myBusiness], activeBusinessId: "mine_1", ...over });
+}
+
+// Someone who finished the questionnaire.
+freshStore();
+actions.loadSample(sampleBusiness());
+const afterComplete = snapshot();
+
+// Someone who never did — the case the old guard let through.
+freshStore({ profile: { ...mine, completedOnboarding: false } });
+actions.loadSample(sampleBusiness());
+const afterIncomplete = snapshot();
+const sampleScoredProfile = effectiveProfile(afterIncomplete);
+
+actions.clearSample(SAMPLE_BUSINESS_ID);
+const afterClear = snapshot();
+
+// The repair path: a stored profile that IS the sample founder, verbatim.
+hydrateFrom({ ...emptyState(), profile: sampleProfile(), businesses: [sampleBusiness()], activeBusinessId: SAMPLE_BUSINESS_ID });
+const repaired = snapshot();
+
+// An edited one must survive — it is theirs now, whatever it started as.
+hydrateFrom({ ...emptyState(), profile: { ...sampleProfile(), name: "Ines Actually Me", location: "Leeds" } });
+const editedKept = snapshot();
+
+// A sample stored before 'demoProfile' existed still gets a founder back.
+const { demoProfile: _dropped, ...legacySample } = sampleBusiness();
+hydrateFrom({ ...emptyState(), profile: emptyProfile(), businesses: [legacySample], activeBusinessId: SAMPLE_BUSINESS_ID });
+const backfilled = snapshot();
+
+results.additive = {
+  completedProfileUntouched: afterComplete.profile.name === "Real Person",
+  incompleteProfileUntouched:
+    afterIncomplete.profile.name === "Real Person" &&
+    afterIncomplete.profile.location === "Sheffield" &&
+    afterIncomplete.profile.completedOnboarding === false,
+  neverFakesCompletion: afterIncomplete.profile.completedOnboarding === false,
+  myBusinessSurvives: afterIncomplete.businesses.some((b) => b.id === "mine_1"),
+  sampleBecomesActive: afterIncomplete.activeBusinessId === SAMPLE_BUSINESS_ID,
+  /* The example still has a founder to be scored against — just not the user. */
+  sampleScoredAgainstItsOwn: sampleScoredProfile.name === sampleProfile().name,
+  sampleScoredProfileIsNotMine: sampleScoredProfile.name !== "Real Person",
+  qualityHoldsUp: businessQuality(sampleBusiness(), sampleScoredProfile).score === qSample.score,
+  clearRestoresMyBusiness: afterClear.activeBusinessId === "mine_1",
+  clearLeavesProfileAlone: afterClear.profile.name === "Real Person",
+  clearRemovesTheSample: !afterClear.businesses.some((b) => b.id === SAMPLE_BUSINESS_ID),
+  /* Accounts damaged by the old behaviour. */
+  damagedProfileIsCleared: repaired.profile.name === "" && repaired.profile.completedOnboarding === false,
+  repairKeepsTheSampleUsable: effectiveProfile(repaired).name === sampleProfile().name,
+  editedProfileIsKept: editedKept.profile.name === "Ines Actually Me",
+  legacySampleGetsItsFounderBack: effectiveProfile(backfilled).name === sampleProfile().name,
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -337,6 +411,21 @@ check("and a real contradiction", r.sample.interviewsFindContradiction);
 check("it contains no fabricated testimonials", r.sample.noFakeTestimonials);
 check("its competitors carry source URLs", r.sample.competitorsHaveSourceUrls);
 check("its market sizing carries a source", r.sample.sizingHasSource);
+
+console.log("\n--- the worked example is additive ---");
+check("opening the example leaves a completed profile alone", r.additive.completedProfileUntouched);
+check("and leaves an INCOMPLETE profile alone — the bug that overwrote real founders", r.additive.incompleteProfileUntouched);
+check("it never marks a skipped profile as finished", r.additive.neverFakesCompletion);
+check("your own business is still there", r.additive.myBusinessSurvives);
+check("the example becomes the active business", r.additive.sampleBecomesActive);
+check("the example is scored against its own founder, not yours", r.additive.sampleScoredAgainstItsOwn && r.additive.sampleScoredProfileIsNotMine);
+check("and still scores the same, so the demo still demonstrates something", r.additive.qualityHoldsUp);
+check("clearing it puts you back on the business you were working on", r.additive.clearRestoresMyBusiness);
+check("clearing it removes the example and nothing else", r.additive.clearRemovesTheSample && r.additive.clearLeavesProfileAlone);
+check("a profile that IS the example founder, verbatim, is cleared on load", r.additive.damagedProfileIsCleared);
+check("and the example still works afterwards", r.additive.repairKeepsTheSampleUsable);
+check("a profile the user has since edited is left alone", r.additive.editedProfileIsKept);
+check("an example saved before it carried a founder gets one back", r.additive.legacySampleGetsItsFounderBack);
 
 console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

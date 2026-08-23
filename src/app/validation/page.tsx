@@ -15,7 +15,7 @@ import {
   Tabs,
   useToast,
 } from "@/components/ui";
-import { actions, newId, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
 import type {
   Competitor,
   Evidence,
@@ -57,7 +57,7 @@ export default function ValidationPage() {
 }
 
 function Validation({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const { status } = useAIStatus();
   const [tab, setTab] = useState<"evidence" | "competitors">("evidence");
   const toast = useToast();

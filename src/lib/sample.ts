@@ -163,6 +163,17 @@ export function sampleBusiness(): SelectedBusiness {
     id: SAMPLE_BUSINESS_ID,
     ideaId: SAMPLE_IDEA_ID,
     idea: sampleIdea(),
+    /*
+     * The example carries its own founder.
+     *
+     * Ines has to exist somewhere or half the app has nothing to score against
+     * — fit, affordability, hours are all read off a profile. She used to be
+     * written into `AppState.profile` when the example loaded, which meant
+     * opening a demo overwrote the real user's founder profile and nothing put
+     * it back. She lives on the business now, so the example is complete and
+     * the user's own profile is never touched. See `effectiveProfile`.
+     */
+    demoProfile: sampleProfile(),
     startedAt: Date.now() - 30 * 86400000,
     revenueTarget: 2200,
     competitors: [],

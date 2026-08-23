@@ -32,7 +32,7 @@ import { assessEvidence } from "@/lib/engine";
 import { ShopArt } from "@/components/art";
 import { computeHealth } from "@/lib/health";
 import { READINESS_LABEL, assessReadiness } from "@/lib/launch";
-import { actions, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, useAppState } from "@/lib/store";
 import type { HealthReport, RadarItem, SelectedBusiness, Task } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
 
@@ -119,7 +119,8 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
   const router = useRouter();
   const toast = useToast();
   const health = useMemo(() => computeHealth(business), [business]);
-  const evidence = useMemo(() => assessEvidence(business, state.profile), [business, state.profile]);
+  const profile = useAppState(effectiveProfile);
+  const evidence = useMemo(() => assessEvidence(business, profile), [business, profile]);
   const advice = useAITask<Omit<HealthReport, "score" | "generatedAt">>("health");
   const radar = useAITask<{ items: Omit<RadarItem, "id" | "createdAt">[] }>("radar");
   const [archiving, setArchiving] = useState(false);
@@ -138,7 +139,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
   const liveBusinesses = state.businesses.filter((b) => !b.archivedAt);
 
   const runAdvice = async () => {
-    const result = await advice.run({ profile: state.profile, business });
+    const result = await advice.run({ profile, business });
     if (result) {
       actions.updateBusiness(business.id, {
         health: { ...result, score: health.score, generatedAt: Date.now() },
@@ -147,7 +148,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
   };
 
   const runRadar = async () => {
-    const result = await radar.run({ profile: state.profile, business });
+    const result = await radar.run({ profile, business });
     if (result) {
       actions.updateBusiness(business.id, {
         radar: result.items.map((i) => ({ ...i, id: `radar_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, createdAt: Date.now() })),

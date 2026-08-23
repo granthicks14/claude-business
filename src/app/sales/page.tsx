@@ -2,7 +2,7 @@
 
 import { AIPanel, GeneratedNote, PageHeader, Ready, RequireBusiness } from "@/components/page";
 import { Card, CopyButton, Disclosure } from "@/components/ui";
-import { actions, useAppState } from "@/lib/store";
+import { actions, effectiveProfile, useAppState } from "@/lib/store";
 import type { SalesPlaybook, SelectedBusiness } from "@/lib/types";
 import { useAITask } from "@/lib/useAI";
 
@@ -15,7 +15,7 @@ export default function SalesPage() {
 }
 
 function Sales({ business }: { business: SelectedBusiness }) {
-  const profile = useAppState((s) => s.profile);
+  const profile = useAppState(effectiveProfile);
   const task = useAITask<Omit<SalesPlaybook, "generatedAt">>("sales");
 
   const run = async () => {
