@@ -44,6 +44,9 @@ npm run check:access   # proves no cross-user data path exists
 ```
 src/app/                Routes. /business is the workspace for the chosen idea.
 src/components/         Design system (ui.tsx) + shared feature components.
+src/components/groundwork-diagram.tsx  The product drawn: ground → options →
+                        what survives → what you build. The front page's subject.
+src/lib/fonts.ts        Fraunces, IBM Plex Sans, IBM Plex Mono. Self-hosted.
 src/lib/store.ts        The single source of truth. localStorage + useSyncExternalStore.
 src/lib/types.ts        Every data model. AppState is one versioned object.
 src/lib/engine/         The Business Intelligence Engine — all local, all free.
@@ -500,38 +503,86 @@ These are product requirements, not style preferences:
 
 ## Look and feel
 
-The audit that produced this section found four tells of a generated
-interface: the framework's default font stack, an accent at hue 275 — the
-violet every AI product ships — cool blue-grey neutrals, and six radius values
-with no rule about which went where.
+The product is **Groundwork**, and the interface is a **drafting table**: ink on
+paper, ruled lines, figures set in a technical face, and structure carried by
+typography rather than by four hundred rounded rectangles. Someone should be
+able to see a screenshot with the wordmark cropped off and know it is this.
 
-- **Two typefaces, self-hosted.** Fraunces for headings, IBM Plex Sans for
-  everything you read and operate, both emitted at build time by `next/font`
-  (`lib/fonts.ts`). No runtime request, so `font-src 'self'` holds and nothing
-  is fetched from another company's server. Both are open-licensed; no paid
-  font is used anywhere.
-- **The accent is a blueprint teal, not violet.** Neutrals are warm paper
-  rather than blue-grey. `--mark` is one warm ochre reserved for the single
-  most important figure on a page — a highlighter, not a second brand colour.
+Two audits produced this section. The first found the framework's default font
+stack, an accent at hue 275 — the violet every AI product ships — cool
+blue-grey neutrals, and six radius values with no rule about which went where.
+The second found what was left: two blurred radial blobs drifting behind every
+page header (one of them at hue 330), a teal-to-magenta gradient on the front
+page headline, a masked grid background, 394 cards, coloured score donuts with
+haloes on five pages, sixty pills, and illustrations bobbing on infinite loops.
+
+- **Two brand colours and no more.** `--accent` is **spruce**, a deep desaturated
+  green: the product itself, the thing you click, the business you are building.
+  `--mark` is **clay**, warm and earthy: what is still open — an opportunity, a
+  direction, the one figure on a page that matters most. Everything else is
+  status (`good`, `warn`, `bad`, `info`) and **status is never a brand colour**.
+- **The `-soft` tints are whispers.** There are 127 of them and 48 are full
+  callout panels; at any real saturation a page shows four blocks of four
+  colours and reads as a carnival. Held close to the paper they group a block
+  without competing with the text on it. The border and the coloured text do
+  the signalling.
+- **Three typefaces, self-hosted, and that is the limit.** Fraunces for
+  headings, IBM Plex Sans for everything operable, IBM Plex Mono for eyebrow
+  labels and small figures. All emitted at build time by `next/font`
+  (`lib/fonts.ts`), so `font-src 'self'` holds and nothing is fetched from
+  another company's server. All open-licensed; no paid font anywhere.
+- **A card means something.** It is a discrete object you could pick up — one
+  idea, one competitor, one business — never a container for a paragraph. It
+  carries no shadow. `Section`, `Split`, `Rail`, `DataList`, `Figure` and
+  `Stages` in `ui.tsx` are the default containers; `Card` is the exception.
+- **Structure is rules, rails and eyebrows.** `.rule` is a hairline between
+  blocks and does most of the work. `.rail` is a weighted left edge carrying a
+  meaning colour without becoming a tinted rectangle. `.eyebrow` is a small
+  mono capital label — it replaced the coloured pill that used to sit above
+  every section, and unlike the pill it costs nothing from the palette.
+- **A score is type, never a donut.** `ScoreRing` renders the figure large and
+  tabular with a hairline bar and the band named in words. An arc adds no
+  precision the digits don't have and takes eight times the space; the halo
+  that used to sit behind it was decoration pretending to be emphasis. The
+  `glow` prop is still accepted and deliberately ignored.
 - **Three radii, and Tailwind's scale is mapped onto them.** `--radius-card`,
   `--radius-control`, `--radius-pill`. `rounded-lg`, `rounded-md` and the rest
   are redefined in `@theme` so 219 existing call sites land on a chosen value
   and there is no fourth radius to reach for.
-- **A type scale, not sizes chosen one at a time.** `--text-display` down to
-  `--text-label`, each with its own line height and tracking. Figures are
-  tabular wherever they are a metric.
+- **The eyebrow is uppercased; a badge is not.** An eyebrow is a short label
+  somebody wrote by hand. A badge carries whatever it is given, and "Stage 6/10
+  · First customer" set in capitals is shouting. Capitals also change what
+  `innerText` returns, which is worth knowing before writing an assertion
+  against page text.
 - **Colour is a signal, never decoration.** Emphasis goes through `<Hi>`, which
   has four tones and no more: `accent` (the subject), `good` (something earned),
   `warn` (needs attention), `mark` (the one key figure on the page). All four
   must be visibly different: `mark` was painted in the accent's own colours for
   a while, which quietly made the four-tone system a three-tone one.
-- **Illustrations are inline SVG** in `components/art.tsx`. There is no
-  `public/` and no CDN, so nothing is fetched. Strokes use `currentColor` and
-  details use the accent tokens, so one drawing serves both themes.
-- **Motion is short and never load-bearing.** Entrances ≤ 0.4s, draw-ins ≤ 0.7s,
-  and nothing conveys information that isn't also in the text. The global
+- **Illustrations are inline SVG** in `components/art.tsx`, plus the product
+  diagram in `components/groundwork-diagram.tsx`. There is no `public/` and no
+  CDN, so nothing is fetched. Strokes use `currentColor` and details use the
+  tokens, so one drawing serves both themes. No brains, no robots, no sparkles,
+  and no lightbulbs — `IdeasArt` was one, and a glowing lightbulb is the
+  universal stock symbol for "idea" and therefore says nothing.
+- **The front page draws the product.** `GroundworkDiagram` is one continuous
+  survey drawing read left to right: empty ground, three staked footprints, two
+  struck through and the survivor measured, then the elevation built out. An
+  earlier version cycled the four stages on a timer, which meant that
+  three-quarters of the time the most important composition on the site was a
+  mostly empty grid. Everything is drawn at once now and the interaction is
+  subtractive — pointing at a stage dims the others.
+- **Motion is short, once, and never load-bearing.** Entrances ≤ 0.4s, draw-ins
+  ≤ 0.7s. There are no infinite loops: `.float` and `.aurora` are gone, and
+  nothing conveys information that isn't also in the text. The global
   `prefers-reduced-motion` block disables all of it; don't work around it.
 - Never glow or colour a low score red as an alarm — a low score early on is
   normal, and the copy says so.
 - A low score never blocks a choice. Say what's weak, then get out of the way:
+  the profile was written in five minutes and the user knows more than it does.
+
+The invariants above are checked, not asserted: `visual-qa.mjs` measures
+contrast from painted pixels in both themes and fails the build on any gradient
+background, any blurred pseudo-element, more than three shadowed elements, or
+more than six fully-round ones.
   the profile was written in five minutes and the user knows more than it does.

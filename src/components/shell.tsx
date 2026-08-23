@@ -237,14 +237,14 @@ function Wordmark() {
         nobody sees, done before anything is built above the surface. The
         previous mark was a bar chart, which said "analytics dashboard".
       */}
-      <span className="size-8 rounded-lg bg-accent grid place-items-center shrink-0 shadow-sm">
-        <svg viewBox="0 0 24 24" className="size-[18px] text-white dark:text-[oklch(15%_0.02_265)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <span className="size-8 grid place-items-center shrink-0 text-accent">
+        <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M12 5 5.5 15.5h13z" />
           <path d="M3 15.5h18" />
           <path d="M8 18.5v1.2M12 18.5v2.2M16 18.5v1.2" opacity=".65" />
         </svg>
       </span>
-      <span className="font-semibold tracking-tight truncate group-hover:text-accent-text transition-colors">
+      <span className="font-display font-semibold text-[17px] tracking-tight truncate group-hover:text-accent-text transition-colors">
         Groundwork
       </span>
     </Link>
@@ -317,15 +317,13 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                   <Link
                     href={section.href}
                     aria-current={open && pathname === section.href ? "page" : undefined}
-                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-colors min-h-10
-                      ${open ? "bg-accent-soft text-accent-text font-medium" : "text-muted hover:text-text hover:bg-surface-2"}`}
+                    className={`flex items-center gap-2.5 pl-3 pr-2.5 py-2 border-l-2 text-sm transition-colors min-h-10
+                      ${open ? "border-accent text-text font-medium" : "border-transparent text-muted hover:text-text hover:border-border-strong"}`}
                   >
                     <IconComponent />
                     <span className="flex-1 truncate">{section.label}</span>
                     {section.badge !== undefined && (
-                      <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-surface-2 text-faint">
-                        {section.badge}
-                      </span>
+                      <span className="font-mono text-[11px] tabular-nums text-faint">{section.badge}</span>
                     )}
                   </Link>
 
@@ -352,14 +350,12 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                                 <Link
                                   href={item.href}
                                   aria-current={active ? "page" : undefined}
-                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[13px] transition-colors min-h-9
+                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-[13px] transition-colors min-h-9
                                     ${active ? "text-accent-text font-medium" : "text-muted hover:text-text hover:bg-surface-2"}`}
                                 >
                                   <span className="flex-1 truncate">{item.label}</span>
                                   {item.badge !== undefined && (
-                                    <span className="text-[11px] tabular-nums px-1.5 py-0.5 rounded bg-surface-2 text-faint">
-                                      {item.badge}
-                                    </span>
+                                    <span className="font-mono text-[11px] tabular-nums text-faint">{item.badge}</span>
                                   )}
                                 </Link>
                               </li>
@@ -377,15 +373,15 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
 
         {progress.total > 0 && (
           <div className="px-4 py-3 border-t border-border shrink-0">
-            <div className="flex items-center justify-between text-[11px] text-muted mb-1.5">
-              <span className="font-medium">Journey</span>
-              <span className="tabular-nums">
+            <div className="flex items-center justify-between mb-2">
+              <span className="eyebrow">Journey</span>
+              <span className="font-mono text-[11px] tabular-nums text-muted">
                 {progress.done}/{progress.total}
               </span>
             </div>
-            <div className="h-1 rounded-full bg-border overflow-hidden">
+            <div className="h-0.5 bg-border overflow-hidden">
               <div
-                className="h-full bg-accent rounded-full transition-[width] duration-500"
+                className="h-full bg-accent transition-[width] duration-500"
                 style={{ width: `${(progress.done / progress.total) * 100}%` }}
               />
             </div>

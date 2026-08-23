@@ -24,20 +24,29 @@ import {
 type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
 type Size = "sm" | "md" | "lg";
 
+/*
+ * Buttons carry no shadow.
+ *
+ * A drop shadow on a button is a skeuomorphic reflex from a decade ago, and on
+ * a page that also shadowed every card it meant nothing on screen sat flat.
+ * The primary is a solid block of spruce, the secondary is a hairline outline,
+ * and the difference between them is weight rather than elevation — which is
+ * how a printed form has always distinguished the main action.
+ */
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-accent text-white hover:bg-accent-hover shadow-sm disabled:bg-accent/50 dark:text-[oklch(15%_0.02_265)] font-semibold",
+    "bg-accent text-white hover:bg-accent-hover disabled:bg-accent/50 dark:text-[oklch(16%_0.01_80)] font-semibold",
   secondary:
-    "bg-surface text-text border border-border-strong hover:bg-surface-2 hover:border-accent-border shadow-sm",
+    "bg-transparent text-text border border-border-strong hover:border-accent hover:text-accent-text",
   ghost: "text-muted hover:text-text hover:bg-surface-2",
-  subtle: "bg-accent-soft text-accent-text border border-accent-border hover:brightness-[0.97]",
-  danger: "bg-bad-soft text-bad border border-bad/30 hover:brightness-[0.97]",
+  subtle: "bg-surface-2 text-text border border-border hover:border-border-strong",
+  danger: "bg-transparent text-bad border border-bad/40 hover:bg-bad-soft",
 };
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-[13px] rounded-lg gap-1.5",
-  md: "h-10 px-4 text-sm rounded-lg gap-2",
-  lg: "h-12 px-6 text-[15px] rounded-xl gap-2",
+  sm: "h-8 px-3 text-[13px] rounded-md gap-1.5",
+  md: "h-10 px-4 text-sm rounded-md gap-2",
+  lg: "h-12 px-7 text-[15px] rounded-md gap-2",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -265,13 +274,263 @@ export function SectionHeader({
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Structure that is not a card                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The eyebrow: a small mono label above a heading.
+ *
+ * It replaces the coloured pill that used to sit in this position. A pill is a
+ * shape and a colour spent on a word that needed neither; a mono label at
+ * 11px with wide tracking reads as the label on an instrument and costs
+ * nothing from the palette.
+ */
+export function Eyebrow({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <p className={`eyebrow ${className}`}>{children}</p>;
+}
+
+/**
+ * An open section. No box, no border, no background.
+ *
+ * This is the default container in the redesigned app and `Card` is the
+ * exception, which is the reverse of how it was: 394 cards meant every page
+ * was a stack of identical rectangles and nothing on it could be more
+ * important than anything else. A rule and an eyebrow separate two sections
+ * perfectly well, which is how print has done it for four hundred years.
+ */
+export function Section({
+  eyebrow,
+  title,
+  description,
+  action,
+  children,
+  level = 2,
+  /** A hairline above the section. Off for the first section on a page. */
+  ruled = true,
+  className = "",
+}: {
+  eyebrow?: ReactNode;
+  title?: ReactNode;
+  description?: ReactNode;
+  action?: ReactNode;
+  children?: ReactNode;
+  level?: 2 | 3;
+  ruled?: boolean;
+  className?: string;
+}) {
+  const Tag = `h${level}` as "h2" | "h3";
+  return (
+    <section className={`${ruled ? "rule pt-7" : ""} ${className}`}>
+      {(eyebrow || title || action) && (
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2 mb-5">
+          <div className="min-w-0">
+            {eyebrow && <Eyebrow className="mb-2">{eyebrow}</Eyebrow>}
+            {title && (
+              <Tag className={level === 2 ? "text-h2" : "text-h3 font-semibold"}>{title}</Tag>
+            )}
+            {description && <p className="text-muted mt-2 max-w-prose leading-relaxed">{description}</p>}
+          </div>
+          {action && <div className="flex items-center gap-2 shrink-0">{action}</div>}
+        </div>
+      )}
+      {children}
+    </section>
+  );
+}
+
+/**
+ * An asymmetric two-column composition — the editorial layout.
+ *
+ * Deliberately never 50/50. Equal columns read as a comparison even when the
+ * two sides are not comparable, and a page of them is the "generic dashboard"
+ * look this replaced.
+ */
+export function Split({
+  left,
+  right,
+  /** Which side carries the weight. */
+  weight = "left",
+  className = "",
+}: {
+  left: ReactNode;
+  right: ReactNode;
+  weight?: "left" | "right" | "narrow-left" | "even-ish";
+  className?: string;
+}) {
+  const cols =
+    weight === "right"
+      ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]"
+      : weight === "narrow-left"
+        ? "lg:grid-cols-[15rem_minmax(0,1fr)]"
+        : weight === "even-ish"
+          ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
+          : "lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]";
+  return (
+    <div className={`grid gap-8 lg:gap-14 items-start ${cols} ${className}`}>
+      <div className="min-w-0">{left}</div>
+      <div className="min-w-0">{right}</div>
+    </div>
+  );
+}
+
+/**
+ * A block with a weighted rule down its left edge: an aside, a verdict, a
+ * warning. Carries a meaning colour without becoming a tinted rectangle —
+ * which matters because four tinted rectangles on one page is a carnival.
+ */
+export function Rail({
+  tone = "neutral",
+  children,
+  className = "",
+}: {
+  tone?: "neutral" | "accent" | "mark" | "good" | "warn" | "bad";
+  children: ReactNode;
+  className?: string;
+}) {
+  const tones = {
+    neutral: "",
+    accent: "rail-accent",
+    mark: "rail-mark",
+    good: "rail-good",
+    warn: "rail-warn",
+    bad: "rail-bad",
+  };
+  return <div className={`rail ${tones[tone]} ${className}`}>{children}</div>;
+}
+
+/**
+ * Label/value rows separated by hairlines.
+ *
+ * This is what replaced grids of small cards. Eight facts about a business
+ * used to be eight bordered boxes; as ruled rows they take a third of the
+ * height, scan vertically, and stop competing with the thing on the page that
+ * actually matters.
+ */
+export function DataList({
+  rows,
+  className = "",
+}: {
+  rows: { label: ReactNode; value: ReactNode; note?: ReactNode }[];
+  className?: string;
+}) {
+  return (
+    <dl className={className}>
+      {rows.map((r, i) => (
+        <div
+          key={i}
+          className={`flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-3 ${i > 0 ? "rule" : ""}`}
+        >
+          <dt className="text-sm text-muted min-w-0">
+            {r.label}
+            {r.note && <span className="block text-caption text-faint mt-0.5">{r.note}</span>}
+          </dt>
+          <dd className="text-sm font-medium tabular-nums text-right">{r.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * A figure set as a figure: the number large and tight, its label small and
+ * mono underneath. No ring, no arc, no coloured donut — a percentage drawn as
+ * a circle is harder to read than the percentage and takes eight times the
+ * space, and five pages of this product were doing exactly that.
+ */
+export function Figure({
+  value,
+  label,
+  note,
+  tone = "default",
+  size = "md",
+  className = "",
+}: {
+  value: ReactNode;
+  label: ReactNode;
+  note?: ReactNode;
+  tone?: "default" | "accent" | "mark" | "good" | "warn" | "bad";
+  size?: "md" | "lg";
+  className?: string;
+}) {
+  const tones = {
+    default: "",
+    accent: "text-accent-text",
+    mark: "text-mark",
+    good: "text-good",
+    warn: "text-warn",
+    bad: "text-bad",
+  };
+  return (
+    <div className={className} data-metric>
+      <div className={`${size === "lg" ? "figure-lg" : "figure"} ${tones[tone]}`}>{value}</div>
+      <Eyebrow className="mt-2">{label}</Eyebrow>
+      {note && <p className="text-small text-muted mt-1.5 max-w-xs leading-relaxed">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * A horizontal progression with the current position obvious: idea →
+ * validated → ready → launching → operating.
+ *
+ * Steps behind you are ruled in the accent, the one you are on is marked, and
+ * the ones ahead are hairlines. Position is carried by weight and by the label
+ * as well as by colour, so it survives being printed in grey or read by
+ * somebody who cannot distinguish the two.
+ */
+export function Stages({
+  stages,
+  current,
+  className = "",
+}: {
+  stages: string[];
+  /** Zero-based index of the current stage. */
+  current: number;
+  className?: string;
+}) {
+  return (
+    <ol className={`flex flex-wrap gap-x-1 gap-y-3 ${className}`}>
+      {stages.map((s, i) => {
+        const done = i < current;
+        const now = i === current;
+        return (
+          <li key={s} className="flex-1 min-w-24">
+            <div
+              className={`h-0.5 ${done ? "bg-accent" : now ? "bg-mark" : "bg-border"}`}
+              aria-hidden="true"
+            />
+            <p
+              className={`eyebrow mt-2 ${now ? "text-mark" : done ? "text-accent-text" : ""}`}
+            >
+              {s}
+            </p>
+            {now && <p className="text-caption text-muted mt-1">You are here</p>}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * A badge. Squared off rather than a pill, and mono, so it reads as a tag on a
+ * drawing rather than as one more rounded thing on a page that had sixty of
+ * them.
+ *
+ * Deliberately not uppercased, unlike `Eyebrow`. An eyebrow is a short label
+ * somebody wrote by hand; a badge carries whatever it is given — "Stage 6/10 ·
+ * First customer" set in capitals is shouting, and four of them in a row is a
+ * headline. Capitals also change what `innerText` returns, which quietly broke
+ * two assertions that were reading the stage off the page.
+ */
 export function Badge({
   children,
   tone = "neutral",
   className = "",
 }: {
   children: ReactNode;
-  tone?: "neutral" | "accent" | "good" | "warn" | "bad" | "info";
+  tone?: "neutral" | "accent" | "good" | "warn" | "bad" | "info" | "mark";
   className?: string;
 }) {
   const tones = {
@@ -281,10 +540,11 @@ export function Badge({
     warn: "bg-warn-soft text-warn border-warn/30",
     bad: "bg-bad-soft text-bad border-bad/30",
     info: "bg-info-soft text-info border-info/30",
+    mark: "bg-mark-soft text-mark-text border-mark/30",
   };
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-medium leading-5 ${tones[tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border font-mono text-[11px] tracking-wide font-medium leading-5 ${tones[tone]} ${className}`}
     >
       {children}
     </span>
@@ -667,63 +927,65 @@ export function scoreTone(score: number): "good" | "warn" | "bad" {
   return "bad";
 }
 
+/**
+ * A score, set as type.
+ *
+ * This was a coloured donut with a halo behind it, on five pages at once. A
+ * ring is the worst available way to show a percentage: the number in the
+ * middle is what everybody actually reads, the arc adds no precision the
+ * digits don't already have, and it takes eight times the space to say it.
+ * The halo was worse — a glow around a figure is decoration pretending to be
+ * emphasis.
+ *
+ * So: the figure large and tabular, a hairline bar carrying the proportion,
+ * and the band named in words underneath. Colour is a second channel rather
+ * than the only one, so the reading survives greyscale and colour-blindness.
+ *
+ * The `size` prop is kept because a dozen call sites pass it, and is read as
+ * a scale hint rather than a pixel diameter.
+ */
 export function ScoreRing({
   score,
   size = 68,
   label,
   sublabel,
-  glow,
+  glow: _glow,
 }: {
   score: number;
   size?: number;
   label?: string;
   sublabel?: string;
-  /** A soft halo in the score's colour, for the one hero ring on a page.
-      Suppressed on a low score: a red halo reads as an error, and a low score
-      early on is normal rather than wrong. */
+  /** Accepted and ignored. There is no halo any more; see above. */
   glow?: boolean;
 }) {
-  const radius = (size - 7) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const tone = scoreTone(score);
-  const color = tone === "good" ? "var(--good)" : tone === "warn" ? "var(--warn)" : "var(--bad)";
+  const clamped = Math.max(0, Math.min(100, score));
+  const tone = scoreTone(clamped);
+  const toneText = tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : "text-bad";
+  const toneBar = tone === "good" ? "bg-good" : tone === "warn" ? "bg-warn" : "bg-bad";
+  const big = size >= 76;
 
   return (
-    <div className="inline-flex items-center gap-3">
-      <div className="relative shrink-0" style={{ width: size, height: size }}>
-        {glow && tone !== "bad" && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 rounded-full"
-            style={{ background: color, filter: "blur(18px)", opacity: 0.22 }}
-          />
-        )}
-        <svg width={size} height={size} className="relative -rotate-90" aria-hidden="true">
-          <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth="5" />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - Math.max(0, Math.min(100, score)) / 100)}
-            style={{ transition: "stroke-dashoffset 0.7s cubic-bezier(0.22,1,0.36,1)" }}
-          />
-        </svg>
-        <span
-          className="absolute inset-0 grid place-items-center font-semibold"
-          style={{ fontSize: size / 3.2 }}
-        >
-          <CountUp value={Math.max(0, Math.min(100, score))} />
+    <div className="min-w-0" data-metric>
+      <div className="flex items-baseline gap-2">
+        <span className={`${big ? "figure-lg" : "figure"} ${toneText}`}>
+          <CountUp value={clamped} />
         </span>
+        <span className="text-caption text-faint">/ 100</span>
+      </div>
+      <div
+        className="h-1 bg-border mt-3 overflow-hidden"
+        role="img"
+        aria-label={`${clamped} out of 100`}
+      >
+        <div
+          className={`h-full ${toneBar}`}
+          style={{ width: `${clamped}%`, transition: "width 0.6s var(--ease)" }}
+        />
       </div>
       {(label || sublabel) && (
-        <div className="min-w-0">
-          {label && <div className="text-sm font-semibold">{label}</div>}
-          {sublabel && <div className="text-xs text-muted">{sublabel}</div>}
+        <div className="mt-2.5">
+          {label && <Eyebrow>{label}</Eyebrow>}
+          {sublabel && <div className="text-small text-muted mt-1">{sublabel}</div>}
         </div>
       )}
     </div>

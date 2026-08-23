@@ -1,4 +1,4 @@
-import { Fraunces, IBM_Plex_Sans } from "next/font/google";
+import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
 /**
  * Typefaces, self-hosted.
@@ -31,4 +31,25 @@ export const body = IBM_Plex_Sans({
   weight: ["400", "500", "600"],
   display: "swap",
   variable: "--font-body",
+});
+
+/**
+ * IBM Plex Mono carries the eyebrow labels, the axis labels and the small
+ * figures — the furniture of a drawing rather than its content.
+ *
+ * This is the third face and the last one: three is a system, five is a mess.
+ * It earns its place because it is the one thing that makes the interface read
+ * as an instrument instead of a website. A label set in mono at 11px with wide
+ * tracking says "this is a measurement" before anybody has read the word, and
+ * it is doing the job that a small coloured pill used to do badly.
+ *
+ * Same superfamily as the body face, so the two share proportions and a
+ * designer, and only two weights are pulled — labels are never bold and never
+ * light.
+ */
+export const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-mono-face",
 });

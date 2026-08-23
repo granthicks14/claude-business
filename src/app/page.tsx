@@ -2,63 +2,86 @@
 
 import Link from "next/link";
 
+import { GroundworkDiagram } from "@/components/groundwork-diagram";
 import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { IdeasArt, ShopArt } from "@/components/art";
-import { Badge, Card, Hi, LinkButton, ScoreRing } from "@/components/ui";
+import { Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import { useAIStatus } from "@/lib/useAI";
 
-const PIPELINE = [
-  { label: "You", detail: "Skills, time, money, goals" },
-  { label: "Analysis", detail: "Matched against real business models" },
-  { label: "Opportunities", detail: "Scored 0–100 against your situation" },
-  { label: "Validation", detail: "Evidence before you commit" },
-  { label: "Launch", detail: "A plan for what to do today" },
+/*
+ * The four doors.
+ *
+ * People arrive in genuinely different states — no idea, an idea, a running
+ * business, or unsure which trade is even worth their time — and routing all
+ * of them through the same questionnaire was the single biggest reason to
+ * leave. Set as a ruled list rather than a grid of tiles: four bordered boxes
+ * of equal weight is a menu that makes you read all four before choosing.
+ */
+const DOORS = [
+  {
+    href: "/start",
+    label: "I have an idea already",
+    detail: "Describe it in a sentence. It comes back scored, with the holes named.",
+  },
+  {
+    href: "/lab",
+    label: "I need an idea",
+    detail: "Built from your hours, your money and what you can already do.",
+  },
+  {
+    href: "/analyze",
+    label: "I already run something",
+    detail: "Score it against fifteen dimensions, and get the three worth fixing first.",
+  },
+  {
+    href: "/explore",
+    label: "I don't know which industry",
+    detail: "Eighteen of them, ranked against your situation rather than in general.",
+  },
+  {
+    href: "/opportunity",
+    label: "I want something that works where I live",
+    detail: "Describe your town. No profile needed, and nothing is invented about your area.",
+  },
 ];
 
-const PROOF = [
+/* What the product refuses to do, which is the part nobody else claims. */
+const POSITIONS = [
   {
-    title: "Free to run, by design",
-    body: "A structured recommendation engine runs locally in your browser — no API key, no account, no database, and it works offline. An AI provider is optional, never required.",
+    n: "01",
+    title: "It will tell you no",
+    body: "The decision layer returns KILL and PIVOT as readily as BUILD, and failure patterns are checked before success patterns — so it cannot congratulate you on a business whose customers are all leaving.",
   },
   {
-    title: "Scored against you, not in general",
-    body: "Ten dimensions — founder fit, demand, speed to revenue, competition and more — weighted by what you told us you want, with the reasoning shown for every number.",
+    n: "02",
+    title: "One payment outweighs forty opinions",
+    body: "Evidence is graded on a ladder and the weights are exponential, so no amount of polite encouragement from friends ever outranks a single person who actually paid.",
   },
   {
-    title: "Evidence, not enthusiasm",
-    body: "The Validation Lab separates what's verified from what's inference and what's still an assumption. If something hasn't been checked, it says so.",
+    n: "03",
+    title: "It says when it doesn't know",
+    body: "A dimension is allowed to return no score at all rather than a confident fifty. Gaps in a generated plan come back as visible placeholders instead of plausible inventions.",
   },
   {
-    title: "Always a next action",
-    body: "A 90-day roadmap, a day-by-day plan to your first $100, and small experiments to run before you build anything expensive.",
+    n: "04",
+    title: "Free is the architecture, not the offer",
+    body: "The engine is deterministic and runs in your browser. No account on a server, no database, no API key. An AI provider is optional and nothing breaks without one.",
   },
 ];
 
-function QuickLink({
-  href,
-  icon,
-  title,
-  detail,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  detail: string;
-}) {
+function Door({ href, label, detail }: { href: string; label: string; detail: string }) {
   return (
     <Link
       href={href}
-      className="hover-lift group flex items-start gap-3 rounded-xl border border-border bg-surface p-4 hover:bg-surface-2 min-h-16"
+      className="group rule flex items-baseline gap-4 py-4 transition-colors hover:bg-surface-2 -mx-3 px-3 rounded-md"
     >
-      <span className="shrink-0 mt-0.5 grid place-items-center size-8 rounded-lg bg-accent-soft text-accent transition-transform duration-200 group-hover:scale-110">
-        {icon}
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium group-hover:text-accent-text transition-colors">{label}</span>
+        <span className="block text-small text-muted mt-1 leading-relaxed">{detail}</span>
       </span>
-      <span className="min-w-0">
-        <span className="block font-medium text-sm">{title}</span>
-        <span className="block text-[13px] text-muted mt-0.5 leading-relaxed">{detail}</span>
-      </span>
+      <Icon.arrowRight className="size-4 shrink-0 text-faint transition-transform duration-200 group-hover:translate-x-1 group-hover:text-accent" />
     </Link>
   );
 }
@@ -74,14 +97,15 @@ export default function HomePage() {
   // next step. The marketing page is for first-time visitors.
   if (ready && hasProfile) {
     return (
-      <div className="space-y-5">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-surface px-5 py-6 sm:px-7 sm:py-7 aurora animate-in">
-          <div className="relative z-[1] flex items-center gap-6">
-            <div className="min-w-0 flex-1">
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+      <div className="space-y-8">
+        <header className="animate-in">
+          <Eyebrow className="mb-3">Groundwork</Eyebrow>
+          <div className="flex items-end justify-between gap-8">
+            <div className="min-w-0">
+              <h1 className="text-h1">
                 {state.profile.name ? `Welcome back, ${state.profile.name}.` : "Welcome back."}
               </h1>
-              <p className="text-muted mt-1.5 leading-relaxed">
+              <p className="text-body-lg text-muted mt-3 leading-relaxed">
                 {business ? (
                   <>
                     You&apos;re building <Hi>{business.idea.name}</Hi>.
@@ -91,261 +115,237 @@ export default function HomePage() {
                 )}
               </p>
             </div>
-            <div className="hidden sm:block shrink-0 w-32 text-muted/70">
+            <div className="hidden sm:block shrink-0 w-24 text-muted/60">
               {business ? <ShopArt className="w-full" /> : <IdeasArt className="w-full" />}
             </div>
           </div>
-        </div>
+          <div className="rule mt-6" />
+        </header>
 
         <NextActionCard />
         <StageCard />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <QuickLink href="/lab?tab=shortlist" icon={<Icon.spark className="size-4" />} title="My ideas" detail={`${state.ideas.length} scored against your profile`} />
-          <QuickLink href="/coach" icon={<Icon.chat className="size-4" />} title="Ask your mentor" detail="Free, works without an API key" />
-          <QuickLink href="/opportunity" icon={<Icon.money className="size-4" />} title="Best opportunity near me" detail="Rank ideas against your area" />
-          <QuickLink href={business ? "/money" : "/lab?tab=generate"} icon={<Icon.money className="size-4" />} title={business ? "Run the numbers" : "Explore ideas"} detail={business ? "Price, customers, what you keep" : "Browse by category"} />
-        </div>
+        <Section eyebrow="Elsewhere" title="Pick something up">
+          <div className="max-w-2xl">
+            <Door href="/lab?tab=shortlist" label="My ideas" detail={`${state.ideas.length} scored against your profile.`} />
+            <Door href="/coach" label="Ask your mentor" detail="Free, and works without an API key." />
+            <Door href="/opportunity" label="Best opportunity near me" detail="Rank ideas against your area." />
+            <Door
+              href={business ? "/money" : "/lab?tab=generate"}
+              label={business ? "Run the numbers" : "Explore ideas"}
+              detail={business ? "Price, customers, and what you actually keep." : "Browse by category."}
+            />
+          </div>
+        </Section>
       </div>
     );
   }
 
   return (
-    <div className="space-y-14 sm:space-y-20">
-      <section className="relative -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pt-6 pb-2 overflow-hidden aurora">
-        <div className="absolute inset-0 grid-fade opacity-[0.55] pointer-events-none" aria-hidden="true" />
-        <div className="relative z-[1] grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-center">
-          <div className="max-w-3xl">
-          <Badge tone="accent" className="mb-5">
-            <span className="size-1.5 rounded-full bg-accent animate-[pulse-dot_2.4s_ease-in-out_infinite]" aria-hidden="true" />
-            Your AI co-founder
-          </Badge>
+    <div className="space-y-[var(--space-section)]">
+      {/*
+        The masthead.
+        Asymmetric and left-set, because the centred headline over a subtitle
+        over two buttons over three cards is the composition every generated
+        landing page ships with. The statement is set in the display face at
+        display size and carries the page on its own — there is no gradient
+        behind it, no badge above it and no glow around it.
+      */}
+      <section className="pt-2 lg:pt-6">
+        <Split
+          weight="even-ish"
+          left={
+            <div className="animate-in">
+              <Eyebrow className="mb-5">Groundwork · the work before you build</Eyebrow>
 
-          <h1 className="text-[2.1rem] leading-[1.1] sm:text-5xl sm:leading-[1.08] font-semibold tracking-tight">
-            Build a business <span className="gradient-text">worth building</span>.
-          </h1>
+              <h1 className="text-display max-w-[15ch]">
+                Find a business
+                <br />
+                worth building.
+              </h1>
 
-          <p className="mt-4 text-base sm:text-lg text-muted max-w-2xl leading-relaxed">
-            Turn an idea into a validated strategy, a real offer and a launch plan — with a co-founder that will{" "}
-            <Hi>tell you when it&apos;s a bad idea</Hi>.
-          </p>
-
-          {ready && (
-            <div className="mt-7 flex flex-wrap gap-2.5 animate-in">
-              {business ? (
-                <>
-                  <LinkButton href="/business" variant="primary" size="lg" icon={<Icon.building />}>
-                    Open {business.idea.name.length > 24 ? "my business" : business.idea.name}
-                  </LinkButton>
-                  <LinkButton href="/tasks" size="lg">
-                    What should I do today?
-                  </LinkButton>
-                </>
-              ) : (
-                <>
-                  <LinkButton href="/start" variant="primary" size="lg" icon={<Icon.bolt />}>
-                    Build my business
-                  </LinkButton>
-                  <LinkButton href="/start" size="lg" icon={<Icon.spark />}>
-                    Explore an example
-                  </LinkButton>
-                </>
-              )}
-            </div>
-          )}
-
-          {ready && hasProfile && !business && state.ideas.length > 0 && (
-            <p className="mt-4 text-sm text-muted">
-              You have {state.ideas.length} idea{state.ideas.length === 1 ? "" : "s"} saved.{" "}
-              <Link href="/lab?tab=choose" className="text-accent-text font-medium underline underline-offset-2">
-                Find your best one
-              </Link>
-              .
-            </p>
-          )}
-
-          {/*
-            Five doors, not one funnel. People arrive in genuinely different
-            states — no idea, an idea, a running business, or just curious which
-            industry is worth their time — and routing all of them through the
-            same profile questionnaire was the single biggest reason to leave.
-          */}
-          {ready && (
-            <div className="mt-7 max-w-2xl animate-in" style={{ animationDelay: "120ms" }}>
-              <p className="text-xs uppercase tracking-wide text-faint font-medium mb-2.5">Or go straight to it</p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <QuickLink
-                  href="/analyze"
-                  icon={<Icon.search className="size-4" />}
-                  title="I already run a business"
-                  detail="Score it, and get the three things worth fixing first."
-                />
-                <QuickLink
-                  href="/explore"
-                  icon={<Icon.compass className="size-4" />}
-                  title="Which industry is worth it?"
-                  detail="Eighteen, ranked against your money, hours and skills."
-                />
-                <QuickLink
-                  href="/opportunity"
-                  icon={<Icon.money className="size-4" />}
-                  title="What would work where I live?"
-                  detail="Describe your town. No profile needed."
-                />
-                <QuickLink
-                  href="/start"
-                  icon={<Icon.spark className="size-4" />}
-                  title="I have an idea already"
-                  detail="Describe it in a sentence and get it scored."
-                />
-              </div>
-            </div>
-          )}
-
-          {ready && (
-            <div className="mt-6 rounded-xl border border-good/30 bg-good-soft px-4 py-3 max-w-2xl animate-in" style={{ animationDelay: "160ms" }}>
-              <p className="text-sm font-medium">
-                Works with <Hi tone="good">no account, no API key and no cost</Hi>
+              <p className="text-body-lg text-muted mt-6 max-w-prose leading-relaxed">
+                Most tools help you build faster. This one works out whether you should — scoring what
+                you&apos;re considering against your real hours, money and skills, then{" "}
+                <Hi tone="mark">arguing the other side</Hi> before you spend anything.
               </p>
-              <p className="text-sm text-muted mt-1">
-                Everything runs on a built-in Business Intelligence Engine in your own browser — ideas, scoring,
-                validation, plans, marketing, money and the coach.{" "}
+
+              {ready && (
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  {business ? (
+                    <>
+                      <LinkButton href="/business" variant="primary" size="lg" icon={<Icon.building />}>
+                        Open {business.idea.name.length > 24 ? "my business" : business.idea.name}
+                      </LinkButton>
+                      <Link href="/tasks" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
+                        What should I do today?
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <LinkButton href="/start" variant="primary" size="lg">
+                        Start with what you have
+                      </LinkButton>
+                      <Link href="/start" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
+                        Or open a worked example
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+
+              <p className="text-small text-muted mt-6 leading-relaxed max-w-md">
+                No account on a server, no API key, no cost.{" "}
                 {status?.configured
-                  ? "An optional AI provider is also configured on this deployment if you want it."
-                  : "An optional AI provider can be added, but nothing here needs one."}{" "}
+                  ? "An optional AI provider is configured on this deployment if you want it."
+                  : "An optional AI provider can be added; nothing here needs one."}{" "}
                 <Link href="/cost" className="text-accent-text font-medium underline underline-offset-2">
                   See the cost audit
                 </Link>
                 .
               </p>
             </div>
-          )}
-          </div>
-
-          {/* Drawn here as SVG, not fetched: there is no public/ directory and a
-              remote image would be a required network dependency. */}
-          <div className="hidden lg:block text-muted/70 animate-in" style={{ animationDelay: "220ms" }}>
-            <ShopArt className="w-full" label="A small shop with its lights on" />
-          </div>
-        </div>
-      </section>
-
-      <section aria-labelledby="how" className="space-y-5">
-        <h2 id="how" className="text-sm font-semibold uppercase tracking-wider text-faint">
-          How it works
-        </h2>
-        <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {PIPELINE.map((step, i) => (
-            <li key={step.label} className="relative">
-              <Card className="p-4 h-full">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="size-6 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold tabular-nums border border-accent-border">
-                    {i + 1}
-                  </span>
-                  <span className="font-medium text-sm">{step.label}</span>
-                </div>
-                <p className="text-[13px] text-muted leading-relaxed">{step.detail}</p>
-              </Card>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section aria-labelledby="example" className="grid gap-6 lg:grid-cols-[1.15fr_1fr] items-center">
-        <div>
-          <h2 id="example" className="text-xl sm:text-2xl font-semibold tracking-tight">
-            You don&apos;t need a business idea to start
-          </h2>
-          <p className="mt-3 text-muted leading-relaxed">
-            One sentence is enough. &ldquo;I like fishing, I&apos;m good at making videos, I have $300, and I want to
-            make money online&rdquo; is a complete brief — enough to generate opportunities, rank them against your
-            budget and hours, and show you which one to test first.
-          </p>
-          <p className="mt-3 text-muted leading-relaxed">
-            Every idea comes back with reasoning: why it fits <em>you</em>, what it costs, how fast a first dollar is
-            realistic, and what could go wrong. Financial figures are illustrative scenarios with their assumptions
-            written out, never promises.
-          </p>
-          <div className="mt-5">
-            <LinkButton href={hasProfile ? "/lab?tab=shortlist" : "/onboarding"} variant="primary" icon={<Icon.arrowRight />}>
-              {hasProfile ? "Generate ideas" : "Build my founder profile"}
-            </LinkButton>
-          </div>
-        </div>
-
-        <Card className="p-5 shadow-card">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wider text-faint font-semibold">Example opportunity</p>
-              <h3 className="font-semibold mt-1 truncate">Bank-fishing spot guides</h3>
-              <p className="text-[13px] text-muted mt-1">
-                Short video reviews plus paid local spot maps for shore anglers without a boat.
-              </p>
+          }
+          right={
+            <div className="animate-in" style={{ animationDelay: "140ms" }}>
+              <GroundworkDiagram />
             </div>
-            <ScoreRing score={84} size={58} />
-          </div>
-          <div className="mt-4 space-y-2.5">
-            {[
-              ["Founder fit", 92, "Uses your video editing and fishing knowledge"],
-              ["Startup accessibility", 88, "Phone, editing app, $0–$60 of tools"],
-              ["Speed to revenue", 76, "First paid map realistic in ~3 weeks"],
-              ["Competition", 61, "Crowded on video, thin on paid local detail"],
-            ].map(([label, value, note]) => (
-              <div key={label as string}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[13px] font-medium">{label}</span>
-                  <span className="text-[13px] tabular-nums text-muted">{value}</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden mt-1">
-                  <div
-                    className="h-full rounded-full bg-accent"
-                    style={{ width: `${value as number}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-faint mt-1">{note}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-[11px] text-faint mt-4 pt-3 border-t border-border">
-            Illustration of the output format. Your ideas are generated from your own profile.
-          </p>
-        </Card>
+          }
+        />
       </section>
 
-      <section aria-labelledby="why" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <h2 id="why" className="sr-only">
-          What makes this different
-        </h2>
-        {PROOF.map((item) => (
-          <Card key={item.title} className="p-5">
-            <h3 className="font-semibold text-[15px]">{item.title}</h3>
-            <p className="text-sm text-muted mt-2 leading-relaxed">{item.body}</p>
-          </Card>
-        ))}
-      </section>
-
-      <section className="rounded-2xl border border-accent-border bg-accent-soft px-6 py-8 sm:px-10 sm:py-10 text-center">
-        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight">
-          {business ? "Pick up where you left off" : "Ready to find yours?"}
-        </h2>
-        <p className="text-sm text-muted mt-2 max-w-lg mx-auto">
-          {business
-            ? `You're building ${business.idea.name}. Your dashboard has the next step waiting.`
-            : "Answer a few questions about your skills, resources and goals. Five minutes, and you can edit any of it later."}
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2.5 justify-center">
-          <LinkButton href={business ? "/business" : hasProfile ? "/lab?tab=shortlist" : "/onboarding"} variant="primary" size="lg">
-            {business ? "Open dashboard" : hasProfile ? "Generate ideas" : "Start"}
-          </LinkButton>
-          {!business && (
-            <LinkButton href="/lab?tab=generate" size="lg" variant="secondary">
-              Browse categories
-            </LinkButton>
-          )}
+      {/* Four doors, ruled. */}
+      <Section
+        eyebrow="Where are you starting?"
+        title="Five ways in, and none of them is a questionnaire first"
+        description="You do not have to know what you want to build. You do have to tell it something true about yourself."
+      >
+        <div className="max-w-3xl">
+          {DOORS.map((d) => (
+            <Door key={d.href} {...d} />
+          ))}
         </div>
-        <p className="text-[11px] text-faint mt-6 max-w-xl mx-auto leading-relaxed">
-          Educational business planning tool. Estimates are illustrative, not financial advice. Verify licences, tax and
-          insurance requirements with a qualified professional in your area.
+      </Section>
+
+      {/*
+        Editorial numbered positions, not a four-up grid of feature cards.
+        The number is the structure, the rule is the separator, and there is
+        no box anywhere in it.
+      */}
+      <Section eyebrow="What makes it different" title="It is built to disappoint you early">
+        <div className="grid gap-x-12 gap-y-8 sm:grid-cols-2">
+          {POSITIONS.map((p) => (
+            <div key={p.n} className="flex gap-5">
+              <span className="eyebrow shrink-0 pt-1 text-mark">{p.n}</span>
+              <div className="min-w-0">
+                <h3 className="text-h3 font-semibold">{p.title}</h3>
+                <p className="text-small text-muted mt-2 leading-relaxed">{p.body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* One worked example, set as a specimen rather than a testimonial. */}
+      <Section eyebrow="What the output looks like" title="One sentence in, a scored opportunity out">
+        <Split
+          weight="left"
+          left={
+            <div>
+              <p className="text-body-lg leading-relaxed">
+                &ldquo;I like fishing, I&apos;m good at making videos, I have $300, and I want to make money
+                online.&rdquo;
+              </p>
+              <p className="text-muted mt-4 leading-relaxed max-w-prose">
+                That is a complete brief. It is enough to generate opportunities, rank them against your budget
+                and your hours, and say which one to test first — with the reasoning shown for every number, and
+                the assumptions written out beside every figure.
+              </p>
+              <div className="mt-6">
+                <LinkButton href={hasProfile ? "/lab?tab=shortlist" : "/start"} variant="primary">
+                  {hasProfile ? "Generate ideas" : "Try it with your own sentence"}
+                </LinkButton>
+              </div>
+            </div>
+          }
+          right={
+            <figure className="rail rail-mark">
+              <Eyebrow>Example opportunity</Eyebrow>
+              <p className="text-h3 font-semibold mt-2">Bank-fishing spot guides</p>
+              <p className="text-small text-muted mt-1.5 leading-relaxed">
+                Short video reviews plus paid local spot maps, for shore anglers without a boat.
+              </p>
+
+              <div className="mt-5">
+                {[
+                  ["Founder fit", 92, "Uses your video editing and your fishing knowledge"],
+                  ["Startup accessibility", 88, "A phone, an editing app, $0–$60 of tools"],
+                  ["Speed to revenue", 76, "First paid map realistic in about three weeks"],
+                  ["Competition", 61, "Crowded on video, thin on paid local detail"],
+                ].map(([label, value, note], i) => (
+                  <div key={label as string} className={`py-2.5 ${i > 0 ? "rule" : ""}`}>
+                    <div className="flex items-baseline justify-between gap-4">
+                      <span className="text-small font-medium">{label}</span>
+                      <span className="text-small tabular-nums text-muted">{value}</span>
+                    </div>
+                    <p className="text-caption text-faint mt-1">{note}</p>
+                  </div>
+                ))}
+              </div>
+
+              <figcaption className="text-caption text-faint mt-4 rule pt-3">
+                An illustration of the output format. Your own ideas are generated from your own profile.
+              </figcaption>
+            </figure>
+          }
+        />
+      </Section>
+
+      {/*
+        The close. Left-set and ruled rather than a centred tinted panel with
+        two centred buttons under it, which is the other half of the template
+        this page used to be.
+      */}
+      <section className="rule pt-8 pb-4">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-xl">
+            <h2 className="text-h2">{business ? "Pick up where you left off" : "Start with what you already have"}</h2>
+            <p className="text-muted mt-3 leading-relaxed">
+              {business
+                ? `You're building ${business.idea.name}. The next step is waiting in your workspace.`
+                : "Five minutes of honest answers about your skills, your money and your hours. You can change any of it later, and a low score never blocks anything."}
+            </p>
+          </div>
+          <div className="flex flex-col items-start gap-3">
+            <LinkButton
+              href={business ? "/business" : hasProfile ? "/lab?tab=shortlist" : "/start"}
+              variant="primary"
+              size="lg"
+            >
+              {business ? "Open workspace" : hasProfile ? "Generate ideas" : "Start"}
+            </LinkButton>
+            {/*
+              The long questionnaire, offered rather than imposed.
+              Routing everybody through it first was the single biggest reason
+              people left, which is why the primary action goes to `/start`.
+              But burying it three clicks deep is the opposite mistake: some
+              people would genuinely rather answer twenty questions once, and
+              they should not have to find it.
+            */}
+            {!business && !hasProfile && (
+              <Link
+                href="/onboarding"
+                className="inline-flex items-center min-h-10 text-sm text-muted underline underline-offset-4 decoration-border-strong hover:text-text hover:decoration-accent"
+              >
+                Or answer the full questionnaire instead
+              </Link>
+            )}
+          </div>
+        </div>
+        <p className="text-caption text-faint mt-8 max-w-2xl leading-relaxed">
+          Educational business planning tool. Estimates are illustrative scenarios with their assumptions stated,
+          not financial advice and not promises. Verify licences, tax and insurance requirements with a qualified
+          professional in your area.
         </p>
       </section>
     </div>

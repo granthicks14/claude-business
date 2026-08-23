@@ -61,7 +61,7 @@ export function ShopArt({ className = "", label }: { className?: string; label?:
       <path d="M118 128V74h30v54" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
       <circle cx="141" cy="102" r="2.5" fill="var(--accent)" stroke="none" />
       {/* hanging sign */}
-      <g className="float">
+      <g>
         <path d="M100 18v10" className="draw" pathLength={1} />
         <rect x="74" y="4" width="52" height="16" rx="5" fill="var(--accent)" stroke="none" />
       </g>
@@ -81,11 +81,11 @@ export function ToolboxArt({ className = "", label }: { className?: string; labe
       <path d="M34 78h132" className="draw" pathLength={1} style={{ ["--d" as string]: "54ms" }} />
       <path d="M78 78V66a8 8 0 0 1 8-8h28a8 8 0 0 1 8 8v12" className="draw" pathLength={1} style={{ ["--d" as string]: "90ms" }} />
       {/* things sticking out of it */}
-      <g className="float">
+      <g>
         <path d="M64 78V44" className="draw" pathLength={1} stroke="var(--accent)" style={{ ["--d" as string]: "144ms" }} />
         <path d="M58 44h12l-6-12z" fill="var(--accent)" stroke="none" />
       </g>
-      <g className="float-delayed">
+      <g>
         <rect x="126" y="34" width="26" height="34" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "171ms" }} />
         <path d="M133 45h12M133 53h8" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "225ms" }} />
       </g>
@@ -102,7 +102,7 @@ export function SignArt({ className = "", label }: { className?: string; label?:
     <Frame className={className} label={label}>
       <path d="M20 20h160" className="draw" pathLength={1} />
       <path d="M62 20v12M138 20v12" className="draw" pathLength={1} style={{ ["--d" as string]: "54ms" }} />
-      <g className="float">
+      <g>
         <rect x="46" y="32" width="108" height="72" rx="8" fill="var(--surface-2)" className="draw" pathLength={1} style={{ ["--d" as string]: "90ms" }} />
         <path d="M64 54h72" stroke="var(--accent)" strokeWidth="3" className="draw" pathLength={1} style={{ ["--d" as string]: "171ms" }} />
         <path d="M64 70h54M64 84h36" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
@@ -168,23 +168,62 @@ export function ChecklistArt({ className = "", label }: { className?: string; la
 }
 
 /** A lightbulb over a stack of cards. Used where ideas are the subject. */
+/**
+ * Options staked out on a plot, one of them chosen.
+ *
+ * This was a lightbulb with rays coming off it, floating up and down on a
+ * loop. A glowing lightbulb is the universal stock symbol for "idea" and
+ * therefore says nothing, and the float loop was decoration that moved — the
+ * two things the visual audit was meant to remove.
+ *
+ * It is now the same drawing vocabulary as the homepage diagram: dashed
+ * footprints for the candidates, one filled and dimensioned for the one worth
+ * measuring. Somebody who has seen the front page recognises it immediately,
+ * which is what a house style is for.
+ */
 export function IdeasArt({ className = "", label }: { className?: string; label?: string }) {
   return (
     <Frame className={className} label={label}>
-      <g className="float">
-        <path
-          d="M100 20a26 26 0 0 1 15 47v9H85v-9a26 26 0 0 1 15-47z"
-          fill="var(--warn-soft)"
-          stroke="var(--warn)"
+      {[
+        { x: 32, y: 62, w: 26, h: 56 },
+        { x: 70, y: 78, w: 24, h: 40 },
+        { x: 142, y: 70, w: 26, h: 48 },
+      ].map((r, i) => (
+        <rect
+          key={i}
+          x={r.x}
+          y={r.y}
+          width={r.w}
+          height={r.h}
+          fill="none"
+          stroke="var(--accent)"
+          strokeDasharray="5 4"
           className="draw"
           pathLength={1}
+          style={{ ["--d" as string]: `${i * 60}ms` }}
         />
-        <path d="M88 84h24M91 92h18" stroke="var(--warn)" className="draw" pathLength={1} style={{ ["--d" as string]: "135ms" }} />
-        <path d="M100 6v9M62 26l7 6M138 26l-7 6" stroke="var(--warn)" className="draw" pathLength={1} style={{ ["--d" as string]: "189ms" }} />
-      </g>
-      <rect x="40" y="106" width="120" height="18" rx="5" fill="var(--surface-2)" className="draw" pathLength={1} style={{ ["--d" as string]: "225ms" }} />
-      <rect x="52" y="126" width="96" height="16" rx="5" className="draw" pathLength={1} style={{ ["--d" as string]: "270ms" }} />
-      <circle cx="54" cy="115" r="3" fill="var(--accent)" stroke="none" />
+      ))}
+      {/* The one that got measured. */}
+      <rect
+        x="104"
+        y="52"
+        width="28"
+        height="66"
+        fill="var(--mark-soft)"
+        stroke="var(--mark)"
+        strokeWidth="2"
+        className="draw"
+        pathLength={1}
+        style={{ ["--d" as string]: "200ms" }}
+      />
+      <path
+        d="M104 40h28M104 35v10M132 35v10"
+        stroke="var(--mark)"
+        className="draw"
+        pathLength={1}
+        style={{ ["--d" as string]: "260ms" }}
+      />
+      <path d="M18 118h164" stroke="var(--border-strong)" className="draw" pathLength={1} style={{ ["--d" as string]: "300ms" }} />
     </Frame>
   );
 }
@@ -214,7 +253,7 @@ export function GrowthArt({ className = "", label }: { className?: string; label
           style={{ ["--d" as string]: `${81 + i * 58}ms` }}
         />
       ))}
-      <g className="float">
+      <g>
         <path d="M60 88l30-18 30-22 32-24" stroke="var(--good)" strokeWidth="2.6" className="draw" pathLength={1} style={{ ["--d" as string]: "315ms" }} />
         <path d="M142 24h12v12" stroke="var(--good)" strokeWidth="2.6" className="draw" pathLength={1} style={{ ["--d" as string]: "405ms" }} />
       </g>
@@ -230,7 +269,7 @@ export function TalkArt({ className = "", label }: { className?: string; label?:
       <path d="M30 128v-18a26 26 0 0 1 52 0v18" className="draw" pathLength={1} style={{ ["--d" as string]: "72ms" }} />
       <circle cx="144" cy="52" r="16" fill="var(--accent-soft)" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "108ms" }} />
       <path d="M118 128v-18a26 26 0 0 1 52 0v18" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "153ms" }} />
-      <g className="float">
+      <g>
         <path d="M78 28h44a8 8 0 0 1 8 8v10a8 8 0 0 1-8 8h-16l-8 8v-8H78a8 8 0 0 1-8-8V36a8 8 0 0 1 8-8z" fill="var(--surface)" className="draw" pathLength={1} style={{ ["--d" as string]: "198ms" }} />
         <path d="M86 41h28" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "270ms" }} />
       </g>

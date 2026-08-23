@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 
 import { Icon } from "./icons";
-import { Badge, Button, useToast } from "./ui";
+import { Button, Eyebrow, useToast } from "./ui";
 import { SAMPLE_BUSINESS_ID, SAMPLE_NOTE, isSample } from "@/lib/sample";
 import { actions, useAppState } from "@/lib/store";
 
@@ -24,37 +24,39 @@ export function SampleBanner() {
 
   if (!isSample(active)) return null;
 
+  /*
+   * A marginal note, not a poster.
+   *
+   * This was a filled, tinted, rounded panel at the top of every workspace
+   * page — which made the loudest object on the screen a piece of chrome
+   * about the screen rather than the work on it. It has to stay unmissable,
+   * because a worked example mistaken for real research is the worst failure
+   * this product has available. But unmissable is a job for a weighted rule
+   * and a mono label, not for a block of colour: the rail runs the full height
+   * of the notice, and nothing else on the page has one in this tone.
+   */
   return (
-    <div className="rounded-xl border border-accent-border bg-accent-soft p-4 mb-6 no-print">
-      <div className="flex flex-wrap items-start gap-3">
-        <Badge tone="accent" className="shrink-0 mt-0.5">
-          <Icon.spark className="size-3" />
-          Example
-        </Badge>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">You&apos;re looking at a worked example, not a real business.</p>
-          <p className="text-xs text-muted mt-1 leading-relaxed">{SAMPLE_NOTE}</p>
-          <div className="flex flex-wrap gap-2 mt-3">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => router.push("/start")}
-              icon={<Icon.arrowRight className="size-4" />}
-            >
-              Build my own instead
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                actions.clearSample(SAMPLE_BUSINESS_ID);
-                toast(others ? "Example cleared" : "Example cleared — your own work is untouched", "good");
-                router.push(others ? "/business" : "/start");
-              }}
-            >
-              Clear the example
-            </Button>
-          </div>
-        </div>
+    <div className="rail rail-mark py-1 mb-8 no-print">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Eyebrow className="text-mark">Worked example</Eyebrow>
+        <p className="text-sm font-medium">This is not a real business.</p>
+      </div>
+      <p className="text-caption text-muted mt-2 leading-relaxed max-w-prose">{SAMPLE_NOTE}</p>
+      <div className="flex flex-wrap gap-2 mt-3">
+        <Button size="sm" onClick={() => router.push("/start")} icon={<Icon.arrowRight className="size-4" />}>
+          Build my own instead
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            actions.clearSample(SAMPLE_BUSINESS_ID);
+            toast(others ? "Example cleared" : "Example cleared — your own work is untouched", "good");
+            router.push(others ? "/business" : "/start");
+          }}
+        >
+          Clear the example
+        </Button>
       </div>
     </div>
   );

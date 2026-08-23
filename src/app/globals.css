@@ -8,61 +8,125 @@
    is the default; `.dark` on <html> swaps the ramp. Everything below is
    expressed as a token so a theme change never means hunting through markup.
    -------------------------------------------------------------------------- */
+/* --------------------------------------------------------------------------
+   THE DRAFTING TABLE
+
+   The product is the work you do before you build. So the interface is a
+   drafting table rather than a dashboard: ink on paper, ruled lines, figures
+   set in a technical face, and structure carried by typography and rules
+   instead of by four hundred rounded rectangles.
+
+   Two brand colours and no more. SPRUCE is the product itself — the subject
+   of a sentence, the thing you click, the business you are building. CLAY is
+   what is still open — an opportunity, an exploration, the one figure on a
+   page that matters most. Everything else is status, and status is never a
+   brand colour.
+   -------------------------------------------------------------------------- */
 :root {
   /*
-   * Neutrals are warm, not blue.
-   *
-   * Every neutral used to sit at hue 265 — the cool blue-grey that ships as
+   * Paper, not screen. The ramp sits at hue 85 at very low chroma so the page
+   * reads as stock rather than as the cool blue-grey (hue 265) that ships as
    * the default in most component libraries and reads instantly as "template".
-   * Moving the ramp to hue 75 at very low chroma gives paper rather than
-   * screen: the difference is subtle per-swatch and unmistakable across a
-   * whole page, and it costs nothing.
+   *
+   * `--bg` is deliberately *not* white and `--surface` deliberately *is*: the
+   * page is the paper and a surface is something laid on top of it. That one
+   * step is what lets a section be legible without a border around it, which
+   * is the whole reason this app no longer needs a card for everything.
    */
-  --bg: oklch(99% 0.004 85);
-  --bg-subtle: oklch(97.4% 0.006 80);
-  --surface: oklch(100% 0 0);
-  --surface-2: oklch(98.3% 0.005 80);
-  --border: oklch(91.5% 0.007 78);
-  --border-strong: oklch(85% 0.010 78);
-  --text: oklch(21% 0.012 75);
-  --text-muted: oklch(49% 0.011 75);
-  --text-faint: oklch(62% 0.010 75);
+  --bg: oklch(97.6% 0.006 88);
+  --bg-subtle: oklch(96% 0.008 86);
+  --surface: oklch(99.6% 0.002 88);
+  --surface-2: oklch(97.2% 0.007 86);
+  --border: oklch(89% 0.008 84);
+  --border-strong: oklch(80% 0.012 84);
+  --text: oklch(19% 0.014 80);
+  --text-muted: oklch(46% 0.013 80);
+  /*
+   * Darkened from 60% because the paper got darker in this pass and the mono
+   * eyebrow — which is real, small, load-bearing text rather than decoration —
+   * landed at 3.68:1 against it. Measured, not guessed: the QA harness reads
+   * the painted pixels back off a canvas.
+   */
+  --text-faint: oklch(52% 0.012 82);
 
   /*
-   * The accent was oklch(54% 0.19 275) — high-chroma violet, which is the
-   * single most recognisable "AI product" signal there is. This is a deep
-   * blueprint teal instead: far enough from `info` (235) to stay distinct,
-   * nowhere near `good` (155), `warn` (78) or `bad` (25), and cool enough to
-   * hold its own against the warm paper without fighting it.
+   * SPRUCE — the primary brand colour.
+   *
+   * It has been violet (hue 275, the AI default) and then a blueprint teal.
+   * Teal was better and still landed in the same cool-tech neighbourhood every
+   * developer tool occupies. Spruce is darker and greener: it reads as
+   * considered and financial rather than as software, it holds its own against
+   * warm paper, and at this chroma it never glows.
    */
-  --accent: oklch(48% 0.098 205);
-  --accent-hover: oklch(41% 0.100 205);
-  --accent-soft: oklch(95.5% 0.022 200);
-  --accent-border: oklch(84% 0.052 202);
-  --accent-text: oklch(42% 0.098 205);
+  --accent: oklch(40% 0.062 176);
+  --accent-hover: oklch(33% 0.060 176);
+  --accent-soft: oklch(96.6% 0.013 172);
+  --accent-border: oklch(82% 0.042 174);
+  --accent-text: oklch(36% 0.062 176);
 
   /*
-   * One warm ochre, reserved for the single most important figure on a page.
-   * Not a second brand colour — a highlighter.
+   * CLAY — the secondary brand colour, and the highlighter.
+   *
+   * Warm, earthy and unmistakably not a status colour. It marks what is still
+   * open: an opportunity, a direction worth exploring, the single most
+   * important figure on a page. Held at hue 40 so it cannot be confused with
+   * `--warn` at 82, which is the mistake that turns a palette into a rainbow.
    */
-  --mark: oklch(58% 0.115 62);
-  --mark-soft: oklch(95% 0.035 70);
+  --mark: oklch(55% 0.132 40);
+  --mark-soft: oklch(96.4% 0.022 44);
   /* Darker than `--mark` because this one is only ever read as text, and it
      sits on `--mark-soft` rather than on the page. */
-  --mark-text: oklch(41% 0.098 60);
+  --mark-text: oklch(43% 0.125 38);
 
-  --good: oklch(58% 0.14 155);
-  --good-soft: oklch(95% 0.04 155);
-  --warn: oklch(70% 0.15 75);
-  --warn-soft: oklch(96% 0.05 85);
-  --bad: oklch(58% 0.19 25);
-  --bad-soft: oklch(96% 0.03 25);
-  --info: oklch(60% 0.12 235);
-  --info-soft: oklch(96% 0.03 235);
+  /*
+   * Status. Never a brand colour, never decorative.
+   *
+   * The `-soft` tints are deliberately close to the paper. There are 127 of
+   * them in the app and 48 are full callout panels, so at the saturation they
+   * used to carry, a page could easily show four blocks of four different
+   * colours and read as a carnival. Held this close to the background they
+   * behave as tinted stock: enough to group a block, never enough to compete
+   * with the text on it. The border and the coloured text do the signalling.
+   */
+  --good: oklch(52% 0.115 152);
+  --good-soft: oklch(96.6% 0.020 152);
+  --warn: oklch(64% 0.125 82);
+  --warn-soft: oklch(96.8% 0.026 84);
+  --bad: oklch(53% 0.175 25);
+  --bad-soft: oklch(96.8% 0.020 25);
+  --info: oklch(48% 0.075 245);
+  --info-soft: oklch(96.6% 0.016 245);
 
-  --shadow-sm: 0 1px 2px oklch(20% 0.02 265 / 0.05);
-  --shadow: 0 1px 3px oklch(20% 0.02 265 / 0.07), 0 8px 24px -8px oklch(20% 0.02 265 / 0.09);
-  --shadow-lg: 0 2px 6px oklch(20% 0.02 265 / 0.06), 0 24px 48px -16px oklch(20% 0.02 265 / 0.16);
+  /*
+   * Shadow is for things that genuinely float — a dialog, a popover, a menu.
+   * A section of a page does not float, so almost nothing here casts one. The
+   * tint is the ink colour rather than neutral grey, which keeps a shadow from
+   * greying out warm paper.
+   */
+  --shadow-sm: 0 1px 2px oklch(19% 0.014 80 / 0.06);
+  --shadow: 0 2px 4px oklch(19% 0.014 80 / 0.06), 0 10px 28px -12px oklch(19% 0.014 80 / 0.14);
+  --shadow-lg: 0 4px 8px oklch(19% 0.014 80 / 0.07), 0 28px 56px -20px oklch(19% 0.014 80 / 0.22);
+
+  /*
+   * Spacing. A 4px base with named steps, so a gap is chosen from a scale
+   * rather than typed. `--space-section` is the one that does the most work:
+   * the rhythm between sections is what makes a page read as composed.
+   */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+  --space-section: clamp(2.5rem, 6vw, 4.5rem);
+
+  /* Motion. Short, and the same easing everywhere. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 0.14s;
+  --dur: 0.24s;
+  --dur-slow: 0.4s;
 }
 
 .dark {
@@ -70,34 +134,35 @@
    * Dark is a warm ink, not an inverted grey and emphatically not #000. The
    * surfaces step in even increments so elevation reads without borders.
    */
-  --bg: oklch(16.5% 0.008 75);
-  --bg-subtle: oklch(19.5% 0.009 75);
-  --surface: oklch(21.5% 0.010 75);
-  --surface-2: oklch(25% 0.011 75);
-  --border: oklch(30% 0.011 75);
-  --border-strong: oklch(38% 0.013 75);
-  --text: oklch(96% 0.004 80);
-  --text-muted: oklch(74% 0.009 78);
-  --text-faint: oklch(60% 0.009 78);
+  --bg: oklch(15.5% 0.009 80);
+  --bg-subtle: oklch(18.5% 0.010 80);
+  --surface: oklch(20.5% 0.011 80);
+  --surface-2: oklch(24.5% 0.012 80);
+  --border: oklch(29% 0.012 80);
+  --border-strong: oklch(38% 0.014 80);
+  --text: oklch(96% 0.005 84);
+  --text-muted: oklch(74% 0.010 82);
+  --text-faint: oklch(60% 0.010 82);
 
-  --accent: oklch(72% 0.098 200);
-  --accent-hover: oklch(78% 0.095 200);
-  --accent-soft: oklch(27% 0.032 202);
-  --accent-border: oklch(40% 0.055 202);
-  --accent-text: oklch(82% 0.085 200);
+  /* Spruce has to come forward on ink, so it lightens and keeps its hue. */
+  --accent: oklch(74% 0.082 172);
+  --accent-hover: oklch(81% 0.078 172);
+  --accent-soft: oklch(23% 0.020 174);
+  --accent-border: oklch(38% 0.046 174);
+  --accent-text: oklch(83% 0.076 172);
 
-  --mark: oklch(76% 0.105 68);
-  --mark-soft: oklch(29% 0.040 68);
-  --mark-text: oklch(85% 0.090 70);
+  --mark: oklch(74% 0.115 45);
+  --mark-soft: oklch(23.5% 0.028 42);
+  --mark-text: oklch(84% 0.098 46);
 
-  --good: oklch(72% 0.15 155);
-  --good-soft: oklch(28% 0.05 155);
-  --warn: oklch(80% 0.14 80);
-  --warn-soft: oklch(30% 0.05 80);
-  --bad: oklch(70% 0.17 25);
-  --bad-soft: oklch(29% 0.06 25);
-  --info: oklch(72% 0.12 235);
-  --info-soft: oklch(28% 0.05 235);
+  --good: oklch(74% 0.135 152);
+  --good-soft: oklch(23% 0.030 152);
+  --warn: oklch(80% 0.125 84);
+  --warn-soft: oklch(23.5% 0.032 84);
+  --bad: oklch(70% 0.155 25);
+  --bad-soft: oklch(23.5% 0.036 25);
+  --info: oklch(74% 0.085 245);
+  --info-soft: oklch(23% 0.026 245);
 
   --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.3);
   --shadow: 0 1px 3px oklch(0% 0 0 / 0.4), 0 8px 24px -8px oklch(0% 0 0 / 0.5);
@@ -146,29 +211,44 @@
    */
   --font-sans: var(--font-body), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: var(--font-display-face), Georgia, "Times New Roman", serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   /*
    * A type scale, so sizes stop being chosen one at a time. Ratios are close
    * to a minor third at the top and tighten toward the body, which keeps
    * headings dramatic without making paragraphs shout.
    */
-  --text-display: 3.25rem;
-  --text-display--line-height: 1.04;
-  --text-display--letter-spacing: -0.028em;
-  --text-h1: 2.25rem;
-  --text-h1--line-height: 1.1;
-  --text-h1--letter-spacing: -0.024em;
-  --text-h2: 1.5rem;
-  --text-h2--line-height: 1.2;
-  --text-h2--letter-spacing: -0.018em;
+  --text-display: clamp(2.75rem, 6.4vw, 4.5rem);
+  --text-display--line-height: 0.98;
+  --text-display--letter-spacing: -0.032em;
+  --text-h1: clamp(2rem, 3.6vw, 2.75rem);
+  --text-h1--line-height: 1.06;
+  --text-h1--letter-spacing: -0.026em;
+  --text-h2: clamp(1.375rem, 2vw, 1.75rem);
+  --text-h2--line-height: 1.16;
+  --text-h2--letter-spacing: -0.02em;
   --text-h3: 1.125rem;
   --text-h3--line-height: 1.35;
+  --text-h3--letter-spacing: -0.012em;
   --text-body-lg: 1.0625rem;
-  --text-body-lg--line-height: 1.6;
+  --text-body-lg--line-height: 1.62;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.5;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.45;
+  /* The mono eyebrow. Wide tracking is what makes it read as an instrument
+     label rather than as small body text. */
   --text-label: 0.6875rem;
-  --text-label--line-height: 1.3;
-  --text-label--letter-spacing: 0.07em;
+  --text-label--line-height: 1.2;
+  --text-label--letter-spacing: 0.12em;
+  /* Figures. Set large, tight and tabular — a metric is meant to be compared
+     with the metric under it, not read as a word. */
+  --text-metric: clamp(2rem, 3.2vw, 2.75rem);
+  --text-metric--line-height: 1;
+  --text-metric--letter-spacing: -0.03em;
+  --text-metric-lg: clamp(3rem, 6vw, 4.25rem);
+  --text-metric-lg--line-height: 0.92;
+  --text-metric-lg--letter-spacing: -0.038em;
 
   /*
    * Three radii, not six. The audit found rounded-sm through rounded-3xl in
@@ -284,29 +364,34 @@
 }
 
 @layer utilities {
+  /*
+   * A card is a discrete object you could pick up: one idea, one competitor,
+   * one business. It is not a container for a paragraph.
+   *
+   * It used to carry a shadow by default, and with 394 of them on the site
+   * that meant every page was a field of floating rectangles at identical
+   * elevation — which is the same as no elevation at all, only noisier. The
+   * shadow is gone, the surface barely lifts off the paper, and the border is
+   * a hairline. Anything that genuinely floats asks for `.card-raised`.
+   */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-card);
-    box-shadow: var(--shadow-sm);
   }
 
-  .gradient-text {
-    /* background-image, not the `background` shorthand: the shorthand resets
-       background-clip, and the wide-gamut colour fallback emitted at build time
-       would land after this rule and undo the text clipping. */
-    background-image: linear-gradient(100deg, var(--accent) 10%, oklch(62% 0.2 330) 90%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+  .card-raised {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow);
   }
 
-  .grid-fade {
-    background-image:
-      linear-gradient(to right, var(--border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 10%, transparent 75%);
+  /* A card that is the subject of its page rather than one of many. */
+  .card-feature {
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-card);
   }
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -343,25 +428,27 @@
       border-color 0.18s ease;
   }
 
+  /* A 1px rise and a darker edge. The old version lifted 2px and dropped a
+     full shadow, which on a grid of results made the hovered item look like it
+     had been pulled out of the page rather than pointed at. */
   .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-    border-color: var(--accent-border);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+    border-color: var(--border-strong);
   }
 
   .hover-lift:active {
     transform: translateY(0);
   }
 
-  /* Illustrations breathe rather than sit still. Killed by the reduced-motion
-     block below, which forces iteration-count to 1. */
-  .float {
-    animation: float 6s ease-in-out infinite;
-  }
-
-  .float-delayed {
-    animation: float 7.5s ease-in-out -2.5s infinite;
-  }
+  /*
+   * `.float` and `.float-delayed` used to live here: infinite six-second
+   * bobbing loops on every illustration in the product. Nothing in a drawing
+   * of a shopfront is communicated by the shopfront moving, and a page with
+   * several of them running forever is the "random floating shapes" tell. The
+   * draw-in below runs once on entrance and then stops, which is the whole
+   * budget motion gets in this design.
+   */
 
   /* Line art that draws itself in. Needs pathLength="1" on the path so one
      dasharray value works whatever the real geometry is. */
@@ -372,39 +459,89 @@
     animation-delay: var(--d, 0ms);
   }
 
-  /* A soft moving wash behind hero content. Two large radial blobs, blurred,
-     so it reads as light rather than as shapes. */
-  .aurora::before,
-  .aurora::after {
-    content: "";
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(56px);
-    opacity: 0.5;
-    pointer-events: none;
+  /*
+   * THE STRUCTURAL VOCABULARY
+   *
+   * What used to be here was `.aurora`: two large blurred radial blobs, one of
+   * them at hue 330, drifting behind the hero and behind every page header.
+   * Glowing blobs are the single most recognisable ornament of a generated
+   * interface, and they were doing no work — the page reads identically
+   * without them, which is the test that ornament always fails.
+   *
+   * These replace it. None of them is a box. Structure comes from rules,
+   * indentation and one measured tint, which is how a printed page has always
+   * organised itself without drawing a rectangle around every paragraph.
+   */
+
+  /* A hairline that separates two blocks. The primary structural device in
+     the whole product, and the reason most sections need no border. */
+  .rule {
+    border-top: 1px solid var(--border);
   }
 
-  .aurora::before {
-    width: 30rem;
-    height: 22rem;
-    top: -8rem;
-    left: -6rem;
-    background: radial-gradient(circle, var(--accent) 0%, transparent 68%);
-    animation: drift 18s ease-in-out infinite;
+  /*
+   * A block with a weighted rule down its left edge — a margin note, an aside,
+   * a verdict. It carries a meaning colour without becoming a coloured card,
+   * which is the distinction that keeps four tinted rectangles off a page.
+   */
+  .rail {
+    border-left: 2px solid var(--border-strong);
+    padding-left: var(--space-4);
   }
 
-  .aurora::after {
-    width: 26rem;
-    height: 20rem;
-    top: -4rem;
-    right: -8rem;
-    background: radial-gradient(circle, oklch(64% 0.19 330) 0%, transparent 68%);
-    animation: drift 22s ease-in-out -6s infinite reverse;
+  .rail-accent { border-left-color: var(--accent); }
+  .rail-mark { border-left-color: var(--mark); }
+  .rail-good { border-left-color: var(--good); }
+  .rail-warn { border-left-color: var(--warn); }
+  .rail-bad { border-left-color: var(--bad); }
+
+  /*
+   * The eyebrow. Mono, small, wide-tracked, uppercase — the label on an
+   * instrument. It replaces the small coloured pill that used to sit above
+   * every section, and unlike the pill it costs no colour and no shape.
+   */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    letter-spacing: var(--text-label--letter-spacing);
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--text-faint);
   }
 
-  .dark .aurora::before,
-  .dark .aurora::after {
-    opacity: 0.32;
+  /*
+   * Ruled paper, at the very low contrast of a real drafting sheet. Used once
+   * per page at most, behind the largest composition, and it is a repeating
+   * line rather than a gradient wash — so it reads as stock, not as light.
+   */
+  .ruled {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--space-6) - 1px),
+      var(--border) calc(var(--space-6) - 1px),
+      var(--border) var(--space-6)
+    );
+  }
+
+  /* A figure set as a figure: large, tight, tabular, and never a coloured ring. */
+  .figure {
+    font-size: var(--text-metric);
+    line-height: var(--text-metric--line-height);
+    letter-spacing: var(--text-metric--letter-spacing);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    font-weight: 600;
+  }
+
+  .figure-lg {
+    font-size: var(--text-metric-lg);
+    line-height: var(--text-metric-lg--line-height);
+    letter-spacing: var(--text-metric-lg--letter-spacing);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    font-weight: 600;
   }
 
   /* Emphasis for the one word in a sentence that carries the meaning. */
@@ -455,19 +592,8 @@
   to { opacity: 1; transform: none; }
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
 @keyframes draw {
   to { stroke-dashoffset: 0; }
-}
-
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  33% { transform: translate(3rem, 1.5rem) scale(1.12); }
-  66% { transform: translate(-1.5rem, 2.5rem) scale(0.95); }
 }
 
 /* --------------------------------------------------------------------------

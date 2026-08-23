@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { Why } from "@/components/teach";
-import { Badge, Button, Card, LinkButton, useToast } from "@/components/ui";
+import { Badge, Button, Card, Eyebrow, LinkButton, useToast } from "@/components/ui";
 import {
   diagnoseStuck,
   nextAction,
@@ -54,19 +54,22 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
     toast("Logged. Come back for the next one.", "good");
   };
 
+  /*
+   * The most important block in the product, and it now looks like it.
+   *
+   * It used to be a tinted rounded card with a lightning bolt in a rounded
+   * square — visually a sibling of the eight other cards around it, which is
+   * exactly wrong for the one thing the user should read first. It is now set
+   * as a statement: a mono eyebrow, the instruction at heading size in the
+   * display face, and the reasoning carried on a weighted rule. No box at all,
+   * and it dominates the page by weight rather than by tint.
+   */
   return (
-    <Card className="p-5 sm:p-6 border-accent-border bg-accent-soft/40">
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="shrink-0 size-9 rounded-xl bg-accent grid place-items-center">
-            <Icon.bolt className="size-5 text-white dark:text-[oklch(15%_0.02_265)]" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="font-semibold text-lg leading-tight">What should I do right now?</h2>
-            <p className="text-xs text-muted mt-0.5">
-              {STAGE_LABEL[stage]} · one step at a time
-            </p>
-          </div>
+    <section className="rail rail-mark py-1">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2 mb-4">
+        <div className="min-w-0">
+          <Eyebrow>Your next move</Eyebrow>
+          <p className="text-caption text-muted mt-1.5">{STAGE_LABEL[stage]} · one step at a time</p>
         </div>
         {!compact && <StageBar stage={stage} />}
       </div>
@@ -74,22 +77,22 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
       {mode === "action" && (
         <div className="animate-in">
           {done ? (
-            <div className="rounded-xl border border-good/30 bg-good-soft p-4">
-              <p className="font-medium text-sm">Done — that&apos;s logged.</p>
-              <p className="text-sm text-muted mt-1 leading-relaxed">
+            <div>
+              <h3 className="text-h3 font-semibold text-good">Done — that&apos;s logged.</h3>
+              <p className="text-muted mt-2 leading-relaxed max-w-prose">
                 Record what actually happened (who replied, who didn&apos;t, what they said) and the next step will
                 take it into account.
               </p>
-              <Button size="sm" className="mt-3" onClick={() => setDone(false)}>
+              <Button size="sm" className="mt-4" onClick={() => setDone(false)}>
                 Show my next step
               </Button>
             </div>
           ) : (
             <>
-              <h3 className="text-xl font-semibold tracking-tight">{action.title}</h3>
-              <p className="text-[15px] mt-2 leading-relaxed">{action.detail}</p>
+              <h3 className="text-h2">{action.title}</h3>
+              <p className="text-body-lg mt-3 leading-relaxed max-w-prose">{action.detail}</p>
 
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-5">
                 <Badge>{action.minutes} min</Badge>
                 <Badge tone="good">{action.cost}</Badge>
                 <Badge tone={DIFFICULTY_TONE[action.difficulty]}>
@@ -97,12 +100,12 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
                 </Badge>
               </div>
 
-              <p className="text-sm text-muted mt-4 pt-3 border-t border-accent-border/60 leading-relaxed">
-                <span className="text-xs uppercase tracking-wide text-faint font-medium">Why this one · </span>
-                {action.why}
-              </p>
+              <div className="mt-5 rule pt-4">
+                <Eyebrow>Why this one</Eyebrow>
+                <p className="text-small text-muted mt-2 leading-relaxed max-w-prose">{action.why}</p>
+              </div>
 
-              <div className="flex flex-wrap gap-2 mt-4">
+              <div className="flex flex-wrap gap-2 mt-5">
                 <Button variant="primary" onClick={markComplete} icon={<Icon.check className="size-4" />}>
                   I did this
                 </Button>
@@ -114,7 +117,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-accent-border/60">
+              <div className="flex flex-wrap gap-1.5 mt-4 rule pt-4">
                 {action.easier && (
                   <Chip onClick={() => setMode("easier")}>Make this easier</Chip>
                 )}
@@ -207,7 +210,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
           </p>
         </Panel>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -216,7 +219,7 @@ function Chip({ children, onClick }: { children: React.ReactNode; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="min-h-9 px-3 rounded-lg border border-border bg-surface text-[13px] hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors"
+      className="min-h-9 px-3 rounded-sm border border-border bg-surface font-mono text-[11px] tracking-wide hover:border-accent hover:text-accent-text transition-colors"
     >
       {children}
     </button>
@@ -256,8 +259,8 @@ export function StageBar({ stage }: { stage: (typeof STAGES)[number] }) {
           key={s}
           title={STAGE_LABEL[s]}
           aria-hidden="true"
-          className={`h-1.5 rounded-full transition-all ${
-            i < index ? "w-4 bg-accent" : i === index ? "w-7 bg-accent" : "w-4 bg-surface-2"
+          className={`h-0.5 transition-all ${
+            i < index ? "w-4 bg-accent" : i === index ? "w-8 bg-mark" : "w-4 bg-border"
           }`}
         />
       ))}

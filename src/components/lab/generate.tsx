@@ -203,7 +203,15 @@ function CategoryExplorer() {
         territory.
       </p>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {/*
+        An index, not eighteen tiles.
+        As a grid of bordered boxes this was the single densest field of
+        identical rectangles in the product — eighteen of them, all the same
+        weight, so choosing meant reading every one. Ruled rows in columns
+        scan in a fraction of the time, take a third of the height, and the
+        selected row is marked by a rule rather than by a tinted fill.
+      */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-8">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
@@ -218,15 +226,15 @@ function CategoryExplorer() {
               );
             }}
             disabled={loading}
-            className={`text-left px-3.5 py-3 rounded-xl border transition-all min-h-16 disabled:opacity-60
+            className={`rule text-left py-3 pl-3 border-l-2 transition-colors min-h-14 disabled:opacity-60
               ${
                 active === cat.id
-                  ? "border-accent bg-accent-soft"
-                  : "border-border bg-surface hover:border-accent-border hover:bg-surface-2"
+                  ? "border-l-accent text-accent-text"
+                  : "border-l-transparent hover:border-l-border-strong hover:bg-surface-2"
               }`}
           >
             <span className="block text-sm font-medium">{cat.label}</span>
-            <span className="block text-[11px] text-muted mt-0.5 leading-snug">{cat.hint}</span>
+            <span className="block text-caption text-muted mt-0.5 leading-snug">{cat.hint}</span>
           </button>
         ))}
       </div>
