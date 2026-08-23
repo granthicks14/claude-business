@@ -48,6 +48,40 @@ const results: Record<string, unknown> = {};
 
 const scoreOf = (p: FounderProfile, i = 0) => computeFit(ideas[i], p).score;
 
+/*
+ * Interests must rank markets, never gate them.
+ *
+ * Measured, because this failed silently for a long time: naming an interest
+ * used to shrink the search space to the industries that literally matched the
+ * word, so a founder who said "technology" received four ideas out of ten
+ * while a founder who said nothing at all received the full ten. The app was
+ * punishing people for telling it what they liked, and nothing in the UI could
+ * possibly have shown that.
+ */
+const interestBatch = (interests: string[]) =>
+  generateIdeas(profile({ interests }), { angle: "balanced", count: 10, seed: 3 });
+
+results.supply = {
+  none: interestBatch([]).length,
+  food: interestBatch(["food"]).length,
+  tech: interestBatch(["technology"]).length,
+  sports: interestBatch(["sports"]).length,
+};
+
+// Naming an interest should still steer the top of the list toward it.
+const foodIdeas = interestBatch(["food"]);
+results.interestLeads = /food|recipe|meal|cook|cater|diet|kitchen|menu/i.test(
+  foodIdeas.slice(0, 3).map((i) => i.name + " " + (i.summary ?? "")).join(" "),
+);
+
+// Two batches from one profile must not return the same businesses.
+const b1 = generateIdeas(profile({ interests: ["sports"] }), { count: 10, seed: 1 });
+const b2 = generateIdeas(profile({ interests: ["sports"] }), { count: 10, seed: 9 });
+results.repeatAcrossBatches = b1.filter((i) => b2.some((j) => j.name === i.name)).length;
+
+// One batch must not be ten variations on one business model.
+results.distinctModels = new Set(b1.map((i) => i.model?.id ?? i.modelId ?? i.name)).size;
+
 results.weights = SCORING_WEIGHTS;
 results.ideaCount = ideas.length;
 results.ideaName = ideas[0]?.name ?? "";
@@ -203,6 +237,18 @@ check(
   r.weights.personalFit + r.weights.affordability + r.weights.timeFit + r.weights.skillFit >
     (r.weights.profitPotential + r.weights.scalability) * 2,
 );
+
+const supply = r.supply;
+check(
+  "naming an interest does not shrink the number of ideas offered",
+  supply.food >= supply.none && supply.tech >= supply.none && supply.sports >= supply.none,
+  JSON.stringify(supply),
+);
+check("ten ideas were asked for and ten came back, whatever the interest",
+  Object.values(supply).every((n) => n === 10), JSON.stringify(supply));
+check("a stated interest still leads the shortlist", r.interestLeads);
+check("two batches from one profile do not repeat", r.repeatAcrossBatches === 0, `${r.repeatAcrossBatches} repeated`);
+check("a batch spans several business models", r.distinctModels >= 4, `${r.distinctModels} distinct`);
 
 console.log(`\n${failures === 0 ? "ALL SCORING TESTS PASSED" : `${failures} FAILURES`}`);
 process.exit(failures ? 1 : 0);

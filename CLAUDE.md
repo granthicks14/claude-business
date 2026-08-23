@@ -28,7 +28,7 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:scoring   # 22 scoring calibration tests
+npm run test:scoring   # 27 scoring + idea-diversity calibration tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
 npm run test:product   # 60 quality/consistency/variant/intake/sample tests
@@ -256,6 +256,30 @@ actually have them, so incoherent pairings can't be generated.
 Key modules: `match.ts` (profile → signals), `ideas.ts` (generation),
 `feasibility.ts` (can-you-start), `actions.ts` (stage + next action),
 `evidence.ts` (validation status), `generators/*` (plans, toolkit, explainer).
+
+### Interests rank markets; they never gate them
+
+`match.ts` scores every industry against the founder's own language, and the
+result used to be filtered to `strength > 0` — only markets that literally
+matched a word the founder typed reached the generator.
+
+That is the opposite of personalisation, and it failed silently. Measured: a
+founder who said "technology" received four ideas out of a requested ten, one
+who said "food" received five, and one who stated no interests at all received
+the full ten, because the empty case fell through to a broad
+capability-matched set. The app was punishing people for telling it what they
+liked, and nothing in the interface could have revealed that.
+
+Stated interests still lead the shortlist — someone is far more likely to stick
+with work they care about, which is why passion hits are weighted nearly double
+alias hits. But the search space is now topped up with markets the founder's
+capabilities serve, so there is always room for an opportunity they would not
+have thought to ask for, and each carries its own reason: "you mentioned food"
+reads differently from "outside what you listed — matched to your skills".
+
+`test:scoring` holds the line with five checks, including that naming an
+interest never reduces how many ideas come back, that a stated interest still
+leads, and that two batches from one profile never repeat.
 
 ### The niche catalogue
 

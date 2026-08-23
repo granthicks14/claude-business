@@ -85,15 +85,36 @@ export function analyseFounder(profile: FounderProfile): FounderSignals {
     .filter((s) => s.strength > 0)
     .sort((a, b) => b.strength - a.strength);
 
-  // Someone who listed no recognisable interests still deserves real options:
-  // fall back to markets their capabilities serve well.
-  const industries = scored.length
-    ? scored
-    : fallbackIndustries(capabilities).map((industry) => ({
-        industry,
-        strength: 8,
-        reason: "matched to your skills rather than a stated interest",
-      }));
+  /*
+   * An interest ranks markets. It does not gate them.
+   *
+   * This used to be `scored` on its own, which meant only industries that
+   * literally matched a word the founder typed ever reached the generator —
+   * and the effect was the opposite of personalisation. Measured: a founder
+   * who said "technology" got four ideas out of a requested ten, one who said
+   * "food" got five, and one who stated no interests at all got the full ten,
+   * because the empty case fell through to a broad capability-matched set.
+   * The app was quietly punishing people for telling it what they liked.
+   *
+   * Stated interests still lead — they carry real weight, and someone is far
+   * more likely to stick with work they care about. But the search space is
+   * always topped up with markets their capabilities serve, so there is room
+   * for an opportunity they would not have thought to ask for. Each one
+   * carries its own reason, so the difference between "you mentioned food" and
+   * "this came from your skills, not your interests" stays visible.
+   */
+  const matched = scored;
+  const already = new Set(matched.map((s) => s.industry.id));
+  const topUp = fallbackIndustries(capabilities)
+    .filter((industry) => !already.has(industry.id))
+    .map((industry) => ({
+      industry,
+      strength: 8,
+      reason: matched.length
+        ? "outside what you listed — matched to your skills"
+        : "matched to your skills rather than a stated interest",
+    }));
+  const industries = [...matched, ...topUp];
 
   const preferredKinds = new Set<ModelKind>();
   for (const pref of profile.preferences) {
