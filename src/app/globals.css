@@ -90,7 +90,18 @@
    */
   --good: oklch(52% 0.115 152);
   --good-soft: oklch(96.6% 0.020 152);
-  --warn: oklch(64% 0.125 82);
+  /*
+   * 53%, not the 64% this used to be, and the difference is readability rather
+   * than taste. Amber is naturally the lightest hue on the wheel, so a warn
+   * that "looks right" next to the others is a good deal lighter than them —
+   * this one sat at 64% while `--good` was 52% and `--bad` 53%, and it measured
+   * 3.10:1 against `--warn-soft`, well under the 4.5:1 minimum. Every "Not set"
+   * and "Paid" badge in the app was failing it.
+   *
+   * Found by `check:visual`, which measures the painted pixels; hue and chroma
+   * are unchanged, so the palette rationale above still holds.
+   */
+  --warn: oklch(53% 0.125 82);
   --warn-soft: oklch(96.8% 0.026 84);
   --bad: oklch(53% 0.175 25);
   --bad-soft: oklch(96.8% 0.020 25);
@@ -159,7 +170,15 @@
   --border-strong: oklch(38% 0.014 80);
   --text: oklch(96% 0.005 84);
   --text-muted: oklch(74% 0.010 82);
-  --text-faint: oklch(60% 0.010 82);
+  /*
+   * 64%, up from 60%. `--faint` carries the eyebrow labels — "People you've
+   * contacted", "Money received" — and on `--surface-2`, the lightest of the
+   * four dark grounds, 60% measured 4.13:1 against a 4.5:1 minimum. It read as
+   * faint in the intended sense on the page background and as unreadable
+   * inside a panel, which is the failure mode of a token tuned against one
+   * ground and used on four. 64% clears every one of them.
+   */
+  --text-faint: oklch(64% 0.010 82);
 
   /* Spruce has to come forward on ink, so it lightens and keeps its hue. */
   --accent: oklch(74% 0.082 172);

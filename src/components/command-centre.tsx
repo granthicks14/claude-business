@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { Icon } from "./icons";
 import { Badge, Card, Eyebrow, Hi, LinkButton } from "./ui";
+import { withBusiness } from "@/lib/business-param";
 import { CALL_LABEL, CALL_TONE, STATE_LABEL, STATE_TONE, useIntel } from "@/lib/intel";
 import { QUALITY_BAND_LABEL, businessQuality } from "@/lib/quality";
 import { checkConsistency } from "@/lib/consistency";
@@ -23,6 +24,8 @@ import { useAppState } from "@/lib/store";
  */
 export function CommandCentre() {
   const { state, readiness, decision, redTeam, change, unknowns, business } = useIntel();
+  /* Every link out of the dashboard names the business it is about. */
+  const link = (href: string) => withBusiness(href, business?.id ?? null);
   const profile = useAppState((s) => s.profile);
   const threat = redTeam.biggestThreat;
   const unknown = unknowns[0];
@@ -87,13 +90,13 @@ export function CommandCentre() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <LinkButton href="/decide" size="sm" variant="secondary">
+        <LinkButton href={link("/decide")} size="sm" variant="secondary">
           See the full argument
         </LinkButton>
-        <Link href="/quality" className="text-sm text-accent-text hover:underline">
+        <Link href={link("/quality")} className="text-sm text-accent-text hover:underline">
           Is it any good?
         </Link>
-        <Link href="/money" className="text-sm text-accent-text hover:underline">
+        <Link href={link("/money")} className="text-sm text-accent-text hover:underline">
           Which number matters most
         </Link>
       </div>

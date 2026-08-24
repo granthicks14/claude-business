@@ -1,10 +1,13 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 
+import { BUSINESS_PARAM, withBusiness } from "./business-param";
 import { activeBusiness, actions, useAppState } from "./store";
 import type { SelectedBusiness } from "./types";
+
+export { BUSINESS_PARAM, withBusiness } from "./business-param";
 
 /**
  * Which business a workspace URL is about.
@@ -40,8 +43,6 @@ import type { SelectedBusiness } from "./types";
  * history entry is spent doing it. Old bookmarks therefore keep working and
  * silently upgrade themselves.
  */
-export const BUSINESS_PARAM = "b";
-
 export interface BusinessRoute {
   /** The business this URL is about, or null when there is none to show. */
   business: SelectedBusiness | null;
@@ -51,13 +52,23 @@ export interface BusinessRoute {
   link: (href: string) => string;
 }
 
-/** Attaches the business id to a workspace href, preserving existing params. */
-export function withBusiness(href: string, businessId: string | null | undefined): string {
-  if (!businessId) return href;
-  const [path, query = ""] = href.split("?");
-  const params = new URLSearchParams(query);
-  params.set(BUSINESS_PARAM, businessId);
-  return `${path}?${params.toString()}`;
+/**
+ * A link-builder for pages that already know which business they are showing.
+ *
+ * The sidebar gets its ids from `nav-model.ts`, but a workspace page also links
+ * sideways — Money to the plan, MVP to talking to customers, the decision page
+ * to the numbers behind it. Those hrefs were bare, so following one dropped the
+ * id out of the address and the next page had to guess from the global active
+ * business. In one tab you cannot tell; in two, following a link in the tab you
+ * were *not* using last silently moves you to the other tab's business.
+ *
+ * Deliberately a hook over the same `withBusiness` the nav uses, rather than a
+ * second way of writing the parameter.
+ */
+export function useBusinessLink(): (href: string) => string {
+  const active = useAppState(activeBusiness);
+  const id = active?.id ?? null;
+  return useCallback((href: string) => withBusiness(href, id), [id]);
 }
 
 export function useBusinessRoute(label?: string | null): BusinessRoute {

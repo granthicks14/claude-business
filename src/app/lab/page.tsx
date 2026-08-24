@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo } from "react";
 
 import { IdeasArt } from "@/components/art";
 import { Choose } from "@/components/lab/choose";
@@ -47,7 +48,15 @@ export default function BrainstormPage() {
   return (
     <Ready>
       <RequireProfile>
-        <Brainstorm />
+        {/*
+          `useSearchParams` needs a Suspense boundary above it. `null` rather
+          than a skeleton: everything under here is already behind `Ready`,
+          which does not render until the store has hydrated, so a second
+          placeholder would only add a flash between two loading states.
+        */}
+        <Suspense fallback={null}>
+          <Brainstorm />
+        </Suspense>
       </RequireProfile>
     </Ready>
   );
@@ -57,25 +66,34 @@ function Brainstorm() {
   const ideas = useAppState((s) => s.ideas);
 
   /*
-   * The panel is read from the query string once, on mount, rather than
-   * through `useSearchParams`. That hook requires a Suspense boundary around
-   * the route or the whole page opts out of static rendering — a real cost to
-   * pay for a tab name. Reading `window.location.search` in an effect keeps
-   * the panel addressable (the retired /ideas, /best and /discover URLs
-   * redirect into it) and the page static, with no boundary at all.
+   * THE PANEL COMES FROM THE URL, AND THE ROUTER OWNS THE URL.
    *
-   * The trade is one render with no tab selected before the effect runs, which
-   * is invisible here: the default panel is the one a first-time visitor wants
-   * anyway.
+   * This used to read `window.location.search` in a `useEffect` with an empty
+   * dependency array — once, on mount — and switch panels with
+   * `history.replaceState`. It was written that way to avoid the Suspense
+   * boundary `useSearchParams` requires, on the reasoning that static rendering
+   * was worth more than a tab name.
+   *
+   * It broke the sidebar. "Saved ideas" links to `/lab?tab=shortlist`, and
+   * clicking it from anywhere else in the lab is a client-side navigation: the
+   * component does not remount, so the effect never re-ran, so the URL changed
+   * and the panel did not. The link did nothing at all. Back and forward
+   * between panels were dead for the same reason, and writing history behind
+   * the router's back left Next's own history state disagreeing with the
+   * address bar.
+   *
+   * The static-rendering worry was also not real: this route sits behind
+   * `Ready` and `RequireProfile`, both of which read `localStorage`, so it has
+   * always rendered on the client.
    */
-  const [raw, setRaw] = useState<string | null>(null);
-  useEffect(() => {
-    setRaw(new URLSearchParams(window.location.search).get("tab"));
-  }, []);
+  const router = useRouter();
+  const raw = useSearchParams()?.get("tab") ?? null;
 
   const select = (id: TabId) => {
-    setRaw(id);
-    window.history.replaceState(null, "", `/lab?tab=${id}`);
+    // `replace`, not `push`: flicking between panels is not a journey, and
+    // filling history with it would make Back mean "the previous tab I glanced
+    // at" rather than "the page I came from".
+    router.replace(`/lab?tab=${id}`, { scroll: false });
   };
 
   /*

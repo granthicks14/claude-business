@@ -306,6 +306,23 @@ async function exportableKey(passphrase: string, salt: Uint8Array, iterations: n
 
 export type RememberFor = "session" | "tab" | "device";
 
+/**
+ * What a form starts on when the user has chosen nothing.
+ *
+ * `"session"`, and the reason is worth a sentence because it was wrong. Both
+ * the unlock form and the create form opened on `"device"` — so "stay signed in
+ * on this device for a week" was ticked before anybody had read the paragraph
+ * next to it warning them not to tick it on a machine they don't control. Every
+ * account created since was created that way, including on the create screen,
+ * which is the one route through the app that everybody takes exactly once.
+ *
+ * A default is a recommendation whether or not it is written as one, and the
+ * one being made here was the weakest option available. It lives as a named
+ * constant rather than a literal in two components so the recommendation is one
+ * fact in one place, and so `test:accounts` can hold it to it.
+ */
+export const DEFAULT_REMEMBER: RememberFor = "session";
+
 async function remember(
   scope: RememberFor,
   accountId: string,
@@ -341,6 +358,27 @@ function forgetKeys(): void {
   } catch {
     /* Same. */
   }
+}
+
+/**
+ * Stop this device being remembered, without ending the session in front of you.
+ *
+ * The only way to revoke a device key used to be the shell's "lock now", which
+ * also drops the live key — so somebody who ticked the box on a borrowed laptop
+ * and thought better of it had to sign out of their own session to undo it, and
+ * then type the passphrase again to carry on. That is a penalty for changing
+ * your mind about the more cautious choice, which is precisely backwards.
+ *
+ * Narrower than `forgetKeys` on purpose: the tab key is a separate decision the
+ * user made about this tab, and it dies with the tab anyway.
+ */
+export function forgetDevice(): void {
+  try {
+    window.localStorage.removeItem(DEVICE_KEY);
+  } catch {
+    /* Storage disabled. Nothing was written, so nothing to clear. */
+  }
+  emit();
 }
 
 function readStoredKey(): { record: StoredKey; from: "tab" | "device" } | null {
@@ -510,7 +548,7 @@ export function passphraseProblem(passphrase: string): string | null {
   return null;
 }
 
-export async function createAccount(label: string, passphrase: string, initialState: unknown, remember_: RememberFor = "session"): Promise<VaultResult & { id?: string }> {
+export async function createAccount(label: string, passphrase: string, initialState: unknown, remember_: RememberFor = DEFAULT_REMEMBER): Promise<VaultResult & { id?: string }> {
   const trimmed = label.trim();
   if (!trimmed) return { ok: false, error: "Give the account a name so you can find it on this device." };
   if (trimmed.length > 40) return { ok: false, error: "Keep the name under 40 characters." };
@@ -595,7 +633,7 @@ export async function createAccount(label: string, passphrase: string, initialSt
  * key fails to decrypt rather than returning plausible rubbish, and adding a
  * second encrypted artifact would only be one more thing to keep in step.
  */
-export async function unlock(accountId: string, passphrase: string, remember_: RememberFor = "session"): Promise<VaultResult & { state?: unknown }> {
+export async function unlock(accountId: string, passphrase: string, remember_: RememberFor = DEFAULT_REMEMBER): Promise<VaultResult & { state?: unknown }> {
   const account = listAccounts().find((a) => a.id === accountId);
   if (!account) return { ok: false, error: "That account isn't on this browser any more." };
 

@@ -20,6 +20,7 @@ import {
   Select,
   useToast,
 } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { useBusinessAnalysis } from "@/lib/explain";
 import {
   HOSTINGER,
@@ -70,6 +71,7 @@ export default function WebsitePage() {
 
 function Website({ business }: { business: SelectedBusiness }) {
   const profile = useAppState(effectiveProfile);
+  const link = (href: string) => withBusiness(href, business.id);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const toast = useToast();
 
@@ -173,7 +175,7 @@ function Website({ business }: { business: SelectedBusiness }) {
               : `Write my whole website plan (${autofillable.length})`}
           </Button>
           {readiness.blocking.length > 0 && (
-            <LinkButton href="/business/identity" variant="secondary">
+            <LinkButton href={link("/business/identity")} variant="secondary">
               Fill in what&apos;s missing
             </LinkButton>
           )}
@@ -201,7 +203,7 @@ function Website({ business }: { business: SelectedBusiness }) {
                 </div>
               ))}
               <div className="mt-3">
-                <LinkButton href="/business/identity" size="sm">
+                <LinkButton href={link("/business/identity")} size="sm">
                   Fix in business details
                 </LinkButton>
               </div>
@@ -282,7 +284,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             />
           </dl>
           <div className="mt-4 pt-4 border-t border-border">
-            <LinkButton href="/business/identity" size="sm">
+            <LinkButton href={link("/business/identity")} size="sm">
               Edit the business details
             </LinkButton>
           </div>
@@ -560,7 +562,7 @@ function Website({ business }: { business: SelectedBusiness }) {
           {business.websiteLive && (
             <p className="text-[13px] text-muted">
               Counted in your{" "}
-              <Link href="/business/launch" className="text-accent-text hover:underline">
+              <Link href={link("/business/launch")} className="text-accent-text hover:underline">
                 launch checklist
               </Link>
               .

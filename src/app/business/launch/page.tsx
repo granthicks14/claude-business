@@ -8,6 +8,7 @@ import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { ChecklistArt } from "@/components/art";
 import { Explain } from "@/components/teach";
 import { Badge, Card, Hi, LinkButton, ScoreRing, SectionHeader } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { computeFit } from "@/lib/fit";
 import { READINESS_LABEL, assessReadiness } from "@/lib/launch";
 import { effectiveProfile, useAppState } from "@/lib/store";
@@ -32,6 +33,7 @@ export default function LaunchPage() {
 
 function Launch({ business }: { business: SelectedBusiness }) {
   const profile = useAppState(effectiveProfile);
+  const link = (href: string) => withBusiness(href, business.id);
   const readiness = useMemo(() => assessReadiness(business), [business]);
   const fit = useMemo(() => computeFit(business.idea, profile), [business.idea, profile]);
 
@@ -137,7 +139,7 @@ function Launch({ business }: { business: SelectedBusiness }) {
         <p className="text-[13px] text-muted leading-relaxed">
           <strong className="font-medium text-text">A full checklist isn&apos;t permission.</strong> It means you&apos;ve
           prepared what can be prepared. Whether people buy is answered by talking to them, which is what{" "}
-          <Link href="/validation" className="text-accent-text hover:underline">
+          <Link href={link("/validation")} className="text-accent-text hover:underline">
             validation
           </Link>{" "}
           tracks separately.

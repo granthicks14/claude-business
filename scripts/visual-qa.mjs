@@ -1,0 +1,484 @@
+/**
+ * The look-and-feel invariants, measured rather than asserted.
+ *
+ * WHY THIS EXISTS
+ *
+ * The "Look and feel" section of CLAUDE.md is a list of rules that came out of
+ * two design audits — no gradients, no blurred blobs behind headers, cards are
+ * rare and shadowless, radii come from three tokens, and every piece of text
+ * has to be readable in both themes. Project memory claimed those rules were
+ * checked by this file. They were not: the file did not exist. Every one of
+ * them was on the honour system while the document said otherwise, which is
+ * worse than having no check at all, because it stops anyone looking.
+ *
+ * So this is the check. It opens the built app in Chromium, in both themes, and
+ * measures what the browser actually resolved rather than reading the source.
+ * That distinction matters: a gradient can arrive from a utility class, a
+ * component, a pseudo-element or an inherited variable, and only the resolved
+ * style knows about all four.
+ *
+ * WHAT IT REFUSES TO DO
+ *
+ * It is not part of `npm test`. That suite is pure node with no network, no
+ * browser and no build, and it finishes in seconds — a property worth keeping.
+ * This one needs a production build and a running server, so it is its own
+ * command.
+ *
+ * Playwright is deliberately NOT a dependency of this project. Adding it would
+ * put a browser download into every install, including the Vercel build, in
+ * exchange for a check that runs by hand. It is resolved from wherever it
+ * happens to be installed, and the script says how to get it when it is not.
+ *
+ * Run: npm run check:visual
+ */
+
+import { spawn, spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
+const PORT = 4321;
+const ORIGIN = `http://127.0.0.1:${PORT}`;
+
+/**
+ * The routes swept.
+ *
+ * Chosen to cover every layout the app has rather than every route it has: a
+ * marketing page, the front door, the two gates, a dense workspace page, a
+ * scored report, a form-heavy wizard and a legal page. Adding routes is cheap;
+ * these are the ones whose regressions would look different from each other.
+ */
+const ROUTES = [
+  "/",
+  "/start",
+  "/lab",
+  "/business",
+  "/quality",
+  "/profile",
+  "/account",
+  "/explore",
+  "/cost",
+  "/privacy",
+];
+
+/** The thresholds the project memory states. Change the document, not these. */
+const LIMITS = {
+  gradients: 0,
+  blurredPseudoElements: 0,
+  shadowed: 3,
+  fullyRound: 6,
+};
+
+/* -------------------------------------------------------------------------- */
+/* Finding playwright                                                          */
+/* -------------------------------------------------------------------------- */
+
+async function loadPlaywright() {
+  const require_ = createRequire(import.meta.url);
+  const candidates = [process.cwd(), "/tmp", process.env.HOME].filter(Boolean);
+  for (const base of candidates) {
+    try {
+      const resolved = require_.resolve("playwright", { paths: [base] });
+      const mod = await import(resolved);
+      // Playwright is CommonJS, so under some resolutions the named exports
+      // land on `default` rather than on the namespace object.
+      const api = mod.chromium ? mod : mod.default;
+      if (api?.chromium) return api;
+    } catch {
+      /* Try the next one. */
+    }
+  }
+  console.error(
+    [
+      "Playwright is not installed, so the visual invariants cannot be measured.",
+      "",
+      "It is intentionally not a dependency of this project — it would put a",
+      "browser download into every install, including the Vercel build, for a",
+      "check that runs by hand. Install it somewhere this script can find it:",
+      "",
+      "  npm install --prefix /tmp playwright",
+      "",
+      "A browser is already present at /opt/pw-browsers in this environment;",
+      "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 avoids re-fetching it.",
+    ].join("\n"),
+  );
+  process.exit(1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Colour                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * WCAG 2.1 relative luminance and contrast.
+ *
+ * Reimplemented here rather than pulled in, because it is nine lines and a
+ * dependency for nine lines is a dependency for nothing.
+ */
+function luminance([r, g, b]) {
+  const channel = (v) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function contrast(fg, bg) {
+  const a = luminance(fg);
+  const b = luminance(bg);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+/* Colours arrive from the page already resolved to sRGB — see `toRGB` below. */
+
+/* -------------------------------------------------------------------------- */
+/* The measurement, run inside the page                                        */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Everything below runs in the browser and returns plain data.
+ *
+ * Written as one pass over the DOM rather than four, because four passes over a
+ * few thousand nodes on ten routes in two themes is the difference between a
+ * check people run and one they stop running.
+ */
+const COLLECT = () => {
+  const out = {
+    gradients: [],
+    blurredPseudoElements: [],
+    shadowed: [],
+    fullyRound: [],
+    text: [],
+  };
+
+  const describe = (el) => {
+    const id = el.id ? `#${el.id}` : "";
+    const cls = typeof el.className === "string" && el.className ? `.${el.className.trim().split(/\s+/).slice(0, 3).join(".")}` : "";
+    return `${el.tagName.toLowerCase()}${id}${cls}`.slice(0, 90);
+  };
+
+  /**
+   * A computed colour, as the pixels the browser would paint.
+   *
+   * THIS IS THE PART THAT WAS WRONG FIRST TIME.
+   *
+   * The first version of this file matched `rgb()` and `rgba()` with a regular
+   * expression. Tailwind v4 emits `oklch()`, and Chromium reports those back
+   * from `getComputedStyle` as `lab(...)` — so nothing matched, no text run was
+   * ever collected, and every route reported "0 text runs" and passed. A check
+   * that measures nothing and prints PASS is worse than no check, and it is the
+   * exact failure this whole file exists to correct, so it is worth the comment.
+   *
+   * Painting the colour into a 1×1 canvas and reading the pixel back delegates
+   * the whole colour-space problem to the engine that does the painting. It
+   * handles `lab`, `oklch`, `color-mix`, `color(display-p3 …)` and anything
+   * added later, and the value it returns is by definition what the reader sees.
+   */
+  const probe = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+  probe.canvas.width = 1;
+  probe.canvas.height = 1;
+
+  const toRGB = (value) => {
+    if (!value || value === "transparent" || value === "none") return null;
+    try {
+      probe.clearRect(0, 0, 1, 1);
+      probe.fillStyle = "#000";
+      probe.fillStyle = value;
+      // An unparseable value leaves fillStyle at the previous colour, so a
+      // failed parse reads as black rather than throwing. Detect it directly.
+      if (probe.fillStyle === "#000000" && !/^(#000000|#000|black|rgb\(0, 0, 0\))$/i.test(value.trim())) {
+        // Fall through: it may genuinely be black in another notation, so paint
+        // and measure rather than deciding from the string.
+      }
+      probe.fillRect(0, 0, 1, 1);
+      const [r, g, b, a] = probe.getImageData(0, 0, 1, 1).data;
+      return { rgb: [r, g, b], alpha: a / 255 };
+    } catch {
+      return null;
+    }
+  };
+
+  /** The colour actually behind an element, walking up through transparency. */
+  const effectiveBackground = (el) => {
+    let node = el;
+    while (node) {
+      const painted = toRGB(getComputedStyle(node).backgroundColor);
+      // Anything close to opaque is what the reader sees. A 0.4 tint over an
+      // unknown parent is not something this check can resolve honestly, so it
+      // keeps walking rather than guessing.
+      if (painted && painted.alpha >= 0.9) return painted.rgb;
+      node = node.parentElement;
+    }
+    return null;
+  };
+
+  for (const el of document.querySelectorAll("*")) {
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    const painted = rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    if (!painted) continue;
+
+    if (style.backgroundImage && style.backgroundImage.includes("gradient")) {
+      out.gradients.push(`${describe(el)} → ${style.backgroundImage.slice(0, 60)}`);
+    }
+
+    for (const pseudo of ["::before", "::after"]) {
+      const ps = getComputedStyle(el, pseudo);
+      if (ps.content === "none" || ps.content === "normal") continue;
+      const blurred =
+        (ps.filter && ps.filter.includes("blur")) || (ps.backdropFilter && ps.backdropFilter.includes("blur"));
+      if (blurred) out.blurredPseudoElements.push(`${describe(el)}${pseudo}`);
+      if (ps.backgroundImage && ps.backgroundImage.includes("gradient")) {
+        out.gradients.push(`${describe(el)}${pseudo}`);
+      }
+    }
+
+    if (style.boxShadow && style.boxShadow !== "none") out.shadowed.push(describe(el));
+
+    /*
+     * "Fully round" means a pill or a circle: a radius at least half the
+     * shorter side. Measured against the box rather than by matching a token,
+     * because the rule is about how many round things a screen shows, and a
+     * 9999px radius on a 20px chip and a 10px radius on a 20px chip look the
+     * same.
+     */
+    const radius = parseFloat(style.borderTopLeftRadius) || 0;
+    const shorter = Math.min(rect.width, rect.height);
+    if (shorter > 6 && radius >= shorter / 2 - 0.5) out.fullyRound.push(describe(el));
+
+    /* Contrast, on elements that hold their own text. */
+    const ownText = [...el.childNodes]
+      .filter((n) => n.nodeType === 3)
+      .map((n) => n.textContent.trim())
+      .join(" ")
+      .trim();
+    if (!ownText) continue;
+    if (parseFloat(style.opacity) < 0.5) continue;
+
+    const bg = effectiveBackground(el);
+    const fg = toRGB(style.color);
+    if (!bg || !fg || fg.alpha < 0.9) continue;
+    out.text.push({
+      where: describe(el),
+      sample: ownText.slice(0, 40),
+      color: fg.rgb,
+      background: bg,
+      size: parseFloat(style.fontSize),
+      weight: Number(style.fontWeight) || 400,
+    });
+  }
+
+  return out;
+};
+
+/* -------------------------------------------------------------------------- */
+/* Driving it                                                                  */
+/* -------------------------------------------------------------------------- */
+
+function waitForServer(timeoutMs = 60_000) {
+  const started = Date.now();
+  return new Promise((resolve, reject) => {
+    const tick = async () => {
+      try {
+        const res = await fetch(ORIGIN + "/", { signal: AbortSignal.timeout(2000) });
+        if (res.ok) return resolve();
+      } catch {
+        /* Not up yet. */
+      }
+      if (Date.now() - started > timeoutMs) return reject(new Error("server never came up"));
+      setTimeout(tick, 400);
+    };
+    tick();
+  });
+}
+
+/**
+ * Get past the account gate, and load something worth looking at.
+ *
+ * Without this the sweep measures the unlock prompt on every private route —
+ * ten routes, four distinct pages, and none of the layouts the design rules
+ * were written about. The account is created through the real form rather than
+ * by seeding storage, because the state is encrypted and there is no way to
+ * write it without the key. It costs about a second of PBKDF2, once per theme.
+ *
+ * Then the worked example is loaded, so the workspace pages render with a
+ * business in them: scores, tables, badges and figures, rather than the empty
+ * states that exercise almost none of the palette.
+ */
+async function signIn(page) {
+  await page.goto(ORIGIN + "/start", { waitUntil: "networkidle" });
+
+  const name = page.getByLabel("Account name");
+  if (await name.count()) {
+    await name.fill("Visual QA");
+    await page.getByLabel("Passphrase", { exact: true }).fill("correct horse battery staple");
+    await page.getByLabel("Passphrase again").fill("correct horse battery staple");
+    /*
+     * "Stay signed in on this device", deliberately — and this is the one place
+     * in the project where that is the right choice.
+     *
+     * The key is held in memory by default (see `DEFAULT_REMEMBER`), and every
+     * `page.goto` here is a full document load, so without this the sweep met
+     * the unlock prompt on every private route and measured the same four
+     * pages ten times. Ticking it is a decision the test is making about its
+     * own browser, which is exactly the shape the option is meant to have.
+     */
+    await page.getByRole("radio", { name: /stay signed in on this device/i }).check();
+    await page.getByRole("checkbox").last().check();
+    await page.getByRole("button", { name: "Create account" }).click();
+    await page.waitForSelector("nav[aria-label='Main']", { timeout: 20_000 });
+  }
+
+  /*
+   * The worked example, so the workspace pages have something in them.
+   *
+   * Without it `/business` and `/quality` render "nothing picked yet" — an
+   * empty state that exercises almost none of the palette, and not the layout
+   * the rules were written about. With it they render scores, tables, badges
+   * and figures. Not fatal when the control has moved: the sweep is still
+   * measuring real pages, and the text-run count in the output shows which.
+   */
+  const example = page.getByRole("button", { name: /example business/i }).first();
+  if (await example.count().catch(() => 0)) {
+    await example.click().catch(() => {});
+    await page.waitForTimeout(800);
+  }
+}
+
+async function main() {
+  if (!existsSync(join(process.cwd(), ".next"))) {
+    console.error("No build found. Run `npm run build` first — this measures the production output.");
+    process.exit(1);
+  }
+
+  const { chromium } = await loadPlaywright();
+
+  /*
+   * `pkill -f "next start"` does not match the process, which is called
+   * `next-server`. A stale server from an earlier run serves the previous
+   * build's chunks, and the resulting failures look like real regressions in
+   * code that has already been fixed. This has cost hours before now.
+   */
+  spawnSync("pkill", ["-f", "next-server"], { stdio: "ignore" });
+
+  const server = spawn("npx", ["next", "start", "-p", String(PORT)], {
+    stdio: "ignore",
+    env: { ...process.env, NODE_ENV: "production" },
+  });
+
+  let failures = 0;
+  const fail = (message, detail = "") => {
+    failures++;
+    console.log(`FAIL  ${message}${detail ? `\n      ${detail}` : ""}`);
+  };
+  const pass = (message, detail = "") => console.log(`PASS  ${message}${detail ? ` — ${detail}` : ""}`);
+
+  try {
+    await waitForServer();
+
+    const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" }).catch(() => chromium.launch());
+
+    for (const theme of ["light", "dark"]) {
+      console.log(`\n--- ${theme} ---`);
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+
+      // The theme is stamped on the root by an inline script reading storage,
+      // so it has to be set before the first paint of every page.
+      await page.addInitScript((t) => {
+        try {
+          window.localStorage.setItem("abb:theme", t);
+        } catch {
+          /* Storage disabled — the attribute below still carries it. */
+        }
+      }, theme);
+
+      await signIn(page);
+
+      for (const route of ROUTES) {
+        await page.goto(ORIGIN + route, { waitUntil: "networkidle" });
+        await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
+        // One frame, so the attribute change is resolved before measuring.
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+
+        const found = await page.evaluate(COLLECT);
+        const label = `${route} (${theme})`;
+
+        if (found.gradients.length > LIMITS.gradients) {
+          fail(`${label}: ${found.gradients.length} gradient background(s)`, found.gradients.slice(0, 3).join("\n      "));
+        }
+        if (found.blurredPseudoElements.length > LIMITS.blurredPseudoElements) {
+          fail(
+            `${label}: ${found.blurredPseudoElements.length} blurred pseudo-element(s)`,
+            found.blurredPseudoElements.slice(0, 3).join("\n      "),
+          );
+        }
+        if (found.shadowed.length > LIMITS.shadowed) {
+          fail(
+            `${label}: ${found.shadowed.length} shadowed elements, limit ${LIMITS.shadowed}`,
+            found.shadowed.slice(0, 5).join(", "),
+          );
+        }
+        if (found.fullyRound.length > LIMITS.fullyRound) {
+          fail(
+            `${label}: ${found.fullyRound.length} fully-round elements, limit ${LIMITS.fullyRound}`,
+            found.fullyRound.slice(0, 6).join(", "),
+          );
+        }
+
+        const unreadable = [];
+        for (const t of found.text) {
+          // WCAG's large-text allowance: 24px, or 18.66px at 700+.
+          const large = t.size >= 24 || (t.size >= 18.66 && t.weight >= 700);
+          const required = large ? 3 : 4.5;
+          const ratio = contrast(t.color, t.background);
+          if (ratio < required) {
+            unreadable.push(`${t.where} "${t.sample}" — ${ratio.toFixed(2)}:1, needs ${required}:1`);
+          }
+        }
+
+        /*
+         * A route that collected no text at all is a broken measurement, not a
+         * clean page — that is exactly how the first version of this file
+         * passed everything while checking nothing.
+         */
+        if (found.text.length === 0) {
+          fail(`${label}: no text measured — the sweep is not reading this page`);
+        }
+        if (unreadable.length > 0) {
+          fail(`${label}: ${unreadable.length} text run(s) below the contrast minimum`, unreadable.slice(0, 4).join("\n      "));
+        }
+
+        if (
+          found.gradients.length === 0 &&
+          found.blurredPseudoElements.length === 0 &&
+          found.shadowed.length <= LIMITS.shadowed &&
+          found.fullyRound.length <= LIMITS.fullyRound &&
+          unreadable.length === 0
+        ) {
+          pass(label, `${found.text.length} text runs, ${found.shadowed.length} shadowed, ${found.fullyRound.length} round`);
+        }
+      }
+
+      await context.close();
+    }
+
+    await browser.close();
+  } finally {
+    server.kill("SIGTERM");
+    spawnSync("pkill", ["-f", "next-server"], { stdio: "ignore" });
+  }
+
+  console.log(
+    failures === 0
+      ? "\nVISUAL INVARIANTS HOLD in both themes."
+      : `\n${failures} VISUAL CHECK${failures === 1 ? "" : "S"} FAILED`,
+  );
+  process.exit(failures === 0 ? 0 : 1);
+}
+
+main().catch((error) => {
+  spawnSync("pkill", ["-f", "next-server"], { stdio: "ignore" });
+  console.error(error);
+  process.exit(1);
+});

@@ -8,6 +8,7 @@ import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { SignArt } from "@/components/art";
 import { Explain } from "@/components/teach";
 import { Badge, Button, Card, CountUp, Field, Hi, Input, LinkButton, Textarea, useToast } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { assessReadiness } from "@/lib/launch";
 import { actions, emptyIdentity } from "@/lib/store";
 import type { BusinessIdentity, SelectedBusiness } from "@/lib/types";
@@ -91,6 +92,8 @@ export default function IdentityPage() {
 }
 
 function Wizard({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. */
+  const link = (href: string) => withBusiness(href, business.id);
   const toast = useToast();
   const saved = business.identity;
   const [draft, setDraft] = useState<BusinessIdentity>(() => ({ ...emptyIdentity(), ...saved }));
@@ -210,10 +213,10 @@ function Wizard({ business }: { business: SelectedBusiness }) {
           you copy it or export it yourself.
         </p>
         <div className="flex flex-wrap gap-2 mt-3">
-          <LinkButton href="/business/build" size="sm">
+          <LinkButton href={link("/business/build")} size="sm">
             Build something with this
           </LinkButton>
-          <LinkButton href="/business/launch" size="sm" variant="ghost">
+          <LinkButton href={link("/business/launch")} size="sm" variant="ghost">
             Check launch readiness
           </LinkButton>
         </div>

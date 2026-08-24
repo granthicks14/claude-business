@@ -550,7 +550,30 @@ export interface AIConversation {
   businessId?: ID;
   /** Where the user came from, when they arrived via "discuss this". */
   topic?: string;
+  /**
+   * A question typed but not yet sent.
+   *
+   * Held here rather than in component state because the coach page is one
+   * people leave mid-sentence — to check a price, to re-read what a competitor
+   * charges — and an unsent message is the most irritating thing in an app to
+   * lose. It lives on the conversation, which is already scoped to a business,
+   * so switching business does not carry somebody's half-written question about
+   * one idea over to another.
+   *
+   * Capped at `DRAFT_LIMIT` on write. Everything a founder owns is in a single
+   * localStorage key, and this is the only free-text field with no natural end.
+   */
+  draft?: string;
 }
+
+/**
+ * How much of an unsent question is kept.
+ *
+ * Generous for a question — several paragraphs — and small next to the 0.29MB a
+ * deliberately heavy state measures at, so it cannot meaningfully move the
+ * storage picture even with a draft on every conversation.
+ */
+export const DRAFT_LIMIT = 4000;
 
 export interface NicheReport {
   market: string;

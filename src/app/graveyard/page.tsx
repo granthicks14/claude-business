@@ -16,6 +16,7 @@ import {
   LinkButton,
   useToast,
 } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { currency } from "@/lib/finance";
 import { actions, profileForBusiness, useAppState } from "@/lib/store";
 import type { SelectedBusiness } from "@/lib/types";
@@ -39,6 +40,7 @@ export default function GraveyardPage() {
 function Graveyard() {
   const state = useAppState((s) => s);
   const archived = state.businesses.filter((b) => b.archivedAt);
+  const activeId = state.activeBusinessId;
 
   return (
     <div className="space-y-6">
@@ -53,7 +55,7 @@ function Graveyard() {
             icon={<Icon.archive className="size-8 mx-auto text-muted" />}
             title="Nothing archived"
             description="When you stop working on something, archive it instead of deleting it. You keep the lessons, and you can restore it later if it turns out you were early rather than wrong."
-            action={<LinkButton href="/business" variant="primary">Back to my business</LinkButton>}
+            action={<LinkButton href={withBusiness("/business", activeId)} variant="primary">Back to my business</LinkButton>}
           />
         </Card>
       ) : (

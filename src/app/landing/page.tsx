@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { SignArt } from "@/components/art";
 import { Badge, Card, CopyButton, EmptyState, Hi, LinkButton, Meter, SectionHeader, Tabs } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { LANDING_NOTE, landingReadiness, landingVariants, type Angle } from "@/lib/landing";
 import { useBusinessAnalysis } from "@/lib/explain";
 import { effectiveProfile, useAppState } from "@/lib/store";
@@ -28,6 +29,8 @@ export default function LandingPage() {
 }
 
 function Landing({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. See nav-model.ts. */
+  const link = (href: string) => withBusiness(href, business.id);
   const profile = useAppState(effectiveProfile);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const [angle, setAngle] = useState<Angle>("problem");
@@ -42,7 +45,7 @@ function Landing({ business }: { business: SelectedBusiness }) {
           icon={<Icon.doc className="size-6" />}
           title="Not enough to write a page yet"
           description="Fill in the business details and this writes three complete pages from them."
-          action={<LinkButton href="/business/identity">Business details</LinkButton>}
+          action={<LinkButton href={link("/business/identity")}>Business details</LinkButton>}
         />
       </div>
     );
@@ -130,10 +133,10 @@ function Landing({ business }: { business: SelectedBusiness }) {
         <SectionHeader title="Before you publish it" />
         <p className="text-sm text-muted leading-relaxed">{LANDING_NOTE}</p>
         <div className="flex flex-wrap gap-2 mt-4">
-          <LinkButton href="/business/website" size="sm" variant="primary">
+          <LinkButton href={link("/business/website")} size="sm" variant="primary">
             Turn this into a website brief
           </LinkButton>
-          <LinkButton href="/customers" size="sm">
+          <LinkButton href={link("/customers")} size="sm">
             Get the words from real conversations
           </LinkButton>
         </div>

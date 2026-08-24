@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "check:deploy": "node scripts/check-deploy.mjs",
     "check:access": "node scripts/check-access.mjs",
+    "check:visual": "node scripts/visual-qa.mjs",
     "test:scoring": "node scripts/test-scoring.mjs",
     "test:intel": "node scripts/test-intel.mjs",
     "test:research": "node scripts/test-research.mjs",

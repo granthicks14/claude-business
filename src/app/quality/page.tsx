@@ -9,6 +9,7 @@ import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { GrowthArt } from "@/components/art";
 import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, SectionHeader, Tabs } from "@/components/ui";
 import { PositionMap, type MapPoint } from "@/components/position-map";
+import { withBusiness } from "@/lib/business-param";
 import { CONSISTENCY_NOTE, SEVERITY_LABEL, SEVERITY_TONE, checkConsistency } from "@/lib/consistency";
 import { QUALITY_HELP, QUALITY_LABEL, QUALITY_BAND_LABEL, QUALITY_NOTE, businessQuality } from "@/lib/quality";
 import { effectiveProfile, useAppState } from "@/lib/store";
@@ -33,6 +34,8 @@ export default function QualityPage() {
 }
 
 function Quality({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. */
+  const link = (href: string) => withBusiness(href, business.id);
   const profile = useAppState(effectiveProfile);
   const others = useAppState((s) => s.businesses);
   const [tab, setTab] = useState<"score" | "check">("score");
@@ -268,7 +271,7 @@ function Quality({ business }: { business: SelectedBusiness }) {
               <p className="text-sm text-muted leading-relaxed">
                 Worth re-running this after any significant change — especially to the customer or the price, which are
                 the two that quietly invalidate everything downstream of them. See{" "}
-                <Link href="/decide" className="text-accent-text hover:underline">
+                <Link href={link("/decide")} className="text-accent-text hover:underline">
                   what you&apos;ve changed
                 </Link>
                 .

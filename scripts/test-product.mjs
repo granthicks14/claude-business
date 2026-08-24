@@ -33,6 +33,7 @@ import { analyseInterviews } from "../src/lib/customers/interviews.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
 import { actions, effectiveProfile, emptyProfile, emptyState, hydrateFrom, snapshot } from "../src/lib/store.ts";
 import { looksAutoNamed } from "../src/lib/engine/naming.ts";
+import { crumbsFor, navSections, sectionFor } from "../src/lib/nav-model.ts";
 import type { FounderProfile, SelectedBusiness } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -343,6 +344,82 @@ results.retitle = {
   idsUnchanged: titled.every((i) => typeof i.id === "string" && i.id.length > 0),
 };
 
+/* ----------------------------------------- the business named in every link --- */
+
+/*
+ * Why this is a test and not a comment.
+ *
+ * Every workspace link used to be bare. That works perfectly in one tab — the
+ * address is completed from the globally active business on arrival — and fails
+ * silently in two: tab A on business A, tab B on business B, tab A clicks the
+ * sidebar, the link carries no id, the fallback reads the active business, the
+ * cross-tab listener has already moved that to B, and tab A is now showing B's
+ * numbers under a name it never changed. Nothing throws. Nothing looks wrong.
+ * The only way to catch it is to assert on the hrefs themselves, which is why
+ * the model was pulled out of the hook into 'navSections'.
+ */
+const twoBusinesses: any = {
+  ...emptyState(),
+  profile: profile(),
+  ideas: [idea],
+  businesses: [business({ id: "biz_one" }), business({ id: "biz_two" })],
+  activeBusinessId: "biz_two",
+};
+
+const sections = navSections(twoBusinesses);
+const scoped = sections.filter((s) => ["My business", "Does it hold up?", "Make it"].includes(s.label));
+const scopedHrefs = scoped.flatMap((s) => [s.href, ...s.items.map((i) => i.href)]);
+
+/* The founder-level sections must NOT be dragged into one business. */
+const you = sections.find((s) => s.label === "You")!;
+const brainstorm = sections.find((s) => s.label === "Brainstorm")!;
+
+results.navScoping = {
+  threeSectionsFound: scoped.length === 3,
+  everyScopedHrefNamesTheActive: scopedHrefs.every((h) => h.includes("b=biz_two")),
+  noneNamesTheOther: scopedHrefs.every((h) => !h.includes("b=biz_one")),
+  /* The profile, the lab and the ideas belong to the founder, not a business. */
+  profileStaysBare: you.items.find((i) => i.label === "My profile")!.href === "/profile",
+  labStaysBare: brainstorm.items.find((i) => i.label === "The lab")!.href === "/lab",
+  savedIdeasKeepsItsOwnParam: brainstorm.items.find((i) => i.label === "Saved ideas")!.href === "/lab?tab=shortlist",
+  /* The coach is the one founder-section link that is about a business. */
+  coachIsScoped: you.items.find((i) => i.label === "Ask a question")!.href.includes("b=biz_two"),
+};
+
+/* Switching the active business must move every scoped link with it. */
+const switched = navSections({ ...twoBusinesses, activeBusinessId: "biz_one" });
+const switchedHrefs = switched
+  .filter((s) => ["My business", "Does it hold up?", "Make it"].includes(s.label))
+  .flatMap((s) => [s.href, ...s.items.map((i) => i.href)]);
+results.navSwitch = {
+  followsTheActive: switchedHrefs.every((h) => h.includes("b=biz_one")),
+  noneLeftBehind: switchedHrefs.every((h) => !h.includes("b=biz_two")),
+};
+
+/* With nothing picked, the links are ordinary — no dangling 'b='. */
+const nothingPicked = navSections({ ...emptyState(), profile: profile() } as any);
+results.navCold = {
+  /* Matched as a real parameter: "/lab?tab=shortlist" contains the substring "b=". */
+  noParamAnywhere: nothingPicked
+    .flatMap((s) => [s.href, ...s.items.map((i) => i.href)])
+    .every((h) => !/[?&]b=/.test(h)),
+};
+
+/*
+ * And the matching still works with a query string on the href, which is the
+ * thing that would break quietly: 'sectionFor' would stop resolving, the
+ * sidebar would open the wrong section, and nobody reports a wrong section.
+ */
+results.navMatching = {
+  workspaceResolves: sectionFor(sections, "/money")?.label === "My business",
+  longestPrefixStillWins: sectionFor(sections, "/business/website")?.label === "Make it",
+  homeResolves: sectionFor(sections, "/")?.label === "Home",
+  crumbsStillBuild: crumbsFor(sections, "/money").map((c) => c.label).join(" / ") === "Home / My business / Money",
+  crumbHrefCarriesTheBusiness: (crumbsFor(sections, "/money")[1]?.href ?? "").includes("b=biz_two"),
+  /* The section's own page must not get a crumb pointing at itself. */
+  sectionPageHasNoSelfCrumb: crumbsFor(sections, "/business").length === 2,
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -477,6 +554,22 @@ check("a name the founder typed is never overwritten", r.retitle.handNamedKept);
 check("an idea with nothing to rebuild from is left alone", r.retitle.noEngineLeftAlone);
 check("every rebuilt title describes a business", r.retitle.everyRewriteDescribes);
 check("nothing is added or dropped in the process", r.retitle.countUnchanged && r.retitle.idsUnchanged);
+
+console.log("\n--- the business is named in every link that is about one ---");
+check("all three business sections are present", r.navScoping.threeSectionsFound);
+check("every link inside them names the active business", r.navScoping.everyScopedHrefNamesTheActive);
+check("and none of them names the other one", r.navScoping.noneNamesTheOther);
+check("the profile and the lab stay founder-level", r.navScoping.profileStaysBare && r.navScoping.labStaysBare);
+check("\"saved ideas\" keeps its own tab parameter", r.navScoping.savedIdeasKeepsItsOwnParam);
+check("the coach is scoped, because a conversation belongs to a business", r.navScoping.coachIsScoped);
+check("switching business moves every scoped link with it", r.navSwitch.followsTheActive && r.navSwitch.noneLeftBehind);
+check("with nothing picked, no link carries a dangling parameter", r.navCold.noParamAnywhere);
+check("a workspace path still resolves to its section", r.navMatching.workspaceResolves);
+check("longest prefix still wins", r.navMatching.longestPrefixStillWins);
+check("home still resolves", r.navMatching.homeResolves);
+check("breadcrumbs still build", r.navMatching.crumbsStillBuild);
+check("and the section crumb carries the business too", r.navMatching.crumbHrefCarriesTheBusiness);
+check("a section's own page gets no crumb pointing at itself", r.navMatching.sectionPageHasNoSelfCrumb);
 
 console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

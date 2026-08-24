@@ -35,9 +35,11 @@ npm run test:research  # 74 customer/market/MVP calibration tests
 npm run test:product   # 78 quality/consistency/variant/intake/sample tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
+npm run test:describe  # natural-language founder profile tests
 npm test               # all eight
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
+npm run check:visual   # measures the look-and-feel invariants in a browser
 ```
 
 ## Architecture
@@ -91,7 +93,14 @@ src/lib/ai/             Optional provider adapters. server-only.
 ```
 
 `/lab` is the brainstorming lab — one route where `/ideas`, `/best` and
-`/discover` used to be three. The workspace lives under `/business`: the dashboard, `/identity` (business
+`/discover` used to be three. Its panel comes from `?tab=` read through
+`useSearchParams`, behind a `Suspense` boundary, and switches with
+`router.replace`. It read `window.location.search` in a mount-only effect for a
+while, to dodge that boundary — which meant the sidebar's "Saved ideas" link did
+**nothing** when you were already in the lab: a client navigation does not
+remount, so the URL changed and the panel did not. The static-rendering the
+effect was protecting was never real either; the route sits behind two gates
+that read `localStorage`. The workspace lives under `/business`: the dashboard, `/identity` (business
 details wizard), `/build` (prompt builder), `/website` (website builder),
 `/spend` (what to pay for), `/launch` (readiness checklist). `/opportunity` is a
 second front door for people who don't know what business they want.
@@ -523,6 +532,31 @@ not have been defensible.
 Any stored key that is expired, tampered with, or names a deleted account is
 removed rather than ignored. `test:accounts` covers all of it.
 
+**"Opt-in" was a claim, not a fact, for one release.** Both forms opened on
+`useState<RememberFor>("device")` — so the weakest option was ticked before
+anybody had read the warning sitting three lines above it, including on the
+create screen, which is the one route through the app that everybody takes
+exactly once. Every account made in that window was made that way. A default is
+a recommendation whether or not it is written as one, and this file said the
+opposite of what the code did.
+
+`DEFAULT_REMEMBER` in `vault.ts` is `"session"` and is the single place that
+decides, so the two cannot drift again, and `test:accounts` asserts both the
+constant and that a call with no argument writes neither key.
+
+`forgetDevice()` ends a remembered device **without ending the session in front
+of you**. Revoking used to mean "lock now", which also drops the live key — so
+changing your mind about the more cautious choice cost you your session and
+another passphrase entry. `/account` states the expiry date and offers the
+button, and renders neither when there is no device key: a permanent "this
+device is not remembered" panel is an advertisement for a setting the reader
+already declined.
+
+The security page's own bullet claimed the key "is never written to storage".
+That stopped being true the day this feature shipped. It now says what is
+actually done, because the person reading that page is the one deciding how far
+to trust the thing.
+
 ### The URL names the business
 
 `activeBusinessId` was global and never appeared in an address, so a workspace
@@ -539,6 +573,29 @@ gone gets a real explanation rather than "pick a business first".
 A search parameter rather than a path segment on purpose: the guarantee comes
 from the URL naming the business, not from which part of it does, and moving
 twenty-one route directories buys nothing a reader can see.
+
+**A URL that names the business is worth nothing if links drop it.** The first
+version put `?b=` in the address and then shipped `withBusiness` with no call
+sites — every link in the sidebar, the bottom bar, the journey spine and between
+workspace pages was bare. So the parameter survived being pasted and died on the
+first click, and `useBusinessRoute` fell back to the global active business.
+In one tab that is invisible. In two it is the exact bug the feature was built
+to prevent: tab A on business A, tab B on business B, tab A clicks the sidebar,
+and lands on **B** — same layout, same headings, another business's money.
+
+`nav-model.ts` now holds `navSections(state)` as a pure function so the decision
+about which hrefs carry an id is testable in the node suite rather than trapped
+inside a hook. The three business-scoped sections carry it, plus the coach —
+a conversation belongs to a business — and the founder-level pages deliberately
+do not. Workspace pages use `withBusiness(href, business.id)` from the business
+their own gate resolved, which is a stronger authority than the global active
+one. `business-param.ts` exists so `nav-model` can write the parameter without
+importing the router.
+
+`test:product` holds it: two businesses, every scoped href names the active one
+and none names the other, switching moves all of them, nothing picked leaves no
+dangling parameter, and `sectionFor`/`crumbsFor` still resolve with a query
+string on the href — which is the part that would break quietly.
 
 **Two tabs, and the rule that took two attempts.** A `storage` listener keeps a
 second tab fresh — armed on hydrate, not on first write, since a tab that only
@@ -569,6 +626,17 @@ One thing found while testing this: the suggested questions were hidden whenever
 no AI provider was configured — which is the app's *default*. The built-in
 engine answers perfectly well without one, so the beginners the questions exist
 for were the only people who never saw them.
+
+**An unsent question survives leaving the page.** The draft was `useState("")`,
+so navigating away threw it out — including by way of the coach's own "back to
+where you were" link, which is a particularly poor joke. It lives on
+`AIConversation.draft` now, which scopes it to the business for free, written
+with `updateQuiet` so typing schedules no vault write and flushed once on the
+way out. A thread that exists only to hold a draft is removed again when the box
+is cleared, because `/settings` counts saved conversations and a thread conjured
+by one keystroke would inflate that with nothing in it. Capped at `DRAFT_LIMIT`:
+it is the only free-text field in the app with no natural end, and everything a
+founder owns is in one storage key.
 
 ### Accounts, and the leak they close
 
@@ -951,8 +1019,31 @@ them, heading-level skips on 11, and 14 filled primary buttons on one page.
   browser, so a failed generation costs them nothing, and saying so is the
   difference between an inconvenience and a message that reads like lost work.
 
-The invariants above are checked, not asserted: `visual-qa.mjs` measures
-contrast from painted pixels in both themes and fails the build on any gradient
-background, any blurred pseudo-element, more than three shadowed elements, or
-more than six fully-round ones.
-  the profile was written in five minutes and the user knows more than it does.
+The invariants above are checked, not asserted — `npm run check:visual`.
+
+`scripts/visual-qa.mjs` opens the production build in Chromium, signs in, loads
+the worked example and sweeps ten routes in both themes, failing on any gradient
+background, any blurred pseudo-element, more than three shadowed elements, more
+than six fully-round ones, or any text below the WCAG minimum for its size.
+
+**It measures painted pixels, and that is not a figure of speech.** The first
+version of the file matched `rgb()` with a regular expression; Tailwind v4 emits
+`oklch()`, which Chromium reports back as `lab()`, so nothing matched, every
+route reported "0 text runs", and the whole suite passed while checking nothing.
+Colours are now painted into a 1×1 canvas and read back, which delegates the
+colour-space problem to the engine that does the painting — and a route that
+collects no text at all is a failure, because that is what the broken version
+looked like from the outside.
+
+It found three things on its first honest run. `--warn` sat at 64% lightness
+where its siblings were at 52%, because amber looks right lighter than it can
+safely be — every "Not set" and "Paid" badge measured 3.10:1. `--text-faint` in
+dark mode was tuned against the page background and failed on `--surface-2`,
+which is where the eyebrow labels actually sit. Both are fixed in `globals.css`
+with the measurement in the comment.
+
+It is deliberately not part of `npm test`: that suite is pure node with no
+build, no browser and no network, and it finishes in seconds. Playwright is
+deliberately not a dependency either — it would put a browser download into
+every install including the Vercel build — so the script resolves it from
+wherever it is installed and says how to get it when it is not.

@@ -19,6 +19,7 @@ import {
   resumeSession,
   subscribeVault,
   unlock,
+  DEFAULT_REMEMBER,
   type AccountRecord,
   type RememberFor,
 } from "@/lib/vault";
@@ -139,6 +140,14 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
  * weakens the thing the vault exists for, so it says so in the same breath as
  * offering it — the trade belongs to the person sitting at the browser, not to
  * us, but they cannot make it if we describe only the convenience.
+ *
+ * WHICH ONE IS PRE-SELECTED, AND WHY IT IS NOT THE DEVICE ONE
+ *
+ * Both forms opened on `"device"` for a while, which meant the warning above was
+ * being shown next to an option that was already chosen. A default is a
+ * recommendation whether or not anyone writes it as one, and offering the option
+ * honestly while quietly ticking it is not offering it at all. `DEFAULT_REMEMBER`
+ * is `"session"`; anything weaker than that has to be an act by the user.
  */
 const REMEMBER_OPTIONS: { id: RememberFor; label: string; detail: string }[] = [
   {
@@ -346,7 +355,7 @@ function UnlockAccount({
   onDone: () => void;
 }) {
   const [passphrase, setPassphrase] = useState("");
-  const [stay, setStay] = useState<RememberFor>("device");
+  const [stay, setStay] = useState<RememberFor>(DEFAULT_REMEMBER);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -433,7 +442,7 @@ function CreateAccount({
   const [confirm, setConfirm] = useState("");
   const [claim, setClaim] = useState(true);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [stay, setStay] = useState<RememberFor>("device");
+  const [stay, setStay] = useState<RememberFor>(DEFAULT_REMEMBER);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

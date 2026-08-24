@@ -24,8 +24,10 @@ import {
   changePassphrase,
   currentAccount,
   deleteAccount,
+  forgetDevice,
   listAccounts,
   passphraseProblem,
+  rememberedUntil,
 } from "@/lib/vault";
 
 /**
@@ -149,6 +151,15 @@ function SignOutButton() {
 function SecurityTab() {
   const toast = useToast();
   const [current, setCurrent] = useState("");
+  /*
+   * Read in an effect rather than during render: it reads localStorage, and a
+   * value that differs between the server pass and the first client pass is a
+   * hydration mismatch. Null until it has been checked, which is also the value
+   * meaning "nothing to say", so the block simply does not appear.
+   */
+  const [deviceUntil, setDeviceUntil] = useState<number | null>(null);
+  useEffect(() => setDeviceUntil(rememberedUntil()), []);
+
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -194,11 +205,19 @@ function SecurityTab() {
               PBKDF2-SHA256 at 600,000 iterations.
             </span>
           </li>
+          {/*
+            This bullet used to read "the key exists only in this tab's memory
+            … never written to storage". That stopped being true the day
+            "stay signed in" shipped, and a security page that describes a
+            different build is worse than one that says nothing: it is read by
+            exactly the person deciding how much to trust the thing.
+          */}
           <li className="flex gap-2">
             <Icon.check className="size-4 text-good shrink-0 mt-0.5" />
             <span>
-              The key exists only in this tab&apos;s memory. It is never written to storage, never put in a cookie, and
-              is gone the moment you close the tab or sign out.
+              The key is never put in a cookie and never sent anywhere. It lives in memory for the page you have open,
+              and is written to this browser&apos;s storage only if you asked to stay signed in — which you can end
+              below at any time.
             </span>
           </li>
           <li className="flex gap-2">
@@ -221,6 +240,36 @@ function SecurityTab() {
           </li>
         </ul>
       </Card>
+
+      {/*
+        Only when there is genuinely a key sitting in this browser's storage.
+        A permanent "this device is not remembered" panel would be an
+        advertisement for a setting the reader already declined, sitting on the
+        page whose whole job is to be a short list of true things.
+      */}
+      {deviceUntil !== null && (
+        <Card className="p-5">
+          <SectionHeader
+            title="This device is signed in"
+            description="Until it expires, this browser opens your work without asking for the passphrase."
+          />
+          <p className="text-sm leading-relaxed">
+            Expires <Hi tone="mark">{new Date(deviceUntil).toLocaleDateString()}</Hi>, and the clock restarts each time
+            you use the app. Ending it here leaves you signed in right now — you will just be asked for the passphrase
+            next time.
+          </p>
+          <Button
+            className="mt-3"
+            onClick={() => {
+              forgetDevice();
+              setDeviceUntil(null);
+              toast("This device will ask for your passphrase next time", "good");
+            }}
+          >
+            Forget this device
+          </Button>
+        </Card>
+      )}
 
       <Card className="p-5">
         <SectionHeader

@@ -11,7 +11,7 @@ import { PageHeader, Ready } from "@/components/page";
 import { Badge, Button, Card, Spinner, Textarea } from "@/components/ui";
 import { effectiveProfile, newId, update, useAppState } from "@/lib/store";
 import { useBusinessRoute } from "@/lib/business-route";
-import type { AIMessage } from "@/lib/types";
+import { DRAFT_LIMIT, type AIMessage } from "@/lib/types";
 import { useAIStatus, useIntelligence } from "@/lib/useAI";
 
 /**
@@ -155,7 +155,78 @@ function Coach() {
     : state.conversations.find((c) => !c.businessId);
   const messages = conversation?.messages ?? [];
 
-  const [input, setInput] = useState("");
+  /*
+   * THE UNSENT QUESTION
+   *
+   * This was `useState("")`, so leaving the page threw away whatever had been
+   * typed — including by way of the "back to where you were" link the coach
+   * itself offers. People leave this page mid-sentence constantly: to check a
+   * price, to re-read what a competitor charges, to look up the number they
+   * were about to quote. Coming back to an empty box is the single most
+   * irritating thing an app can do, and it costs nothing to avoid.
+   *
+   * The draft lives on the conversation rather than in component state, which
+   * scopes it to the business for free: a half-written question about one idea
+   * does not follow you to another.
+   *
+   * WRITTEN WITH `update`, NOT `updateQuiet`
+   *
+   * `updateQuiet` was the first attempt — keep typing out of the vault, flush
+   * once from an unmount effect on the way out. It does not survive a hard
+   * navigation, because a document being torn down does not run React cleanup,
+   * and it was measured failing: type, leave, come back, empty box. The whole
+   * point of the field is the case where you leave.
+   *
+   * Typing a question is a real edit, not bookkeeping, so it earns a write like
+   * every other field in the app. `update` coalesces at 120ms, so a burst of
+   * typing is one write per pause rather than one per keystroke, and the
+   * existing `pagehide` flush covers the last one.
+   */
+  const input = conversation?.draft ?? "";
+
+  const setInput = (text: string) => {
+    const capped = text.slice(0, DRAFT_LIMIT);
+    update((s) => {
+      const current = business
+        ? (s.conversations.find((c) => c.businessId === business.id) ??
+          s.conversations.find((c) => !c.businessId))
+        : s.conversations.find((c) => !c.businessId);
+
+      if (!current) {
+        // Nothing to hang it on yet. An empty draft creates nothing — settings
+        // counts saved conversations, and a thread conjured by one keystroke
+        // and then emptied would inflate that count with nothing in it.
+        if (!capped) return s;
+        return {
+          ...s,
+          conversations: [
+            {
+              id: newId("conv"),
+              title: business ? business.idea.name : "Coaching",
+              businessId: business?.id,
+              topic: topic ?? undefined,
+              messages: [],
+              createdAt: Date.now(),
+              draft: capped,
+            },
+            ...s.conversations,
+          ],
+        };
+      }
+
+      // Clearing the box on a thread that never had a message removes it again,
+      // for the same reason.
+      if (!capped && current.messages.length === 0) {
+        return { ...s, conversations: s.conversations.filter((c) => c.id !== current.id) };
+      }
+
+      return {
+        ...s,
+        conversations: s.conversations.map((c) => (c.id === current.id ? { ...c, draft: capped } : c)),
+      };
+    });
+  };
+
   const [streaming, setStreaming] = useState(false);
   const [streamText, setStreamText] = useState("");
   const abortRef = useRef<AbortController | null>(null);
@@ -191,6 +262,9 @@ function Coach() {
           ...existing,
           businessId: existing.businessId ?? business?.id,
           messages: [...existing.messages, message],
+          // Sent is not unsent. Leaving the draft here would re-fill the box
+          // with the question that has just been answered above it.
+          draft: message.role === "user" ? "" : existing.draft,
         };
         return {
           ...s,
@@ -220,7 +294,6 @@ function Coach() {
 
     const userMessage: AIMessage = { id: newId("msg"), role: "user", content: trimmed, createdAt: Date.now() };
     pushMessage(userMessage);
-    setInput("");
     setStreaming(true);
     setStreamText("");
 

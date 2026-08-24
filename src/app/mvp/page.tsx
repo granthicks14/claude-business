@@ -6,6 +6,7 @@ import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { ToolboxArt } from "@/components/art";
 import { Badge, Card, Disclosure, Hi, LinkButton, SectionHeader, Stat, Tabs } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { COST_BAND_DETAIL, COST_BAND_LABEL, PRICE_DISCLAIMER } from "@/lib/spend";
 import { BUCKETS, BUCKET_HELP, BUCKET_LABEL, BUCKET_TONE, MVP_NOTE, mvpPlan } from "@/lib/mvp";
 import { effectiveProfile, useAppState } from "@/lib/store";
@@ -30,6 +31,8 @@ export default function MVPPage() {
 }
 
 function MVP({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. See nav-model.ts. */
+  const link = (href: string) => withBusiness(href, business.id);
   const profile = useAppState(effectiveProfile);
   const [tab, setTab] = useState<"build" | "tools" | "flow">("build");
   const plan = useMemo(() => mvpPlan(business, profile), [business, profile]);
@@ -168,7 +171,7 @@ function MVP({ business }: { business: SelectedBusiness }) {
 
           <Card className="p-5">
             <SectionHeader title="What's actually worth paying for" description="The full spending ladder, stage by stage." />
-            <LinkButton href="/business/spend" size="sm">
+            <LinkButton href={link("/business/spend")} size="sm">
               Open the spending guide
             </LinkButton>
           </Card>
@@ -200,10 +203,10 @@ function MVP({ business }: { business: SelectedBusiness }) {
           <Card className="p-5">
             <SectionHeader title="Next" />
             <div className="flex flex-wrap gap-2">
-              <LinkButton href="/customers" size="sm" variant="primary" icon={<Icon.chat className="size-4" />}>
+              <LinkButton href={link("/customers")} size="sm" variant="primary" icon={<Icon.chat className="size-4" />}>
                 Talk to five people first
               </LinkButton>
-              <LinkButton href="/decide" size="sm">
+              <LinkButton href={link("/decide")} size="sm">
                 Should you build this at all?
               </LinkButton>
             </div>

@@ -50,7 +50,6 @@ const PUBLIC_PREFIXES = [
   "/terms",
   "/disclaimer",
   "/accessibility",
-  "/security",
   "/cost",
   /*
    * A share link carries its whole payload in the URL fragment and reads

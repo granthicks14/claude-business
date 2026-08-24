@@ -7,6 +7,7 @@ import { ToolboxArt } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { Badge, Card, Hi, LinkButton, ScoreRing, SectionHeader } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { useBusinessAnalysis } from "@/lib/explain";
 import { currency } from "@/lib/finance";
 import { CONFIDENCE_LABEL } from "@/lib/engine/knowledge/niches";
@@ -38,6 +39,7 @@ export default function OperationsPage() {
 
 function Operations({ business }: { business: SelectedBusiness }) {
   const profile = useAppState(effectiveProfile);
+  const link = (href: string) => withBusiness(href, business.id);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const [target, setTarget] = useState(3000);
 
@@ -88,11 +90,11 @@ function Operations({ business }: { business: SelectedBusiness }) {
             <p className="text-[15px] font-medium">{readiness.headline}</p>
             <p className="text-[13px] text-muted leading-relaxed mt-1">
               This is a third score and it isn&apos;t merged with the others.{" "}
-              <Link href="/business" className="text-accent-text hover:underline">
+              <Link href={link("/business")} className="text-accent-text hover:underline">
                 Business Fit
               </Link>{" "}
               asks whether this suits you.{" "}
-              <Link href="/business/launch" className="text-accent-text hover:underline">
+              <Link href={link("/business/launch")} className="text-accent-text hover:underline">
                 Launch Readiness
               </Link>{" "}
               asks whether you&apos;ve done the things. This one asks whether you could explain how it runs.
@@ -283,7 +285,7 @@ function Operations({ business }: { business: SelectedBusiness }) {
           ))}
         </ul>
         <div className="mt-3 pt-3 border-t border-border">
-          <LinkButton href="/business/spend" size="sm">
+          <LinkButton href={link("/business/spend")} size="sm">
             What&apos;s worth paying for
           </LinkButton>
         </div>

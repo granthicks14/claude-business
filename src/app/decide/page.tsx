@@ -22,6 +22,7 @@ import {
   STATE_TONE,
   useIntel,
 } from "@/lib/intel";
+import { withBusiness } from "@/lib/business-param";
 import { PILLAR_LABEL, STRATEGY_NOTE, strategyChanges, strategyPattern } from "@/lib/strategy";
 import type { SelectedBusiness } from "@/lib/types";
 
@@ -48,6 +49,8 @@ export default function DecidePage() {
 }
 
 function Decide({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. See nav-model.ts. */
+  const link = (href: string) => withBusiness(href, business.id);
   const intel = useIntel();
   const [tab, setTab] = useState("case");
 
@@ -310,7 +313,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
               </div>
 
               <div className="mt-4">
-                <LinkButton href="/validation" variant="primary" size="sm">
+                <LinkButton href={link("/validation")} variant="primary" size="sm">
                   Record what happens
                 </LinkButton>
               </div>
@@ -385,11 +388,11 @@ function Decide({ business }: { business: SelectedBusiness }) {
         <p className="text-sm text-muted leading-relaxed mt-3">
           None of this needs an AI provider — it&apos;s computed from what you&apos;ve recorded, so it costs nothing
           and says the same thing twice. See{" "}
-          <Link href="/business/operations" className="text-accent-text hover:underline">
+          <Link href={link("/business/operations")} className="text-accent-text hover:underline">
             how it runs
           </Link>{" "}
           for the operational side, or{" "}
-          <Link href="/money" className="text-accent-text hover:underline">
+          <Link href={link("/money")} className="text-accent-text hover:underline">
             the money page
           </Link>{" "}
           for which number matters most.

@@ -27,6 +27,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { currency } from "@/lib/finance";
 import { assessEvidence } from "@/lib/engine";
 import { ShopArt } from "@/components/art";
@@ -115,6 +116,8 @@ export default function BusinessPage() {
 }
 
 function Dashboard({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. See nav-model.ts. */
+  const link = (href: string) => withBusiness(href, business.id);
   const state = useAppState((s) => s);
   const router = useRouter();
   const toast = useToast();
@@ -229,7 +232,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
                     </li>
                   ))}
                 </ul>
-                <LinkButton href="/tasks" size="sm" className="mt-3">
+                <LinkButton href={link("/tasks")} size="sm" className="mt-3">
                   All tasks ({openTasks.length})
                 </LinkButton>
               </>
@@ -241,11 +244,11 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
                     : "Everything on your list is done. Time to generate the next phase, or run an experiment."}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-3">
-                  <LinkButton href="/tasks" variant="primary" size="sm">
+                  <LinkButton href={link("/tasks")} variant="primary" size="sm">
                     {business.tasks.length === 0 ? "Build my 90-day plan" : "Open tasks"}
                   </LinkButton>
                   {!business.validation && (
-                    <LinkButton href="/validation" size="sm">
+                    <LinkButton href={link("/validation")} size="sm">
                       Validate this idea first
                     </LinkButton>
                   )}
@@ -303,7 +306,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
             <>
               <ScoreRing score={business.validation.validationScore} size={64} sublabel="Evidence it's real" />
               <p className="text-xs text-muted mt-3 leading-relaxed line-clamp-3">{business.validation.scoreExplanation}</p>
-              <Link href="/validation" className="text-xs text-accent-text hover:underline mt-2 inline-block">
+              <Link href={link("/validation")} className="text-xs text-accent-text hover:underline mt-2 inline-block">
                 Open Validation Lab
               </Link>
             </>
@@ -312,7 +315,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
               <p className="text-sm text-muted">
                 Not validated yet. This is the difference between an idea you like and one you know people will pay for.
               </p>
-              <LinkButton href="/validation" size="sm" variant="primary" className="mt-3">
+              <LinkButton href={link("/validation")} size="sm" variant="primary" className="mt-3">
                 Run validation
               </LinkButton>
             </div>
@@ -392,7 +395,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
 
       <div className="grid gap-3 sm:grid-cols-2">
         <ShortcutCard
-          href="/business/identity"
+          href={link("/business/identity")}
           icon={<Icon.doc className="size-5 text-accent" />}
           title="Business details"
           description={
@@ -403,7 +406,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           done={!!business.identity?.name}
         />
         <ShortcutCard
-          href="/business/build"
+          href={link("/business/build")}
           icon={<Icon.bolt className="size-5 text-accent" />}
           title="Make things"
           description={
@@ -414,13 +417,13 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           done={!!business.prompts?.length}
         />
         <ShortcutCard
-          href="/business/operations"
+          href={link("/business/operations")}
           icon={<Icon.radar className="size-5 text-accent" />}
           title="How this business runs"
           description="Your day, the money on one job, what the customer goes through, and what the trade requires."
         />
         <ShortcutCard
-          href="/business/website"
+          href={link("/business/website")}
           icon={<Icon.compass className="size-5 text-accent" />}
           title="Website"
           description={
@@ -431,34 +434,34 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           done={!!business.websiteLive}
         />
         <ShortcutCard
-          href="/business/spend"
+          href={link("/business/spend")}
           icon={<Icon.scales className="size-5 text-accent" />}
           title="What's worth paying for"
           description="The free route, the better route, and what the difference actually buys you."
         />
         <ShortcutCard
-          href="/plan"
+          href={link("/plan")}
           icon={<Icon.doc className="size-5 text-accent" />}
           title="Business plan"
           description={business.plan ? "Blueprint written — open to review or export." : "Generate the full blueprint: model, pricing, operations, risks."}
           done={!!business.plan}
         />
         <ShortcutCard
-          href="/money"
+          href={link("/money")}
           icon={<Icon.money className="size-5 text-accent" />}
           title="Money model"
           description="Model price, volume and costs. See break-even and what it takes to hit your target."
           done={business.revenue.length > 0}
         />
         <ShortcutCard
-          href="/marketing"
+          href={link("/marketing")}
           icon={<Icon.megaphone className="size-5 text-accent" />}
           title="Marketing"
           description={business.marketing ? "Channel plan ready. Generate content when you need it." : "Work out where your customers actually are, and what to post."}
           done={!!business.marketing}
         />
         <ShortcutCard
-          href="/sales"
+          href={link("/sales")}
           icon={<Icon.handshake className="size-5 text-accent" />}
           title="Sales"
           description={business.sales ? "Playbook ready — outreach, objections, follow-up." : "Get outreach scripts and objection handling you can use today."}
@@ -600,6 +603,8 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
  * answers both.
  */
 function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
+  /* Every link out of this page names the business it is about. See nav-model.ts. */
+  const link = (href: string) => withBusiness(href, business.id);
   const readiness = useMemo(() => assessReadiness(business), [business]);
 
   return (
@@ -608,7 +613,7 @@ function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
         title="Launch readiness"
         description="Whether the business is prepared — separate from whether it suits you. Every tick is something you've actually recorded."
         action={
-          <LinkButton href="/business/launch" size="sm">
+          <LinkButton href={link("/business/launch")} size="sm">
             Full checklist
           </LinkButton>
         }

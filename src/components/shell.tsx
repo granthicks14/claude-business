@@ -8,6 +8,7 @@ import { Footer } from "./footer";
 import { Icon, type IconName } from "./icons";
 import { Eyebrow, ToastProvider } from "./ui";
 import { AccountGate, signOut } from "./account-gate";
+import { withBusiness } from "@/lib/business-param";
 import { actions, activeBusiness, useAppState } from "@/lib/store";
 import { isUnlocked, subscribeVault } from "@/lib/vault";
 import { profileCompleteness } from "@/lib/profile-fields";
@@ -74,18 +75,24 @@ export function Shell({ children }: { children: React.ReactNode }) {
  * Deliberately a second *presentation* of `useNav`, never a second model: the
  * active state comes from the same `sectionFor` the sidebar uses, so the bar
  * and the sidebar can never disagree about which section you are in.
+ *
+ * `scoped` marks the two destinations that are about one business, for the same
+ * reason as the journey spine: a bare href drops the id and the next page falls
+ * back to whatever business is globally active, which is not necessarily this
+ * tab's.
  */
-const BOTTOM_BAR: { href: string; label: string; icon: IconName }[] = [
+const BOTTOM_BAR: { href: string; label: string; icon: IconName; scoped?: boolean }[] = [
   { href: "/", label: "Home", icon: "home" },
   { href: "/lab", label: "Ideas", icon: "spark" },
-  { href: "/business", label: "Business", icon: "building" },
-  { href: "/tasks", label: "Make it", icon: "bolt" },
+  { href: "/business", label: "Business", icon: "building", scoped: true },
+  { href: "/tasks", label: "Make it", icon: "bolt", scoped: true },
 ];
 
 function BottomBar({ onMore }: { onMore: () => void }) {
   const sections = useNav();
   const pathname = usePathname() ?? "/";
   const current = sectionFor(sections, pathname);
+  const business = useAppState(activeBusiness);
 
   return (
     <nav
@@ -102,7 +109,7 @@ function BottomBar({ onMore }: { onMore: () => void }) {
           return (
             <li key={item.href}>
               <Link
-                href={item.href}
+                href={item.scoped ? withBusiness(item.href, business?.id ?? null) : item.href}
                 aria-current={active ? "page" : undefined}
                 className={`flex flex-col items-center justify-center gap-1 min-h-14 text-[11px] transition-colors
                   ${active ? "text-accent-text font-medium" : "text-muted"}`}
@@ -314,7 +321,7 @@ function WhereYouAre() {
         <div className="rail rail-accent py-1">
           <Eyebrow className="text-faint">Current business</Eyebrow>
           <Link
-            href="/business"
+            href={withBusiness("/business", business.id)}
             className="block text-[13px] font-medium leading-snug mt-1 hover:text-accent-text transition-colors"
           >
             {business.idea.name}
@@ -407,6 +414,14 @@ interface JourneyStep {
   done: boolean;
   next: string;
   href: string;
+  /**
+   * True when the destination is a page about one particular business, and so
+   * needs the id in its address. Marked per step rather than guessed from the
+   * path: the first two phases point at the profile and the lab, which belong
+   * to the founder rather than to any business, and hanging a business id off
+   * those would be noise in the URL that means nothing.
+   */
+  scoped?: boolean;
 }
 
 interface JourneyPhase {
@@ -442,23 +457,23 @@ function selectJourney(s: AppState): {
     {
       name: "Validation",
       steps: [
-        { label: "Evidence gathered", done: !!business?.validation, next: "Run the Validation Lab", href: "/validation" },
-        { label: "Plan written", done: !!business?.plan, next: "Build your business plan", href: "/plan" },
+        { label: "Evidence gathered", done: !!business?.validation, next: "Run the Validation Lab", href: "/validation", scoped: true },
+        { label: "Plan written", done: !!business?.plan, next: "Build your business plan", href: "/plan", scoped: true },
       ],
     },
     {
       name: "Build",
       steps: [
-        { label: "Work broken down", done: (business?.tasks.length ?? 0) > 0, next: "Generate your 90-day plan", href: "/tasks" },
-        { label: "Started on it", done: (business?.tasks.filter((t) => t.done).length ?? 0) >= 3, next: "Complete your first tasks", href: "/tasks" },
+        { label: "Work broken down", done: (business?.tasks.length ?? 0) > 0, next: "Generate your 90-day plan", href: "/tasks", scoped: true },
+        { label: "Started on it", done: (business?.tasks.filter((t) => t.done).length ?? 0) >= 3, next: "Complete your first tasks", href: "/tasks", scoped: true },
       ],
     },
     {
       name: "Trading",
       steps: [
-        { label: "First customer", done: (business?.customers.filter((c) => c.status === "customer").length ?? 0) > 0, next: "Land your first customer", href: "/sales" },
-        { label: "First $100", done: revenue >= 100, next: "Earn your first $100", href: "/money" },
-        { label: "First $1,000", done: revenue >= 1000, next: "Reach $1,000 in revenue", href: "/money" },
+        { label: "First customer", done: (business?.customers.filter((c) => c.status === "customer").length ?? 0) > 0, next: "Land your first customer", href: "/sales", scoped: true },
+        { label: "First $100", done: revenue >= 100, next: "Earn your first $100", href: "/money", scoped: true },
+        { label: "First $1,000", done: revenue >= 1000, next: "Reach $1,000 in revenue", href: "/money", scoped: true },
       ],
     },
   ];
@@ -490,7 +505,17 @@ function selectJourney(s: AppState): {
     done,
     total: all.length,
     next: pending?.next ?? "You're scaling — keep going",
-    nextHref: pending?.href ?? "/money",
+    /*
+     * The suggestion is the sidebar's most-clicked link, so it is also the
+     * quickest way to lose the business out of the address. Scoped steps get
+     * the id; the profile and the lab do not, because they are not about a
+     * business at all.
+     */
+    nextHref: pending
+      ? pending.scoped
+        ? withBusiness(pending.href, business?.id ?? null)
+        : pending.href
+      : withBusiness("/money", business?.id ?? null),
     currentPhase: phases[currentIndex].name,
   };
 }

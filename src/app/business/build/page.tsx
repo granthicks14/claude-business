@@ -16,6 +16,7 @@ import {
   SectionHeader,
   useToast,
 } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { useBusinessAnalysis } from "@/lib/explain";
 import {
   AI_TOOL_DISCLAIMER,
@@ -58,6 +59,7 @@ export default function BuildPage() {
 function Builder({ business }: { business: SelectedBusiness }) {
   const params = useSearchParams();
   const profile = useAppState(effectiveProfile);
+  const link = (href: string) => withBusiness(href, business.id);
   const analysis = useBusinessAnalysis(business.idea, profile);
   const toast = useToast();
 
@@ -126,7 +128,7 @@ function Builder({ business }: { business: SelectedBusiness }) {
             start there — the prompt is only as specific as what it knows.
           </p>
           <div className="mt-3">
-            <LinkButton href="/business/identity" size="sm">
+            <LinkButton href={link("/business/identity")} size="sm">
               Fill in my business details
             </LinkButton>
           </div>
@@ -163,7 +165,7 @@ function Builder({ business }: { business: SelectedBusiness }) {
                 ))}
               </ul>
               <div className="mt-3 flex flex-wrap gap-2">
-                <LinkButton href="/business/identity" size="sm">
+                <LinkButton href={link("/business/identity")} size="sm">
                   Fill these in
                 </LinkButton>
                 <a href="#prompt-preview" className="text-[13px] text-accent-text hover:underline min-h-11 inline-flex items-center px-1">

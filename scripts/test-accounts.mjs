@@ -256,6 +256,47 @@ results.lockClears = {
   tabKeyGone: (globalThis as any).sessionStorage.getItem("abb:tabkey") === null,
 };
 
+/*
+ * The default is a recommendation, so it gets a test.
+ *
+ * Both sign-in forms opened on "device" — the option whose own description
+ * warns you not to use it on a machine you do not control. Nothing failed,
+ * nothing looked wrong, and every account created was created that way. The
+ * only way that gets caught is by asserting on the default itself, and by
+ * checking that a call with no argument writes nothing to storage.
+ */
+const defaulted = await vault.createAccount("Defaulted", PASS + "-d", { who: "defaulted" });
+results.defaultRemember = {
+  isSession: vault.DEFAULT_REMEMBER === "session",
+  created: defaulted.ok,
+  noDeviceKey: storage.getItem("abb:devicekey") === null,
+  noTabKey: (globalThis as any).sessionStorage.getItem("abb:tabkey") === null,
+};
+vault.lock();
+const defaultUnlock = await vault.unlock(defaulted.id!, PASS + "-d");
+results.defaultRememberUnlock = {
+  ok: defaultUnlock.ok,
+  noDeviceKey: storage.getItem("abb:devicekey") === null,
+  noTabKey: (globalThis as any).sessionStorage.getItem("abb:tabkey") === null,
+};
+
+/*
+ * Changing your mind about being remembered must not cost you the session you
+ * are sitting in. Before 'forgetDevice' the only revocation was 'lock', which
+ * also drops the live key — a penalty for choosing the more cautious thing.
+ */
+const forgettable = await vault.createAccount("Forgettable", PASS + "-f", {}, "device");
+(globalThis as any).sessionStorage.setItem("abb:tabkey", JSON.stringify({ accountId: forgettable.id, key: "x" }));
+const hadExpiry = typeof vault.rememberedUntil() === "number";
+vault.forgetDevice();
+results.forgetDevice = {
+  hadExpiry,
+  deviceKeyGone: storage.getItem("abb:devicekey") === null,
+  expiryNowNull: vault.rememberedUntil() === null,
+  stillUnlocked: vault.isUnlocked(),
+  tabKeyUntouched: (globalThis as any).sessionStorage.getItem("abb:tabkey") !== null,
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -330,6 +371,17 @@ check("and deleted rather than left lying around", r.expiry.keyRemoved);
 check("a key for an account that no longer exists is refused", r.orphan.refused && r.orphan.keyRemoved);
 check("\"ask every time\" leaves nothing in storage", r.sessionOnly.noDeviceKey && r.sessionOnly.noTabKey);
 check("locking clears every remembered key", r.lockClears.locked && r.lockClears.deviceKeyGone && r.lockClears.tabKeyGone);
+
+console.log("\n--- the default is the private one ---");
+check("DEFAULT_REMEMBER is \"session\"", r.defaultRemember.isSession);
+check("creating an account with no choice made stores no key", r.defaultRemember.created && r.defaultRemember.noDeviceKey && r.defaultRemember.noTabKey);
+check("unlocking with no choice made stores no key either", r.defaultRememberUnlock.ok && r.defaultRememberUnlock.noDeviceKey && r.defaultRememberUnlock.noTabKey);
+
+console.log("\n--- forgetting this device ---");
+check("a remembered device has a stated expiry", r.forgetDevice.hadExpiry);
+check("forgetting removes the device key", r.forgetDevice.deviceKeyGone && r.forgetDevice.expiryNowNull);
+check("and leaves you signed in where you are", r.forgetDevice.stillUnlocked);
+check("the tab's own choice is not revoked with it", r.forgetDevice.tabKeyUntouched);
 
 console.log(failures === 0 ? "\nALL ACCOUNT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

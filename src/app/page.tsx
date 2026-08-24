@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { IdeasArt, ShopArt } from "@/components/art";
 import { Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
+import { withBusiness } from "@/lib/business-param";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import { useAIStatus } from "@/lib/useAI";
 
@@ -166,10 +167,14 @@ export default function HomePage() {
         <Section eyebrow="Elsewhere" title="Pick something up">
           <div className="max-w-2xl">
             <Door href="/lab?tab=shortlist" label="My ideas" detail={`${state.ideas.length} scored against your profile.`} />
-            <Door href="/coach" label="Ask your mentor" detail="Free, and works without an API key." />
+            <Door
+              href={withBusiness("/coach", business?.id ?? null)}
+              label="Ask your mentor"
+              detail="Free, and works without an API key."
+            />
             <Door href="/opportunity" label="Best opportunity near me" detail="Rank ideas against your area." />
             <Door
-              href={business ? "/money" : "/lab?tab=generate"}
+              href={business ? withBusiness("/money", business.id) : "/lab?tab=generate"}
               label={business ? "Run the numbers" : "Explore ideas"}
               detail={business ? "Price, customers, and what you actually keep." : "Browse by category."}
             />
@@ -227,10 +232,10 @@ export default function HomePage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 {ready && business ? (
                   <>
-                    <LinkButton href="/business" variant="primary" size="lg" icon={<Icon.building />}>
+                    <LinkButton href={withBusiness("/business", business.id)} variant="primary" size="lg" icon={<Icon.building />}>
                       Open {business.idea.name.length > 24 ? "my business" : business.idea.name}
                     </LinkButton>
-                    <Link href="/tasks" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
+                    <Link href={withBusiness("/tasks", business.id)} className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
                       What should I do today?
                     </Link>
                   </>
