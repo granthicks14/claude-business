@@ -8,6 +8,7 @@ import { SampleBanner } from "./sample-banner";
 import { useBreadcrumbs, useSectionLabel } from "@/lib/nav";
 import { AILoading, Button, Card, EmptyState, ErrorPanel, Eyebrow, LinkButton, SectionHeader, Skeleton } from "./ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
+import { useBusinessRoute } from "@/lib/business-route";
 import type { SelectedBusiness } from "@/lib/types";
 import { useIntelligence, type AIError, type AIMeta } from "@/lib/useAI";
 
@@ -109,8 +110,48 @@ export function RequireProfile({ children }: { children: ReactNode }) {
 /** Renders children with the active business, or explains how to get one. */
 export function RequireBusiness({ children }: { children: (business: SelectedBusiness) => ReactNode }) {
   const state = useAppState((s) => s);
-  const business = activeBusiness(state);
   const section = useSectionLabel();
+  /*
+   * The single place a workspace page learns which business it is about.
+   *
+   * Every one of the twenty-one workspace routes already goes through this
+   * gate, so resolving the URL here means none of them has to know that
+   * business context is now carried in the address — and none of them can
+   * forget to. See `lib/business-route.ts`.
+   */
+  const { business, missing } = useBusinessRoute(section);
+
+  /*
+   * A URL naming a business that is not here.
+   *
+   * Someone followed an old bookmark, or a link from a device where that
+   * business was archived or deleted. Falling through to "pick a business
+   * first" would be misleading — they did pick one, and it is gone — so this
+   * says what happened and offers the way back rather than pretending the
+   * request was never made.
+   */
+  if (missing) {
+    return (
+      <>
+        <PageHero
+          title="That business isn't here any more"
+          description="The link named a business this browser doesn't have. It may have been deleted, or saved on a different device — nothing here syncs between devices."
+        />
+        <Card>
+          <EmptyState
+            icon={<Icon.building className="size-8 mx-auto text-muted" />}
+            title="Nothing to open"
+            description="Your other businesses are all still where you left them."
+            action={
+              <LinkButton href="/lab?tab=shortlist" variant="primary">
+                See my businesses
+              </LinkButton>
+            }
+          />
+        </Card>
+      </>
+    );
+  }
 
   if (!business) {
     const hasIdeas = state.ideas.length > 0;

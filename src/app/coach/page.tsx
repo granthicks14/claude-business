@@ -2,14 +2,62 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { Icon } from "@/components/icons";
+import { CoachContext } from "@/components/discuss";
 import { Markdown } from "@/components/markdown";
 import { PageHeader, Ready } from "@/components/page";
 import { Badge, Button, Card, Spinner, Textarea } from "@/components/ui";
-import { activeBusiness, effectiveProfile, newId, update, useAppState } from "@/lib/store";
+import { effectiveProfile, newId, update, useAppState } from "@/lib/store";
+import { useBusinessRoute } from "@/lib/business-route";
 import type { AIMessage } from "@/lib/types";
 import { useAIStatus, useIntelligence } from "@/lib/useAI";
+
+/**
+ * What to ask, when you arrived from somewhere specific.
+ *
+ * A founder who clicked "discuss this" on the competition page has a question
+ * about competition, and offering them "how should I price this?" makes the app
+ * look like it did not notice where they came from. These are the "why are we
+ * here" signal made visible — the same information the conversation is tagged
+ * with, offered back as the first thing to click.
+ */
+const TOPIC_SUGGESTIONS: Record<string, string[]> = {
+  competition: [
+    "Who am I actually competing with here?",
+    "How would I be different from them?",
+    "Is this market too crowded to enter?",
+  ],
+  market: [
+    "Is this market big enough to bother with?",
+    "How would I check that demand is real?",
+    "Am I fooling myself about this market?",
+  ],
+  pricing: [
+    "Is this price too low?",
+    "How do I raise my price without losing people?",
+    "What should I charge for the first few?",
+  ],
+  money: [
+    "Do these numbers actually work?",
+    "What has to be true for me to hit my goal?",
+    "Where am I most likely to be wrong about the money?",
+  ],
+  customers: [
+    "How do I find the first ten of these people?",
+    "What should I ask them?",
+    "How do I tell interest from politeness?",
+  ],
+  validation: [
+    "What would prove this is worth building?",
+    "What is the cheapest test I could run this week?",
+    "Am I over-validating instead of selling?",
+  ],
+  quality: ["Challenge this idea honestly.", "What is the biggest risk here?", "Why might this fail?"],
+  website: ["What should the website actually say?", "What is the one thing above the fold?"],
+  tasks: ["What should I do next?", "What am I doing that does not matter?"],
+};
 
 const SUGGESTIONS_NO_BUSINESS = [
   "I don't know where to start. What should I do first?",
@@ -78,8 +126,33 @@ function Coach() {
   const state = useAppState((s) => s);
   const { status } = useAIStatus();
   const intelligence = useIntelligence();
-  const business = activeBusiness(state);
-  const conversation = state.conversations[0];
+  const search = useSearchParams();
+  /*
+   * The business the URL says, not whichever happens to be active.
+   *
+   * Arriving from "discuss this" on a business page carries the id, so the
+   * coach opens on the business the founder was actually reading about — the
+   * bug this fixes was that clicking through from an idea opened a coach with
+   * no idea which idea, and the conversation drifted onto whatever was active.
+   */
+  const { business } = useBusinessRoute();
+  const topic = search?.get("topic") ?? null;
+  const from = search?.get("from") ?? null;
+
+  /*
+   * One thread per business.
+   *
+   * `conversations[0]` was always used, so two businesses shared a single
+   * transcript: the coach answered about A, the founder switched to B, and the
+   * next reply continued the same thread while the underlying context had
+   * silently changed. Threads written before this are matched by the absence of
+   * a business id rather than discarded, because deleting somebody's history to
+   * fix a bug of ours is the wrong trade.
+   */
+  const conversation = business
+    ? (state.conversations.find((c) => c.businessId === business.id) ??
+      state.conversations.find((c) => !c.businessId))
+    : state.conversations.find((c) => !c.businessId);
   const messages = conversation?.messages ?? [];
 
   const [input, setInput] = useState("");
@@ -97,17 +170,44 @@ function Coach() {
 
   const pushMessage = (message: AIMessage) => {
     update((s) => {
-      const existing = s.conversations[0];
-      if (existing) {
+      /*
+       * Find the thread from `s`, not from the render that queued this.
+       *
+       * Matching against a `conversation` captured in the closure looks
+       * equivalent and is not: the user's message creates the thread, and the
+       * assistant's reply is queued from the same render where that variable
+       * was still undefined — so the reply created a *second* conversation and
+       * the question that prompted it disappeared from view. Re-deriving here
+       * with the same rule the reader uses keeps the two in step.
+       */
+      const current = business
+        ? (s.conversations.find((c) => c.businessId === business.id) ??
+          s.conversations.find((c) => !c.businessId))
+        : s.conversations.find((c) => !c.businessId);
+      const index = current ? s.conversations.findIndex((c) => c.id === current.id) : -1;
+      if (index >= 0) {
+        const existing = s.conversations[index];
+        const updated = {
+          ...existing,
+          businessId: existing.businessId ?? business?.id,
+          messages: [...existing.messages, message],
+        };
         return {
           ...s,
-          conversations: [{ ...existing, messages: [...existing.messages, message] }, ...s.conversations.slice(1)],
+          conversations: [updated, ...s.conversations.filter((_, i) => i !== index)],
         };
       }
       return {
         ...s,
         conversations: [
-          { id: newId("conv"), title: "Coaching", messages: [message], createdAt: Date.now() },
+          {
+            id: newId("conv"),
+            title: business ? business.idea.name : "Coaching",
+            businessId: business?.id,
+            topic: topic ?? undefined,
+            messages: [message],
+            createdAt: Date.now(),
+          },
           ...s.conversations,
         ],
       };
@@ -152,6 +252,9 @@ function Coach() {
         body: JSON.stringify({
           profile: effectiveProfile(state),
           business,
+          // Where the question came from, so a configured provider answers
+          // about competition when the founder clicked through from competition.
+          topic,
           journal: state.journal.slice(0, 12),
           messages: [...messages, userMessage].map((m) => ({ role: m.role, content: m.content })),
         }),
@@ -208,7 +311,9 @@ function Coach() {
     }
   };
 
-  const suggestions = business ? SUGGESTIONS_WITH_BUSINESS : SUGGESTIONS_NO_BUSINESS;
+  const suggestions =
+    (topic ? TOPIC_SUGGESTIONS[topic] : undefined) ??
+    (business ? SUGGESTIONS_WITH_BUSINESS : SUGGESTIONS_NO_BUSINESS);
   const lastCoachId = [...messages].reverse().find((m) => m.role === "assistant")?.id;
   const noProvider = status && !status.configured;
 
@@ -226,13 +331,28 @@ function Coach() {
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => update((s) => ({ ...s, conversations: [] }))}
+              onClick={() =>
+                /*
+                 * Clears THIS conversation, not every conversation.
+                 *
+                 * It used to empty `conversations` entirely, so clearing the
+                 * thread about one business also destroyed the history for
+                 * every other one — invisible at the time and impossible to
+                 * undo.
+                 */
+                update((s) => ({
+                  ...s,
+                  conversations: s.conversations.filter((c) => c.id !== conversation?.id),
+                }))
+              }
             >
-              Clear
+              Clear this conversation
             </Button>
           ) : undefined
         }
       />
+
+      <CoachContext business={business} topic={topic} from={from} />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Badge tone={intelligence === "engine" ? "accent" : "info"}>
@@ -251,7 +371,17 @@ function Coach() {
       </div>
 
       <div className="flex-1 space-y-4">
-        {messages.length === 0 && !noProvider && (
+        {/*
+          Shown whether or not an AI provider is configured.
+
+          This was gated on `!noProvider`, which hid the suggested questions in
+          the app's *default* configuration — there is no required provider, the
+          built-in engine answers perfectly well without one, and the people
+          running without a key are exactly the beginners these questions exist
+          for. The badge above already says which system is answering; hiding
+          the way in as well left an empty box and a text field.
+        */}
+        {messages.length === 0 && (
           <Card className="p-5">
             <p className="text-sm text-muted">
               Ask anything. It answers for <em>your</em> situation, and it will tell you when it thinks you&apos;re

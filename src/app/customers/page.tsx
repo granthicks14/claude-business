@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { ClaimList } from "@/components/claim";
+import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { TalkArt } from "@/components/art";
@@ -67,6 +68,7 @@ function Customers({ business }: { business: SelectedBusiness }) {
         art={<TalkArt className="w-full" />}
         description="The only part of a business plan that can't be reasoned out from a desk. Everything here is either derived from how the trade works, or counted from conversations you actually had."
       />
+      <DiscussWithCoach business={business} topic="customers" />
 
       <Tabs
         active={tab}

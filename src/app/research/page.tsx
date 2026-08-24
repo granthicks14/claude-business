@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { ClaimList } from "@/components/claim";
+import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { ToolboxArt } from "@/components/art";
@@ -75,6 +76,7 @@ function Research({ business }: { business: SelectedBusiness }) {
         art={<ToolboxArt className="w-full" />}
         description="The app won't look anything up for you — it can't, and a figure it produced from memory would look exactly like one you'd researched. What it does is tell you what to find out, do the arithmetic, and keep track of when you last checked."
       />
+      <DiscussWithCoach business={business} topic="market" />
 
       <Tabs
         active={tab}

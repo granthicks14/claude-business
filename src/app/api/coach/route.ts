@@ -36,6 +36,8 @@ How you answer:
 interface CoachBody {
   profile?: unknown;
   business?: unknown;
+  /** Which section the founder came from. See the note at the use site. */
+  topic?: unknown;
   journal?: unknown;
   messages?: { role: "user" | "assistant"; content: string }[];
 }
@@ -92,6 +94,21 @@ export async function POST(req: Request) {
 
   const contextParts = [renderProfile(coerceProfile(body.profile))];
   if (body.business) contextParts.push(renderBusiness(coerceBusiness(body.business)));
+
+  /*
+   * Why the founder is here, not just who they are.
+   *
+   * Somebody who clicked "discuss this" on the competition page is asking about
+   * competition even when their first message is "what do you think?" — without
+   * this the model answers in a vacuum and the founder re-types the context the
+   * app already had. Constrained to a short slug from a known set and sanitised
+   * like everything else arriving from a browser; it is untrusted input that
+   * reaches a prompt.
+   */
+  const topic = typeof body.topic === "string" ? sanitize(body.topic).slice(0, 40) : "";
+  if (topic && /^[a-z-]+$/.test(topic)) {
+    contextParts.push(`The founder opened this conversation from the ${topic} section, so their question is most likely about ${topic}.`);
+  }
 
   const journal = (Array.isArray(body.journal) ? body.journal : [])
     .slice(0, 12)

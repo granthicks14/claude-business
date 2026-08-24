@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { Footer } from "./footer";
 import { Icon, type IconName } from "./icons";
 import { Eyebrow, ToastProvider } from "./ui";
-import { AccountGate } from "./account-gate";
+import { AccountGate, signOut } from "./account-gate";
 import { actions, activeBusiness, useAppState } from "@/lib/store";
+import { isUnlocked, subscribeVault } from "@/lib/vault";
 import { profileCompleteness } from "@/lib/profile-fields";
 import type { AppState, SelectedBusiness } from "@/lib/types";
 import { sectionFor, useNav, type NavSection } from "@/lib/nav";
@@ -188,6 +189,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           <div className="flex items-center gap-1">
             <ModeToggle />
             <ThemeToggle />
+            <LockNow />
           </div>
         </div>
 
@@ -578,6 +580,40 @@ function ModeToggle() {
       className="h-9 px-2.5 grid place-items-center rounded-lg text-[11px] font-mono uppercase tracking-wide text-muted hover:bg-surface-2 hover:text-text transition-colors"
     >
       {advanced ? "Detail" : "Simple"}
+    </button>
+  );
+}
+
+/**
+ * Lock, in one click, from anywhere.
+ *
+ * "Stay signed in on this device" is only a defensible offer if leaving is as
+ * cheap as staying. Somebody who ticked it on a laptop and is about to hand
+ * that laptop to someone else needs the way out to be visible right now, not
+ * three clicks into Settings — otherwise the honest thing to do would be not
+ * to offer the option at all.
+ *
+ * Hidden while locked, because a lock button on a sign-in screen is noise.
+ */
+function LockNow() {
+  const unlocked = useSyncExternalStore(
+    subscribeVault,
+    () => isUnlocked(),
+    () => false,
+  );
+  if (!unlocked) return null;
+
+  return (
+    <button
+      onClick={() => signOut()}
+      title="Lock now — the passphrase will be needed again"
+      aria-label="Lock now"
+      className="size-9 grid place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
+    >
+      <svg viewBox="0 0 24 24" className="size-[17px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="4" y="10.5" width="16" height="10" rx="2" />
+        <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+      </svg>
     </button>
   );
 }

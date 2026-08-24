@@ -16,10 +16,11 @@ import {
   legacyState,
   listAccounts,
   passphraseProblem,
-  resumeInTab,
+  resumeSession,
   subscribeVault,
   unlock,
   type AccountRecord,
+  type RememberFor,
 } from "@/lib/vault";
 
 /**
@@ -57,7 +58,7 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
      * show, so a reload never flashes a prompt at somebody who asked not to
      * see one.
      */
-    void resumeInTab().then((resumed) => {
+    void resumeSession().then((resumed) => {
       if (resumed) hydrateFrom(resumed.state);
       // Nothing to restore: settle the store as empty so pages waiting on
       // hydration stop waiting. A locked visitor is not a loading visitor.
@@ -120,6 +121,68 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
       </div>
       <SignIn />
     </>
+  );
+}
+
+/**
+ * How long to stay unlocked — three choices, not a checkbox.
+ *
+ * The checkbox this replaces offered exactly one improvement over nothing:
+ * surviving a refresh in the same tab. It was off by default, so the common
+ * experience of this app was typing a passphrase again after every reload, every
+ * link opened in a new tab, and every browser restart — and because the key
+ * gates the entire encrypted state, losing it loses the founder's whole session,
+ * not just their sign-in. That is the "I have to sign in repeatedly" complaint,
+ * and it was a design decision rather than a bug.
+ *
+ * Each option states what it costs. The device option is the one that genuinely
+ * weakens the thing the vault exists for, so it says so in the same breath as
+ * offering it — the trade belongs to the person sitting at the browser, not to
+ * us, but they cannot make it if we describe only the convenience.
+ */
+const REMEMBER_OPTIONS: { id: RememberFor; label: string; detail: string }[] = [
+  {
+    id: "session",
+    label: "Ask every time",
+    detail: "Most private. You will re-enter the passphrase after any refresh.",
+  },
+  {
+    id: "tab",
+    label: "Stay unlocked in this tab",
+    detail: "Survives a refresh. Closing the tab locks it again.",
+  },
+  {
+    id: "device",
+    label: "Stay signed in on this device for a week",
+    detail:
+      "Survives closing the browser. Until it expires, anyone who opens this browser can read your work without the passphrase — leave it off on a device you don't control.",
+  },
+];
+
+function RememberChoice({ value, onChange }: { value: RememberFor; onChange: (v: RememberFor) => void }) {
+  return (
+    <fieldset className="space-y-1.5">
+      <legend className="text-sm font-medium mb-1.5">Staying signed in</legend>
+      {REMEMBER_OPTIONS.map((option) => (
+        <label
+          key={option.id}
+          className={`flex gap-2.5 items-start cursor-pointer rounded-md border p-2.5 transition-colors
+            ${value === option.id ? "border-accent-border bg-accent-soft/40" : "border-border hover:border-border-strong"}`}
+        >
+          <input
+            type="radio"
+            name="remember"
+            checked={value === option.id}
+            onChange={() => onChange(option.id)}
+            className="mt-0.5 size-4 shrink-0"
+          />
+          <span className="text-sm leading-relaxed">
+            {option.label}
+            <span className="block text-xs text-muted mt-0.5">{option.detail}</span>
+          </span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 
@@ -283,7 +346,7 @@ function UnlockAccount({
   onDone: () => void;
 }) {
   const [passphrase, setPassphrase] = useState("");
-  const [stay, setStay] = useState(false);
+  const [stay, setStay] = useState<RememberFor>("device");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -318,21 +381,7 @@ function UnlockAccount({
           />
         </Field>
 
-        <label className="flex gap-2.5 items-start cursor-pointer">
-          <input
-            type="checkbox"
-            checked={stay}
-            onChange={(e) => setStay(e.target.checked)}
-            className="mt-0.5 size-4 shrink-0"
-          />
-          <span className="text-sm leading-relaxed">
-            Stay unlocked in this tab
-            <span className="block text-xs text-muted mt-0.5">
-              Saves retyping this on every refresh. Closing the tab still locks it, so the next person to open the app
-              needs your passphrase. Leave it off on a device you don&apos;t control.
-            </span>
-          </span>
-        </label>
+        <RememberChoice value={stay} onChange={setStay} />
 
         {error && (
           <p role="alert" className="text-sm text-bad leading-relaxed">
@@ -384,7 +433,7 @@ function CreateAccount({
   const [confirm, setConfirm] = useState("");
   const [claim, setClaim] = useState(true);
   const [acknowledged, setAcknowledged] = useState(false);
-  const [stay, setStay] = useState(false);
+  const [stay, setStay] = useState<RememberFor>("device");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -489,21 +538,7 @@ function CreateAccount({
           </label>
         )}
 
-        <label className="flex gap-2.5 items-start cursor-pointer">
-          <input
-            type="checkbox"
-            checked={stay}
-            onChange={(e) => setStay(e.target.checked)}
-            className="mt-0.5 size-4 shrink-0"
-          />
-          <span className="text-sm leading-relaxed">
-            Stay unlocked in this tab
-            <span className="block text-xs text-muted mt-0.5">
-              Saves retyping this on every refresh. Closing the tab still locks it, so the next person to open the app
-              needs your passphrase. Leave it off on a device you don&apos;t control.
-            </span>
-          </span>
-        </label>
+        <RememberChoice value={stay} onChange={setStay} />
 
         {/* The consent sits last, against the button, rather than above a
             preference someone can skim past on the way to it. */}

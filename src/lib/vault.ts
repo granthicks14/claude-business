@@ -254,8 +254,45 @@ let session: { accountId: string; key: CryptoKey; label: string } | null = null;
  */
 const SESSION_KEY = "abb:tabkey";
 
-async function rememberInTab(accountId: string, passphrase: string, salt: Uint8Array, iterations: number): Promise<void> {
-  // Re-derived as extractable purely to serialise it; the live key is not.
+/**
+ * "Stay signed in on this device" — the wider of the two, and the reason the
+ * repeated sign-in complaint existed.
+ *
+ * The tab option above fixes exactly one thing: a refresh in the same tab.
+ * Opening a link in a new tab, or closing and reopening the browser, both drop
+ * a `sessionStorage` key — so somebody using this app across a week met the
+ * passphrase prompt constantly, and losing the key loses *everything* at once
+ * because the whole state is behind it. That is not a security posture, it is
+ * an app nobody can stay logged into.
+ *
+ * This keeps the same derived key in `localStorage` with an expiry. What it
+ * costs is real and larger than the tab option, and is stated on screen rather
+ * than buried here: until it expires, anyone who opens this browser can read
+ * the work without knowing the passphrase. That is the exact threat the vault
+ * was built for, which is why it stays opt-in, why it expires, and why there is
+ * a one-click "lock now".
+ */
+const DEVICE_KEY = "abb:devicekey";
+
+/**
+ * How long a remembered device stays remembered.
+ *
+ * Refreshed on every unlock, so somebody using the app weekly never sees the
+ * prompt while somebody who walks away from a shared machine is locked out
+ * within the week. A number that has to be a compromise; this one is stated in
+ * the interface so it is at least a compromise the user knows about.
+ */
+const DEVICE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface StoredKey {
+  accountId: string;
+  key: string;
+  /** Absolute expiry. Absent on tab keys, which die with the tab. */
+  expires?: number;
+}
+
+/** Serialises the derived key. Re-derived as extractable purely for this. */
+async function exportableKey(passphrase: string, salt: Uint8Array, iterations: number): Promise<string> {
   const material = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
   const exportable = await crypto.subtle.deriveKey(
     { name: "PBKDF2", salt: salt as BufferSource, iterations, hash: "SHA-256" },
@@ -264,53 +301,135 @@ async function rememberInTab(accountId: string, passphrase: string, salt: Uint8A
     true,
     ["encrypt", "decrypt"],
   );
-  const raw = await crypto.subtle.exportKey("raw", exportable);
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify({ accountId, key: toBase64(new Uint8Array(raw)) }));
+  return toBase64(new Uint8Array(await crypto.subtle.exportKey("raw", exportable)));
 }
 
-function forgetTabKey(): void {
+export type RememberFor = "session" | "tab" | "device";
+
+async function remember(
+  scope: RememberFor,
+  accountId: string,
+  passphrase: string,
+  salt: Uint8Array,
+  iterations: number,
+): Promise<void> {
+  forgetKeys();
+  if (scope === "session") return;
+
+  const raw = await exportableKey(passphrase, salt, iterations);
+  try {
+    if (scope === "tab") {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ accountId, key: raw } satisfies StoredKey));
+    } else {
+      const record: StoredKey = { accountId, key: raw, expires: Date.now() + DEVICE_TTL_MS };
+      window.localStorage.setItem(DEVICE_KEY, JSON.stringify(record));
+    }
+  } catch {
+    /* Storage refused. The session still works in memory for this page load. */
+  }
+}
+
+/** Clears both remembered keys. Locking must not leave either behind. */
+function forgetKeys(): void {
   try {
     sessionStorage.removeItem(SESSION_KEY);
   } catch {
     /* Storage disabled. Nothing was written, so nothing to clear. */
   }
+  try {
+    window.localStorage.removeItem(DEVICE_KEY);
+  } catch {
+    /* Same. */
+  }
+}
+
+function readStoredKey(): { record: StoredKey; from: "tab" | "device" } | null {
+  const read = (get: () => string | null, from: "tab" | "device") => {
+    try {
+      const raw = get();
+      if (!raw) return null;
+      const record = JSON.parse(raw) as StoredKey;
+      if (typeof record?.accountId !== "string" || typeof record?.key !== "string") return null;
+      return { record, from };
+    } catch {
+      return null;
+    }
+  };
+  // Tab first: if somebody unlocked this tab specifically, that is the more
+  // deliberate choice and should win over a device key left from last week.
+  return (
+    read(() => sessionStorage.getItem(SESSION_KEY), "tab") ??
+    read(() => window.localStorage.getItem(DEVICE_KEY), "device")
+  );
 }
 
 /**
- * Restore a tab-scoped key left by a previous page load in this same tab.
+ * Restore a remembered session — this tab's, or this device's.
  *
- * Returns the decrypted state, or null if there is nothing to restore — which
- * is the normal case, since the option is off unless the user asked for it.
+ * Returns the decrypted state, or null when there is nothing to restore. Any
+ * stored key that is expired, tampered with, or names an account that no longer
+ * exists is deleted rather than trusted: a key hanging around for a deleted
+ * account is exactly the sort of residue that turns into a bug nobody can
+ * reproduce.
  */
-export async function resumeInTab(): Promise<{ accountId: string; state: unknown } | null> {
+export async function resumeSession(): Promise<{ accountId: string; state: unknown } | null> {
   if (typeof window === "undefined") return null;
-  let stored: string | null = null;
-  try {
-    stored = sessionStorage.getItem(SESSION_KEY);
-  } catch {
-    return null;
-  }
+
+  const stored = readStoredKey();
   if (!stored) return null;
 
+  const { record } = stored;
+  if (record.expires !== undefined && record.expires < Date.now()) {
+    forgetKeys();
+    return null;
+  }
+
   try {
-    const { accountId, key: rawKey } = JSON.parse(stored) as { accountId: string; key: string };
-    const account = listAccounts().find((a) => a.id === accountId);
-    const blob = readBlob(accountId);
+    const account = listAccounts().find((a) => a.id === record.accountId);
+    const blob = readBlob(record.accountId);
     if (!account || !blob) {
-      forgetTabKey();
+      forgetKeys();
       return null;
     }
-    const key = await crypto.subtle.importKey("raw", fromBase64(rawKey) as BufferSource, "AES-GCM", false, [
+    const key = await crypto.subtle.importKey("raw", fromBase64(record.key) as BufferSource, "AES-GCM", false, [
       "encrypt",
       "decrypt",
     ]);
     const plaintext = await decryptWith(key, blob);
-    session = { accountId, key, label: account.label };
+    session = { accountId: record.accountId, key, label: account.label };
+
+    // Sliding expiry: someone who uses the app keeps their session; someone who
+    // stops using it loses it on schedule. Only the device key slides — a tab
+    // key already dies with the tab.
+    if (stored.from === "device") {
+      try {
+        window.localStorage.setItem(
+          DEVICE_KEY,
+          JSON.stringify({ ...record, expires: Date.now() + DEVICE_TTL_MS } satisfies StoredKey),
+        );
+      } catch {
+        /* Not fatal — the session is live either way. */
+      }
+    }
+
     emit();
-    return { accountId, state: JSON.parse(plaintext) };
+    return { accountId: record.accountId, state: JSON.parse(plaintext) };
   } catch {
     // A stale or tampered entry is discarded rather than trusted.
-    forgetTabKey();
+    forgetKeys();
+    return null;
+  }
+}
+
+/** How long a remembered device has left, for the interface to state plainly. */
+export function rememberedUntil(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(DEVICE_KEY);
+    if (!raw) return null;
+    const record = JSON.parse(raw) as StoredKey;
+    return typeof record.expires === "number" ? record.expires : null;
+  } catch {
     return null;
   }
 }
@@ -391,7 +510,7 @@ export function passphraseProblem(passphrase: string): string | null {
   return null;
 }
 
-export async function createAccount(label: string, passphrase: string, initialState: unknown, stayInTab = false): Promise<VaultResult & { id?: string }> {
+export async function createAccount(label: string, passphrase: string, initialState: unknown, remember_: RememberFor = "session"): Promise<VaultResult & { id?: string }> {
   const trimmed = label.trim();
   if (!trimmed) return { ok: false, error: "Give the account a name so you can find it on this device." };
   if (trimmed.length > 40) return { ok: false, error: "Keep the name under 40 characters." };
@@ -461,7 +580,7 @@ export async function createAccount(label: string, passphrase: string, initialSt
     return { ok: false, error: "This browser is out of storage space, so the account wasn't created. Free some space and try again." };
   }
 
-  if (stayInTab) await rememberInTab(id, passphrase, salt, KDF_ITERATIONS);
+  await remember(remember_, id, passphrase, salt, KDF_ITERATIONS);
 
   session = { accountId: id, key, label: trimmed };
   emit();
@@ -476,7 +595,7 @@ export async function createAccount(label: string, passphrase: string, initialSt
  * key fails to decrypt rather than returning plausible rubbish, and adding a
  * second encrypted artifact would only be one more thing to keep in step.
  */
-export async function unlock(accountId: string, passphrase: string, stayInTab = false): Promise<VaultResult & { state?: unknown }> {
+export async function unlock(accountId: string, passphrase: string, remember_: RememberFor = "session"): Promise<VaultResult & { state?: unknown }> {
   const account = listAccounts().find((a) => a.id === accountId);
   if (!account) return { ok: false, error: "That account isn't on this browser any more." };
 
@@ -495,8 +614,7 @@ export async function unlock(accountId: string, passphrase: string, stayInTab = 
     return { ok: false, error: "That passphrase doesn't open this account." };
   }
 
-  if (stayInTab) await rememberInTab(accountId, passphrase, fromBase64(account.kdf.salt), account.kdf.iterations);
-  else forgetTabKey();
+  await remember(remember_, accountId, passphrase, fromBase64(account.kdf.salt), account.kdf.iterations);
 
   const accounts = listAccounts().map((a) => (a.id === accountId ? { ...a, lastSeenAt: Date.now() } : a));
   writeAccounts(accounts);
@@ -513,10 +631,34 @@ export async function unlock(accountId: string, passphrase: string, stayInTab = 
   return { ok: true, state };
 }
 
+/**
+ * Re-read this account's vault from disk, using the key already in memory.
+ *
+ * For the cross-tab case: another tab wrote, and this tab is holding a stale
+ * copy that its next write would clobber. Returns null when locked or when the
+ * blob will not decrypt, so the caller can leave what it has rather than
+ * replacing good state with nothing.
+ */
+export async function reloadState(): Promise<unknown | null> {
+  if (!session) return null;
+  const blob = readBlob(session.accountId);
+  if (!blob) return null;
+  try {
+    return JSON.parse(await decryptWith(session.key, blob));
+  } catch {
+    return null;
+  }
+}
+
+/** The vault storage key for the open account, so the store can watch it. */
+export function currentVaultKey(): string | null {
+  return session ? VAULT_PREFIX + session.accountId : null;
+}
+
 /** Drop the key. The data stays encrypted on disk; nothing can read it now. */
 export function lock(): void {
   session = null;
-  forgetTabKey();
+  forgetKeys();
   emit();
 }
 
@@ -586,7 +728,7 @@ export async function changePassphrase(current: string, next: string): Promise<V
   // The remembered key was derived from the old passphrase, so it is stale the
   // moment this succeeds. Dropped rather than silently re-derived: staying
   // unlocked is a choice, and it should be made again under the new secret.
-  forgetTabKey();
+  forgetKeys();
 
   session = { ...session, key: newKey };
   return { ok: true };
@@ -618,7 +760,7 @@ export async function deleteAccount(accountId: string, passphrase: string): Prom
   writeAccounts(listAccounts().filter((a) => a.id !== accountId));
   if (session?.accountId === accountId) {
     session = null;
-    forgetTabKey();
+    forgetKeys();
   }
   emit();
   return { ok: true };

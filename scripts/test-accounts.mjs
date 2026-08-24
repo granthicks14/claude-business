@@ -187,6 +187,75 @@ results.deleteNeedsPassphrase = {
   stillThere: vault.listAccounts().some((x) => x.id === a.id),
 };
 
+
+/* ------------------------------------------------------- staying signed in --- */
+
+/*
+ * The repeated sign-in complaint, as a test.
+ *
+ * The key used to live in memory with an opt-in sessionStorage copy, so a
+ * refresh, a new tab and a browser restart all locked the user out — and since
+ * the key gates the whole encrypted state, that lost their entire session, not
+ * just their sign-in. These assert the three things a remembered device has to
+ * do: come back, expire, and never outlive the account it belongs to.
+ */
+
+/* A fresh page load is a fresh module: clear the in-memory session the way a
+   reload would, leaving only what is in storage. */
+const reload = async () => {
+  const fresh = await import("${process.cwd()}/src/lib/vault.ts?reload=" + Math.random());
+  return fresh;
+};
+
+const g = await vault.createAccount("Grant", PASS + "-g", { who: "grant" }, "device");
+results.device = { created: g.ok, keyStored: storage.getItem("abb:devicekey") !== null };
+
+/* Simulate the reload: a new module instance sees only storage. */
+const v2 = await reload();
+const resumed = await v2.resumeSession();
+results.deviceResume = {
+  restored: !!resumed,
+  rightAccount: resumed?.accountId === g.id,
+  itsOwnData: (resumed?.state as any)?.who === "grant",
+};
+
+/* An expired key must be refused AND removed, not merely ignored. */
+const stale = JSON.parse(storage.getItem("abb:devicekey")!);
+storage.setItem("abb:devicekey", JSON.stringify({ ...stale, expires: Date.now() - 1000 }));
+const v3 = await reload();
+const afterExpiry = await v3.resumeSession();
+results.expiry = {
+  refused: afterExpiry === null,
+  keyRemoved: storage.getItem("abb:devicekey") === null,
+};
+
+/* A key naming an account that no longer exists is residue, not a session. */
+await vault.createAccount("Temp", PASS + "-t", {}, "device");
+const tempId = JSON.parse(storage.getItem("abb:devicekey")!).accountId;
+storage.removeItem("abb:vault:" + tempId);
+const v4 = await reload();
+const orphan = await v4.resumeSession();
+results.orphan = {
+  refused: orphan === null,
+  keyRemoved: storage.getItem("abb:devicekey") === null,
+};
+
+/* "Ask every time" must leave nothing behind at all. */
+await vault.createAccount("Private", PASS + "-p", {}, "session");
+results.sessionOnly = {
+  noDeviceKey: storage.getItem("abb:devicekey") === null,
+  noTabKey: (globalThis as any).sessionStorage.getItem("abb:tabkey") === null,
+};
+
+/* Locking must clear both, or "lock now" is a lie. */
+await vault.createAccount("Locker", PASS + "-l", {}, "device");
+vault.lock();
+results.lockClears = {
+  locked: !vault.isUnlocked(),
+  deviceKeyGone: storage.getItem("abb:devicekey") === null,
+  tabKeyGone: (globalThis as any).sessionStorage.getItem("abb:tabkey") === null,
+};
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -251,6 +320,16 @@ check("deleting removes the row and the data", r.deletion.ok && r.deletion.rowRe
 check("other accounts are untouched", r.deletion.othersUntouched);
 check("and still open", r.deletion.aliceStillOpens);
 check("deleting requires that account's passphrase", r.deleteNeedsPassphrase.refused && r.deleteNeedsPassphrase.stillThere);
+
+console.log("\n--- staying signed in ---");
+check("choosing to be remembered stores a device key", r.device.created && r.device.keyStored);
+check("and a reload restores the session without the passphrase", r.deviceResume.restored);
+check("restoring opens the right account's data", r.deviceResume.rightAccount && r.deviceResume.itsOwnData);
+check("an expired key is refused", r.expiry.refused);
+check("and deleted rather than left lying around", r.expiry.keyRemoved);
+check("a key for an account that no longer exists is refused", r.orphan.refused && r.orphan.keyRemoved);
+check("\"ask every time\" leaves nothing in storage", r.sessionOnly.noDeviceKey && r.sessionOnly.noTabKey);
+check("locking clears every remembered key", r.lockClears.locked && r.lockClears.deviceKeyGone && r.lockClears.tabKeyGone);
 
 console.log(failures === 0 ? "\nALL ACCOUNT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

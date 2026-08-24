@@ -537,6 +537,19 @@ export interface AIConversation {
   title: string;
   messages: AIMessage[];
   createdAt: number;
+  /**
+   * Which business this conversation is about.
+   *
+   * Absent on threads written before conversations were scoped, and on any
+   * started with nothing selected. Without it the coach appended every message
+   * to one global thread, so a founder with two businesses had one conversation
+   * that silently changed subject halfway through — and the model was answering
+   * about whichever business happened to be active rather than the one being
+   * discussed a moment earlier.
+   */
+  businessId?: ID;
+  /** Where the user came from, when they arrived via "discuss this". */
+  topic?: string;
 }
 
 export interface NicheReport {
@@ -926,6 +939,14 @@ export interface AppState {
    * Optional so a vault written before this existed still loads.
    */
   ideaFeedback?: IdeaFeedback;
+  /**
+   * The last workspace page opened, so Home can offer to resume.
+   *
+   * One record, not a history: "where was I" has exactly one answer, and a
+   * trail of the last twenty pages is a different feature that nobody asked
+   * for and that would grow without bound.
+   */
+  lastVisited?: { businessId: ID; href: string; label: string; at: number };
   /**
    * What was active before the worked example was opened.
    *

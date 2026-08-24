@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 
+import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHeader, Ready, RequireBusiness } from "@/components/page";
 import {
@@ -45,6 +46,7 @@ function Money({ business }: { business: SelectedBusiness }) {
         title="Money"
         description="Model the business before you run it, then track what actually happens. Every number here is calculated in your browser — nothing is sent anywhere."
       />
+      <DiscussWithCoach business={business} topic="money" />
 
       <Tabs
         active={tab}

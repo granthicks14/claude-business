@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { GrowthArt } from "@/components/art";
@@ -90,6 +91,7 @@ function Quality({ business }: { business: SelectedBusiness }) {
         art={<GrowthArt className="w-full" />}
         description="A different question from whether it suits you, whether it's ready to open, or whether you know how it runs. Those have their own scores, and merging them would hide the mismatches that matter."
       />
+      <DiscussWithCoach business={business} topic="quality" />
 
       <Card className="p-5">
         <div className="flex flex-wrap items-center gap-5">

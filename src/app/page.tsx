@@ -71,6 +71,43 @@ const POSITIONS = [
   },
 ];
 
+/**
+ * "You were in the middle of something."
+ *
+ * The single most useful thing an app can say to somebody returning after two
+ * days, and the one this product could not say at all: it knew the active
+ * business but not what they had been doing with it, so the best it could
+ * manage was a generic dashboard. One record, written on workspace navigation.
+ *
+ * Distinct from `NextActionCard` underneath it, which answers a different
+ * question — that one says what the app thinks you *should* do, this says what
+ * you were *actually* doing. Both are worth having and they are not the same
+ * thing; conflating them would mean guessing which one the reader wanted.
+ *
+ * Silent when there is nothing to resume, or when the business it names has
+ * since gone.
+ */
+function ContinueCard() {
+  const last = useAppState((s) => s.lastVisited);
+  const business = useAppState((s) => s.businesses.find((b) => b.id === last?.businessId) ?? null);
+  if (!last || !business) return null;
+
+  return (
+    <div className="rail rail-accent py-1">
+      <Eyebrow className="text-accent-text">Where you left off</Eyebrow>
+      <p className="text-body-lg mt-1.5 leading-snug">
+        <Hi>{business.idea.name}</Hi>
+        {last.label ? <span className="text-muted"> — {last.label.toLowerCase()}</span> : null}
+      </p>
+      <div className="mt-3">
+        <LinkButton href={last.href} variant="primary" size="sm" icon={<Icon.arrowRight className="size-4" />}>
+          Pick it back up
+        </LinkButton>
+      </div>
+    </div>
+  );
+}
+
 function Door({ href, label, detail }: { href: string; label: string; detail: string }) {
   return (
     <Link
@@ -122,6 +159,7 @@ export default function HomePage() {
           <div className="rule mt-6" />
         </header>
 
+        <ContinueCard />
         <NextActionCard />
         <StageCard />
 

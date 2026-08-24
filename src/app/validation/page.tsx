@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { AIPanel, GeneratedNote, PageHeader, Ready, RequireBusiness } from "@/components/page";
 import {
@@ -100,6 +101,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
         title="Validation Lab"
         description="The difference between an idea you like and one people will pay for. Everything below is labelled by how much you can trust it."
       />
+      <DiscussWithCoach business={business} topic="validation" />
 
       {status && !status.research.configured && (
         <div className="rounded-xl border border-info/30 bg-info-soft px-4 py-3">

@@ -40,7 +40,7 @@ import { INDUSTRIES } from "./engine/knowledge/industries";
 import { businessTitle, looksAutoNamed } from "./engine/naming";
 import { topicForProblem } from "./engine/topics";
 import { SAMPLE_BUSINESS_ID, sampleProfile } from "./sample";
-import { isUnlocked, saveState } from "./vault";
+import { currentVaultKey, isUnlocked, reloadState, saveState } from "./vault";
 
 export const STATE_VERSION = 1;
 
@@ -239,6 +239,56 @@ function persist() {
   writeTimer = setTimeout(writeNow, 120);
 }
 
+/**
+ * Another tab wrote. Take theirs rather than overwriting it.
+ *
+ * Each tab holds its own copy of this module, so two tabs open on the same
+ * account both write the whole state — and the later write wins, silently
+ * discarding whatever the other tab did. That is the "I lost my work" case that
+ * looks like a bug in the app and is really two tabs disagreeing.
+ *
+ * `storage` only fires in tabs *other* than the one that wrote, which is
+ * exactly the semantics needed here. Re-reading is the right resolution rather
+ * than merging: the writing tab has the newer state by definition, and a
+ * field-level merge between two full snapshots would invent a combination
+ * neither tab ever had.
+ */
+function watchOtherTabs() {
+  if (typeof window === "undefined" || watchingTabs) return;
+  watchingTabs = true;
+  window.addEventListener("storage", (event) => {
+    if (!event.key || event.key !== currentVaultKey()) return;
+
+    /*
+     * Never adopt another tab's state over unsaved work in this one.
+     *
+     * A pending write timer means this tab has changes that have not reached
+     * disk — a message just typed into the coach, a figure just edited. The
+     * first version of this handler replaced state unconditionally, and the
+     * result was worse than the problem it fixed: sending a coach message while
+     * a second tab merely navigated made the *question* disappear while the
+     * answer arrived, because the other tab's snapshot predated it.
+     *
+     * When this tab has something pending it wins and flushes immediately.
+     * When it has nothing pending, the other tab's write is strictly newer and
+     * adopting it is what keeps a read-only tab from going stale.
+     */
+    if (writeTimer) {
+      writeNow();
+      return;
+    }
+
+    void reloadState().then((fresh) => {
+      // Re-check: something may have been typed while the vault was decrypting.
+      if (!fresh || writeTimer) return;
+      state = migrate(fresh);
+      emit();
+    });
+  });
+}
+
+let watchingTabs = false;
+
 /** Forces an immediate write. Exported for tests and for export/backup flows. */
 export function flushPersist() {
   writeNow();
@@ -388,6 +438,16 @@ function migrate(raw: unknown): AppState {
 export function hydrateFrom(raw: unknown) {
   state = migrate(raw);
   hydrated = true;
+  /*
+   * Watch for other tabs from the moment there is something to keep in sync.
+   *
+   * This used to be armed inside `persist`, so a tab only started listening
+   * once it had written something itself — which meant a tab you had open and
+   * were only *reading* never noticed the other tab's changes at all, and went
+   * on rendering state that was minutes out of date. Reading is the common case
+   * for a second tab, so that was precisely backwards.
+   */
+  watchOtherTabs();
   emit();
 }
 
@@ -449,6 +509,26 @@ function getServerSnapshot(): AppState {
 export function update(fn: (draft: AppState) => AppState): void {
   state = fn(state);
   persist();
+  emit();
+}
+
+/**
+ * The same, without scheduling a write.
+ *
+ * For bookkeeping that must survive a reload but is not worth a vault write on
+ * its own — currently just "where was I". Recording that on every workspace
+ * page view turned *navigation* into a full-state write, and with two tabs open
+ * that was actively harmful: the second tab merely moving between pages wrote a
+ * whole snapshot taken before the first tab's unsaved change, and the first tab
+ * then adopted it. A read-only tab could destroy a writing tab's work simply by
+ * being navigated.
+ *
+ * The value still reaches disk — `pagehide`, `beforeunload` and
+ * `visibilitychange` all flush, and any real edit persists everything including
+ * this. It just stops being a reason to write on its own.
+ */
+export function updateQuiet(fn: (draft: AppState) => AppState): void {
+  state = fn(state);
   emit();
 }
 
@@ -603,6 +683,21 @@ export const actions = {
             : [...feedback.dials.filter((d) => d !== opposite), dial],
         },
       };
+    });
+  },
+
+  /**
+   * Notes where the founder was, for the "continue" card on Home.
+   *
+   * Written on navigation, so it is deliberately cheap and deliberately
+   * ignored when nothing changed — this fires on every workspace page view and
+   * must not schedule a vault write each time.
+   */
+  noteVisit(businessId: ID, href: string, label: string) {
+    updateQuiet((s) => {
+      const last = s.lastVisited;
+      if (last && last.businessId === businessId && last.href === href) return s;
+      return { ...s, lastVisited: { businessId, href, label, at: Date.now() } };
     });
   },
 

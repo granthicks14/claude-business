@@ -28,7 +28,7 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:accounts  # 26 account-isolation and vault-registry tests
+npm run test:accounts  # 34 account, session-persistence and vault-registry tests
 npm run test:scoring   # 52 scoring, title, diversity, memory and refusal tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
@@ -66,6 +66,8 @@ src/lib/engine/topics.ts What a business is about, keyed on the problem.
 src/components/reveal.tsx Scroll-triggered entrance. Visible by default, always.
 src/components/lab/dials.tsx  Which way to push the next batch, and what it remembers.
 src/components/lab/guide.tsx  Four questions before the first batch. Skippable.
+src/lib/business-route.ts The URL names the business. Deep links, two tabs, refresh.
+src/components/discuss.tsx "Discuss this with the coach", carrying what "this" is.
 src/lib/analyze/        The existing-business analyser. Reads a page, works out
                         what kind of business it is, scores fifteen dimensions.
 src/lib/competition.ts  How crowded is this, and what does that mean. Two-sided.
@@ -501,6 +503,72 @@ a blob is written, so a collision refuses rather than overwriting somebody's
 data. A full quota returns an error instead of throwing past an `await` and
 leaving the create form spinning forever. `test:accounts` drives the real module
 against a fake `localStorage`, including another tab writing mid-creation.
+
+### Staying signed in, and what that costs
+
+The key used to live in a module variable with an opt-in `sessionStorage` copy.
+That fixed exactly one thing — a refresh in the same tab — so opening a link in
+a new tab or reopening the browser both dropped it, and because the key gates
+the whole encrypted state, losing it lost the founder's entire session rather
+than just their sign-in. People met the passphrase prompt constantly.
+
+There are now three choices, stated with their costs: ask every time, this tab,
+or **this device for a week** (`localStorage`, sliding expiry refreshed on each
+unlock). The device option genuinely weakens what the vault is for — until it
+expires, anyone opening this browser reads the work without the passphrase — so
+it says exactly that next to itself, stays opt-in, expires, and is paired with a
+one-click **Lock now** in the shell. Offering it without a cheap way out would
+not have been defensible.
+
+Any stored key that is expired, tampered with, or names a deleted account is
+removed rather than ignored. `test:accounts` covers all of it.
+
+### The URL names the business
+
+`activeBusinessId` was global and never appeared in an address, so a workspace
+URL carried no information about what it meant: `/money` opened whatever was
+active, a second tab could not hold a second business, and Back could land on a
+page whose business had moved underneath it.
+
+`business-route.ts` puts it in `?b=<id>` and canonicalises with `router.replace`
+— old links keep working and upgrade themselves without spending a history
+entry. `RequireBusiness` resolves it, so all twenty-one workspace pages inherit
+deep-linking without knowing about routing, and a URL naming a business that is
+gone gets a real explanation rather than "pick a business first".
+
+A search parameter rather than a path segment on purpose: the guarantee comes
+from the URL naming the business, not from which part of it does, and moving
+twenty-one route directories buys nothing a reader can see.
+
+**Two tabs, and the rule that took two attempts.** A `storage` listener keeps a
+second tab fresh — armed on hydrate, not on first write, since a tab that only
+*reads* is exactly the one that goes stale. But the first version adopted the
+other tab's state unconditionally, which was worse than the problem: sending a
+coach message while another tab merely navigated made the *question* vanish
+while the answer arrived, because the other snapshot predated it. A pending
+write timer now means this tab has unsaved work and wins, flushing instead of
+adopting. `noteVisit` also stopped persisting on its own — recording "where was
+I" on every page view turned navigation itself into a full-state write.
+
+### The coach knows which business, and why you came
+
+`AIConversation` gained a `businessId`. Before that, `/coach` appended to
+`conversations[0]` whatever was selected, so two businesses shared one
+transcript and the coach changed subject halfway through without saying so.
+Threads written earlier are adopted rather than discarded — deleting somebody's
+history to fix a bug of ours is the wrong trade.
+
+`DiscussWithCoach` carries three things in the URL: the business, the section
+the question came from, and where to return to. So "discuss this" from the money
+page opens on that business, suggests money questions, tells a configured
+provider the topic, and offers a Back that returns to money rather than to a
+hardcoded parent. All of it in the address, so the conversation survives a
+refresh and behaves properly with the browser's Back button.
+
+One thing found while testing this: the suggested questions were hidden whenever
+no AI provider was configured — which is the app's *default*. The built-in
+engine answers perfectly well without one, so the beginners the questions exist
+for were the only people who never saw them.
 
 ### Accounts, and the leak they close
 
