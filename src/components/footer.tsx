@@ -26,7 +26,7 @@ export function Footer() {
 
           <nav aria-label="Site information" className="flex flex-wrap gap-x-10 gap-y-6">
             <FooterGroup title="The product">
-              <FooterLink href="/start">Start a business</FooterLink>
+              <FooterLink href="/">Start a business</FooterLink>
               <FooterLink href="/analyze">Analyse my business</FooterLink>
               <FooterLink href="/explore">Which industry?</FooterLink>
               <FooterLink href="/cost">Cost audit</FooterLink>

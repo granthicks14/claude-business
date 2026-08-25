@@ -66,52 +66,42 @@ export function Ready({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * A MISSING PROFILE IS A CAVEAT, NOT A LOCKED DOOR.
+ *
+ * This used to replace the whole page with "First, tell us about you" and a
+ * button to a questionnaire. It guarded exactly one route — the brainstorming
+ * lab — which meant the one place somebody could find out what this product
+ * does was the one place it refused to show them until they had answered
+ * twenty-six questions about themselves.
+ *
+ * That was the last wall in the funnel and it is gone. The engine has always
+ * coped with an empty profile — `fallbackIndustries` exists precisely for "no
+ * capability matched" and returns a spread across categories — so the ideas
+ * are real, they are simply scored against defaults instead of against a
+ * person. Saying so is the honest thing and it costs one line of text; refusing
+ * to render is not more honest, it is just less useful.
+ *
+ * The notice stays, and it stays until the profile is filled in.
+ */
 export function RequireProfile({ children }: { children: ReactNode }) {
   const done = useAppState((s) => s.profile.completedOnboarding);
-  // Someone who arrived through the opportunity finder never filled in a
-  // profile, but they do have ideas. Blocking them here would be the app
-  // insisting on the questionnaire it just let them skip.
-  const hasWork = useAppState((s) => s.ideas.length > 0 || s.businesses.length > 0);
-  const section = useSectionLabel();
-
-  if (!done && !hasWork) {
-    return (
-      // Same reason as `RequireBusiness` below: this gate replaces the page,
-      // so it has to carry the page's h1 or the route has none.
-      <>
-        <PageHero
-          title={section ? `${section} — tell us about you first` : "Tell us about you first"}
-          description="Everything in this section is scored against your own skills, money and hours, so it needs a profile before it can say anything true."
-        />
-        <Card>
-        <EmptyState
-          icon={<Icon.spark className="size-8 mx-auto text-accent" />}
-          title="First, tell us about you"
-          description="Everything here is scored against your skills, budget, hours and goals. It takes about five minutes, and you can change any answer later."
-          action={
-            <LinkButton href="/onboarding" variant="primary">
-              Build my founder profile
-            </LinkButton>
-          }
-        />
-        </Card>
-      </>
-    );
-  }
 
   return (
     <>
       {!done && (
-        <Card className="p-4 mb-4">
-          <p className="text-xs leading-relaxed">
-            You skipped the founder profile, so anything scored against{" "}
-            <em>you</em> — skills, time, budget — is showing a neutral 50 rather than a real number.{" "}
-            <Link href="/onboarding" className="text-accent-text hover:underline">
-              Fill it in
+        <div className="rail rail-warn py-1 mb-6">
+          <Eyebrow className="text-warn">Scored against defaults</Eyebrow>
+          <p className="text-caption text-muted mt-1.5 leading-relaxed max-w-prose">
+            The app doesn&apos;t know your skills, hours or budget yet, so anything
+            scored against <em>you</em> is showing a neutral 50 rather than a real
+            number. The ideas themselves are real.{" "}
+            <Link href="/profile" className="text-section underline underline-offset-2 font-medium">
+              Tell it about you
             </Link>{" "}
-            and everything recalculates. Nothing you&apos;ve done is lost.
+            and every score recalculates. Nothing you&apos;ve done is lost.
           </p>
-        </Card>
+        </div>
       )}
       {children}
     </>

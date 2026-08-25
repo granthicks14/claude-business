@@ -137,7 +137,7 @@ const RULES: Rule[] = [
           minutes: 3,
           cost: "Free",
           difficulty: "easy",
-          href: "/onboarding",
+          href: "/profile",
           stage: "idea",
         },
 

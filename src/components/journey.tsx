@@ -101,7 +101,7 @@ function selectJourney(s: AppState): {
     {
       name: "Foundation",
       steps: [
-        { label: "Founder profile", done: s.profile.completedOnboarding, next: "Finish your founder profile", href: "/onboarding" },
+        { label: "Founder profile", done: s.profile.completedOnboarding, next: "Finish your founder profile", href: "/profile" },
       ],
     },
     {

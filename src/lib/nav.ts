@@ -24,7 +24,7 @@ import { crumbsFor, navSections, sectionFor } from "./nav-model";
 import { useAppState } from "./store";
 
 export type { Crumb, NavItem, NavSection } from "./nav-model";
-export { sectionFor } from "./nav-model";
+export { sectionFor, topSections, overflowSections, TOP_LEVEL } from "./nav-model";
 
 /** The six sections, built from the current state. See `navSections`. */
 export function useNav() {

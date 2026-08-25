@@ -7,7 +7,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "@/components/icons";
 import { GeneratedNote, PageHero, Ready, RequireBusiness } from "@/components/page";
 import { EvidenceCard } from "@/components/fit-score";
-import { CommandCentre } from "@/components/command-centre";
+import { BusinessStateCard } from "@/components/business-state-card";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { AdvancedOnly, Explain } from "@/components/teach";
 import {
@@ -219,7 +219,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
 
       {/* Where the business actually is, what the app currently thinks, and the
           two things it would rather the founder didn't scroll past. */}
-      <CommandCentre />
+      <BusinessStateCard />
 
       {/* The single most important thing on the page: one instruction, not a
           list. Everything else is context for it. */}

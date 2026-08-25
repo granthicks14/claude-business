@@ -33,7 +33,7 @@ import { analyseInterviews } from "../src/lib/customers/interviews.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
 import { actions, effectiveProfile, emptyProfile, emptyState, hydrateFrom, snapshot } from "../src/lib/store.ts";
 import { looksAutoNamed } from "../src/lib/engine/naming.ts";
-import { crumbsFor, navSections, sectionFor } from "../src/lib/nav-model.ts";
+import { crumbsFor, navSections, overflowSections, sectionFor, topSections } from "../src/lib/nav-model.ts";
 import type { FounderProfile, SelectedBusiness } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -367,7 +367,7 @@ const twoBusinesses: any = {
 };
 
 const sections = navSections(twoBusinesses);
-const scoped = sections.filter((s) => ["My business", "Does it hold up?", "Make it"].includes(s.label));
+const scoped = sections.filter((s) => ["My business", "Progress"].includes(s.label));
 const scopedHrefs = scoped.flatMap((s) => [s.href, ...s.items.map((i) => i.href)]);
 
 /* The founder-level sections must NOT be dragged into one business. */
@@ -375,7 +375,7 @@ const you = sections.find((s) => s.label === "You")!;
 const brainstorm = sections.find((s) => s.label === "Brainstorm")!;
 
 results.navScoping = {
-  threeSectionsFound: scoped.length === 3,
+  scopedSectionsFound: scoped.length === 2,
   everyScopedHrefNamesTheActive: scopedHrefs.every((h) => h.includes("b=biz_two")),
   noneNamesTheOther: scopedHrefs.every((h) => !h.includes("b=biz_one")),
   /* The profile, the lab and the ideas belong to the founder, not a business. */
@@ -389,7 +389,7 @@ results.navScoping = {
 /* Switching the active business must move every scoped link with it. */
 const switched = navSections({ ...twoBusinesses, activeBusinessId: "biz_one" });
 const switchedHrefs = switched
-  .filter((s) => ["My business", "Does it hold up?", "Make it"].includes(s.label))
+  .filter((s) => ["My business", "Progress"].includes(s.label))
   .flatMap((s) => [s.href, ...s.items.map((i) => i.href)]);
 results.navSwitch = {
   followsTheActive: switchedHrefs.every((h) => h.includes("b=biz_one")),
@@ -410,9 +410,39 @@ results.navCold = {
  * thing that would break quietly: 'sectionFor' would stop resolving, the
  * sidebar would open the wrong section, and nobody reports a wrong section.
  */
+/*
+ * NO ROUTE MAY BELONG TO TWO SECTIONS.
+ *
+ * sectionFor is longest-prefix-wins, so a route listed under two sections
+ * resolves by list order — silently, and differently depending on which list
+ * was edited last. That would give the page a hue and a breadcrumb from one
+ * section while the nav marked another. Caught here because it breaks nothing
+ * visible enough to notice by hand.
+ */
+{
+  const seen = new Map();
+  const dupes = [];
+  for (const sec of sections) {
+    for (const href of [sec.href, ...sec.items.map((i) => i.href)]) {
+      const path = href.split("?")[0];
+      if (seen.has(path) && seen.get(path) !== sec.id) dupes.push(path + ": " + seen.get(path) + " + " + sec.id);
+      else seen.set(path, sec.id);
+    }
+  }
+  results.navUnique = { dupes };
+}
+
+results.navTop = {
+  four: topSections(sections).length === 4,
+  ids: topSections(sections).map((s) => s.id).join(","),
+  youIsOverflow: overflowSections(sections).some((s) => s.id === "you"),
+  // Every section still resolves, whether or not it is in the masthead.
+  everySectionReachable: sections.every((s) => sectionFor(sections, s.href.split("?")[0]) !== null),
+};
+
 results.navMatching = {
   workspaceResolves: sectionFor(sections, "/money")?.label === "My business",
-  longestPrefixStillWins: sectionFor(sections, "/business/website")?.label === "Make it",
+  longestPrefixStillWins: sectionFor(sections, "/business/website")?.label === "My business",
   homeResolves: sectionFor(sections, "/")?.label === "Home",
   crumbsStillBuild: crumbsFor(sections, "/money").map((c) => c.label).join(" / ") === "Home / My business / Money",
   crumbHrefCarriesTheBusiness: (crumbsFor(sections, "/money")[1]?.href ?? "").includes("b=biz_two"),
@@ -556,7 +586,7 @@ check("every rebuilt title describes a business", r.retitle.everyRewriteDescribe
 check("nothing is added or dropped in the process", r.retitle.countUnchanged && r.retitle.idsUnchanged);
 
 console.log("\n--- the business is named in every link that is about one ---");
-check("all three business sections are present", r.navScoping.threeSectionsFound);
+check("both business-scoped sections are present", r.navScoping.scopedSectionsFound);
 check("every link inside them names the active business", r.navScoping.everyScopedHrefNamesTheActive);
 check("and none of them names the other one", r.navScoping.noneNamesTheOther);
 check("the profile and the lab stay founder-level", r.navScoping.profileStaysBare && r.navScoping.labStaysBare);
@@ -566,6 +596,10 @@ check("switching business moves every scoped link with it", r.navSwitch.followsT
 check("with nothing picked, no link carries a dangling parameter", r.navCold.noParamAnywhere);
 check("a workspace path still resolves to its section", r.navMatching.workspaceResolves);
 check("longest prefix still wins", r.navMatching.longestPrefixStillWins);
+check("no route belongs to two sections", r.navUnique.dupes.length === 0, r.navUnique.dupes.join(" · "));
+check("the masthead shows four sections", r.navTop.four, r.navTop.ids);
+check("and \"You\" is reached from the overflow menu", r.navTop.youIsOverflow);
+check("every section still resolves, in or out of the masthead", r.navTop.everySectionReachable);
 check("home still resolves", r.navMatching.homeResolves);
 check("breadcrumbs still build", r.navMatching.crumbsStillBuild);
 check("and the section crumb carries the business too", r.navMatching.crumbHrefCarriesTheBusiness);

@@ -304,19 +304,12 @@
   --section-soft: oklch(96.5% 0.016 258);
   --section-border: oklch(84% 0.075 258);
 }
-[data-section="quality"] {
+[data-section="progress"] {
   /* blue — 6.31:1 on the page ground */
   --section: oklch(47% 0.081 221);
   --section-text: oklch(47% 0.081 221);
   --section-soft: oklch(96.5% 0.023 221);
   --section-border: oklch(84% 0.075 221);
-}
-[data-section="make"] {
-  /* teal — 6.22:1 on the page ground */
-  --section: oklch(47% 0.078 185);
-  --section-text: oklch(47% 0.078 185);
-  --section-soft: oklch(96.5% 0.024 185);
-  --section-border: oklch(84% 0.075 185);
 }
 
 /* dark */
@@ -341,19 +334,12 @@
   --section-soft: oklch(24.5% 0.042 258);
   --section-border: oklch(42% 0.09 258);
 }
-.dark [data-section="quality"] {
+.dark [data-section="progress"] {
   /* blue — 9.98:1 on the page ground */
   --section: oklch(78% 0.135 221);
   --section-text: oklch(78% 0.135 221);
   --section-soft: oklch(24.5% 0.042 221);
   --section-border: oklch(42% 0.073 221);
-}
-.dark [data-section="make"] {
-  /* teal — 10.17:1 on the page ground */
-  --section: oklch(78% 0.129 185);
-  --section-text: oklch(78% 0.129 185);
-  --section-soft: oklch(24.5% 0.042 185);
-  --section-border: oklch(42% 0.07 185);
 }
 
 

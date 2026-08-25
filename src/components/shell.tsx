@@ -15,7 +15,7 @@ import { actions, activeBusiness, useAppState } from "@/lib/store";
 import { isGuest, isOpen, subscribeVault } from "@/lib/vault";
 import { profileCompleteness } from "@/lib/profile-fields";
 import type { AppState, SelectedBusiness } from "@/lib/types";
-import { sectionFor, useNav, type NavSection } from "@/lib/nav";
+import { overflowSections, sectionFor, topSections, useNav, type NavSection } from "@/lib/nav";
 
 /**
  * THE FRAME: A MASTHEAD, NOT A DASHBOARD.
@@ -151,8 +151,14 @@ function Masthead({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu:
           <Wordmark size="sm" className="group-hover:opacity-80 transition-opacity" />
         </Link>
 
+        {/*
+          Four, not six. `topSections` is the single place that decides which
+          sections are somewhere you navigate *to*; "You" owns real routes and
+          needs a hue and a crumb, but a settings group is not a destination
+          while you are building a business, so it lives in the overflow menu.
+        */}
         <nav aria-label="Main" className="hidden lg:flex items-stretch gap-1 flex-1 min-w-0">
-          {sections.map((section) => {
+          {topSections(sections).map((section) => {
             const open = current?.href === section.href;
             return (
               <Link

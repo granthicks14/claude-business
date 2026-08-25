@@ -139,6 +139,20 @@ function Plan({ business }: { business: SelectedBusiness }) {
         <Meter value={quality.completeness} label="Research completeness" tone={quality.completeness >= 60 ? "good" : "accent"} />
         <p className="text-sm text-muted mt-3 leading-relaxed">{quality.note}</p>
 
+        {/*
+          THE TOGGLE HAD NOTHING TO DO ON THIS TAB, WHICH IS THE TAB YOU LAND ON.
+
+          Both `AdvancedOnly` wraps on this page were on the other two tabs, so
+          Simple and Detail rendered identically on arrival — measured at 0%
+          difference — and a control that changes nothing on the screen you are
+          looking at is a control people stop believing.
+
+          The meter and its note above are the answer. These two lists are the
+          working behind it: which findings have aged out, and which are
+          sourced from somewhere the app cannot rank. Real, and not the first
+          thing somebody needs.
+        */}
+        <AdvancedOnly summary="What's aged, and what's thinly sourced">
         {summary.stale.length > 0 && (
           <div className="mt-4 rounded-lg border border-warn/30 bg-warn-soft p-3">
             <p className="text-xs font-medium text-warn uppercase tracking-wide">May be out of date</p>
@@ -164,6 +178,14 @@ function Plan({ business }: { business: SelectedBusiness }) {
             </ul>
           </div>
         )}
+        {summary.stale.length === 0 && summary.weakSourced.length === 0 && (
+          <p className="text-caption text-muted mt-4 leading-relaxed">
+            Nothing recorded has aged out, and nothing is resting on a source
+            the app can&apos;t place — which may just mean there isn&apos;t much
+            recorded yet.
+          </p>
+        )}
+        </AdvancedOnly>
       </Section>
 
       {plan.map((task) => {

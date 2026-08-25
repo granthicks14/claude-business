@@ -218,7 +218,7 @@ function IndustryCard({
             <Button size="sm" variant="primary" onClick={onPick}>
               Generate ideas in {fit.industry.label.toLowerCase()}
             </Button>
-            <LinkButton href="/start" size="sm">
+            <LinkButton href="/" size="sm">
               I already know what I want
             </LinkButton>
           </div>

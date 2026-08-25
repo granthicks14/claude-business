@@ -50,7 +50,13 @@ const ORIGIN = `http://127.0.0.1:${PORT}`;
  */
 const ROUTES = [
   "/",
-  "/start",
+  /*
+   * `/start` used to be here and is now a redirect to `/`, so sweeping it
+   * measured the home page twice and one layout not at all. `/tasks` takes the
+   * slot: it is the "Progress" section's landing page, which is new, and it is
+   * a dense list rather than another prose page.
+   */
+  "/tasks",
   "/lab",
   "/business",
   "/quality",
@@ -551,7 +557,20 @@ async function occludedAcrossScroll(page) {
 }
 
 async function signIn(page) {
-  await page.goto(ORIGIN + "/start", { waitUntil: "networkidle" });
+  /*
+   * A GATED ROUTE, BECAUSE THE PROMPT ONLY APPEARS ON ONE.
+   *
+   * This used `/start`, which was gated and is now a redirect to the public
+   * home page. The account gate does not prompt on a public route — by design,
+   * see `lib/routes.ts` — so the create form never rendered, `name.count()`
+   * was zero, sign-in was silently skipped, and every route after it was swept
+   * in the locked state: `children` mounted but `hidden inert`. The failure
+   * surfaced as "textarea is not visible" on the coach, forty checks later.
+   *
+   * `/profile` is private and stays private. Any gated route works; this one
+   * is the least likely to move.
+   */
+  await page.goto(ORIGIN + "/profile", { waitUntil: "networkidle" });
 
   const name = page.getByLabel("Account name");
   if (await name.count()) {

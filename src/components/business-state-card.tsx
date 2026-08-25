@@ -11,6 +11,13 @@ import { checkConsistency } from "@/lib/consistency";
 import { useAppState } from "@/lib/store";
 
 /**
+ * RENAMED FROM `CommandCentre`.
+ *
+ * The name was wanted for the product's new front door — one input that reads
+ * a typed sentence — and this is not that. It is a status card for somebody
+ * who already *has* a business, which is close enough to be confusing and far
+ * enough to be wrong. What it does has not changed.
+ *
  * The state of the business in one card.
  *
  * §77 asks for a command centre. The temptation with that brief is a wall of
@@ -22,7 +29,7 @@ import { useAppState } from "@/lib/store";
  * The threat and the unknown are here rather than buried on the decision page
  * because a dashboard that only shows progress is a dashboard that flatters.
  */
-export function CommandCentre() {
+export function BusinessStateCard() {
   const { state, readiness, decision, redTeam, change, unknowns, business } = useIntel();
   /* Every link out of the dashboard names the business it is about. */
   const link = (href: string) => withBusiness(href, business?.id ?? null);

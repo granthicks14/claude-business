@@ -77,7 +77,23 @@ function firstMatch(text: string, re: RegExp): { value: string; quote: string } 
  */
 const MONEY = /(?:[£$€]\s?([\d,]+(?:\.\d+)?)\s?(k\b)?|\b([\d,]+(?:\.\d+)?)\s?(k\b)?\s?(?:dollars|pounds|quid|euros|usd|gbp)\b)/i;
 
-function readMoney(text: string): { amount: number; quote: string } | null {
+/**
+ * Exported for `lib/intent.ts`, which needs the same reading of "$300" that
+ * this file already does correctly — including the refusals that matter.
+ *
+ * `MONEY` requires a currency symbol or a money word. A `k` suffix is read
+ * only alongside one of those, so "£2k" is two thousand and a bare "2k" is
+ * nothing. That looks over-cautious until you notice the app also reads
+ * follower counts: "10k followers" is the sentence a bare-`k` rule would turn
+ * into a ten-thousand-pound budget.
+ *
+ * Same reason the bare numbers in "I'm 18 and have 10 hours" are not a budget.
+ *
+ * A second implementation of this in the router would eventually disagree with
+ * this one, and the disagreement would be invisible until somebody's budget
+ * was silently wrong.
+ */
+export function readMoney(text: string): { amount: number; quote: string } | null {
   const m = text.match(MONEY);
   if (!m) return null;
   const raw = (m[1] ?? m[3] ?? "").replace(/,/g, "");
@@ -100,7 +116,8 @@ function readMoney(text: string): { amount: number; quote: string } | null {
 const HOURS =
   /\b(?:about\s+|around\s+|roughly\s+)?(\d{1,2})(?!\d)\s?(?:-|–|to)?\s?(\d{1,2}(?!\d))?\s*(?:hours?|hrs?)\s*(?:a|per|each)?\s*(week|day|evening)?/i;
 
-function readHours(text: string): { hours: number; quote: string } | null {
+/** Exported for `lib/intent.ts`. See `readMoney` for why it is shared. */
+export function readHours(text: string): { hours: number; quote: string } | null {
   const m = text.match(HOURS);
   if (!m) return null;
   const low = Number(m[1]);
@@ -185,10 +202,43 @@ function readPlaceKind(text: string): { note: string; quote: string } | null {
  * removes — so the most obvious skill in the brief's own example sentence went
  * unread. Aliases already ending in "s" are left alone.
  */
-function aliasPattern(alias: string): RegExp {
+/**
+ * Exported for `lib/intent.ts`, which needed to choose between two alias
+ * matching conventions already in the codebase and chose this one.
+ *
+ * `engine/match.ts` matches the same alias tables with raw `String.includes`.
+ * This one requires a word boundary and allows an optional plural, which is
+ * the stricter and more correct of the two: `includes("art")` fires on
+ * "start", "party" and "smart". The router uses this.
+ */
+export function aliasPattern(alias: string): RegExp {
   const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const plural = /s$/i.test(alias) ? "" : "s?";
-  return new RegExp(`\\b${escaped}${plural}\\b`, "i");
+
+  /*
+   * THE PLURAL HAS TO WORK IN BOTH DIRECTIONS.
+   *
+   * This added an optional `s` to a singular alias — "video" matching "videos"
+   * — for a stated reason: `\bvideo\b` needs a boundary that the 's' removes.
+   * But it did nothing for a *plural* alias, and the industry table is full of
+   * them. `aliasPattern("sports")` produced `\bsports\b`, which does not match
+   * "sport".
+   *
+   * So a founder who wrote "I want something to do with sport" — ordinary
+   * British usage, in a product whose copy is written in British English — was
+   * not matched to the sports industry at all, while "sports" was. Measured
+   * while building the intent router, which surfaces the match on screen and
+   * therefore made the gap visible for the first time.
+   *
+   * Stripping the plural and making it optional matches both. Guarded so it
+   * only fires on something that looks like a real plural: at least four
+   * characters left over, and not an "-ss"/"-us"/"-is" ending, so "business"
+   * and "analysis" are left exactly as they were.
+   */
+  const looksPlural =
+    /s$/i.test(alias) && alias.length >= 5 && !/(?:ss|us|is)$/i.test(alias);
+  const stem = looksPlural ? escaped.slice(0, -1) : escaped;
+  const plural = looksPlural || !/s$/i.test(alias) ? "s?" : "";
+  return new RegExp(`\\b${stem}${plural}\\b`, "i");
 }
 
 /* ---------------------------------------------------------------- skills --- */

@@ -87,7 +87,7 @@ function Describe() {
           <Button variant="primary" onClick={read} icon={<Icon.arrowRight className="size-4" />}>
             Read what I wrote
           </Button>
-          <Button variant="ghost" size="md" onClick={() => router.push("/onboarding")}>
+          <Button variant="ghost" size="md" onClick={() => router.push("/profile")}>
             I&apos;d rather answer questions
           </Button>
         </div>

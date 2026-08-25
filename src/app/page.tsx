@@ -1,52 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { GroundworkDiagram } from "@/components/groundwork-diagram";
 import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { IdeasArt, ShopArt } from "@/components/art";
-import { Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
+import { AskBar } from "@/components/ask-bar";
+import { Wedge } from "@/components/brand";
+import { Badge, Button, Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
 import { JourneySpine, ProfilePrompt } from "@/components/journey";
 import { withBusiness } from "@/lib/business-param";
-import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
+import { actions, activeBusiness, useAppState, useStoreReady } from "@/lib/store";
+import { sampleBusiness } from "@/lib/sample";
 import { useAIStatus } from "@/lib/useAI";
 
-/*
- * The four doors.
+/**
+ * THE PRODUCT, AS A SEQUENCE.
  *
- * People arrive in genuinely different states — no idea, an idea, a running
- * business, or unsure which trade is even worth their time — and routing all
- * of them through the same questionnaire was the single biggest reason to
- * leave. Set as a ruled list rather than a grid of tiles: four bordered boxes
- * of equal weight is a menu that makes you read all four before choosing.
+ * This replaces five "doors" — under a heading that said there were four,
+ * which is how much attention the block was getting. Five destinations
+ * described in the product's own vocabulary, offered to somebody who had been
+ * on the page for eleven seconds. Choosing between them required knowing what
+ * the product does, which is the thing they were there to find out.
+ *
+ * What somebody actually needs at that moment is not a menu, it is the shape
+ * of the work: what happens if you start, in order, in six words each. The
+ * choosing is done by the input at the top of the page instead.
  */
-const DOORS = [
-  {
-    href: "/start",
-    label: "I have an idea already",
-    detail: "Describe it in a sentence. It comes back scored, with the holes named.",
-  },
-  {
-    href: "/lab",
-    label: "I need an idea",
-    detail: "Built from your hours, your money and what you can already do.",
-  },
-  {
-    href: "/analyze",
-    label: "I already run something",
-    detail: "Score it against fifteen dimensions, and get the three worth fixing first.",
-  },
-  {
-    href: "/explore",
-    label: "I don't know which industry",
-    detail: "Eighteen of them, ranked against your situation rather than in general.",
-  },
-  {
-    href: "/opportunity",
-    label: "I want something that works where I live",
-    detail: "Describe your town. No profile needed, and nothing is invented about your area.",
-  },
+const JOURNEY = [
+  { step: "Idea", body: "One sentence, or none at all — it will find you options." },
+  { step: "Business model", body: "Who pays, for what, and how the money actually works." },
+  { step: "Market check", body: "Whether anybody wants it, argued against honestly." },
+  { step: "Launch plan", body: "The smallest thing you could sell, and what to skip." },
+  { step: "Website", body: "Copy, structure and a page you can put in front of someone." },
+  { step: "First customers", body: "Where they are, what to say, and what they'll object to." },
 ];
 
 /* What the product refuses to do, which is the part nobody else claims. */
@@ -110,6 +99,36 @@ function ContinueCard() {
   );
 }
 
+/**
+ * Loads the worked example and opens it.
+ *
+ * A real action, not a link that implies one: the copy above promises a
+ * complete business with conversations and numbers in it, and a button that
+ * only navigated to the idea generator would be the product lying about what
+ * pressing it does.
+ *
+ * `loadSample` is additive — it appends one business and selects it, and
+ * `clearSample` puts everything back. Nothing the founder has made is touched,
+ * which is what the badge beside it says.
+ */
+function OpenExampleButton() {
+  const router = useRouter();
+  return (
+    <Button
+      variant="secondary"
+      size="sm"
+      icon={<Icon.spark className="size-4" />}
+      onClick={() => {
+        const sample = sampleBusiness();
+        actions.loadSample(sample);
+        router.push(withBusiness("/business", sample.id));
+      }}
+    >
+      Open the example business
+    </Button>
+  );
+}
+
 function Door({ href, label, detail }: { href: string; label: string; detail: string }) {
   return (
     <Link
@@ -165,37 +184,63 @@ export default function HomePage() {
           )}
         </header>
 
-        <div className="grid gap-10 lg:grid-cols-[1.9fr_1fr] lg:gap-14 items-start">
-          <div className="min-w-0 space-y-8">
-            <ContinueCard />
-            <NextActionCard />
-          </div>
+        {/*
+          THE INPUT, ON THE SIGNED-IN PAGE TOO.
 
-          {/* The margin: context, never instruction. */}
-          <aside className="min-w-0 space-y-8 lg:pt-1">
-            <ProfilePrompt />
-            <StageCard />
-          </aside>
+          The same component as the landing hero, deliberately. Somebody who
+          has been away for a week does not necessarily want the next action
+          the app computed — they may want to ask something, or start something
+          else entirely — and making them find the right section for that is
+          the navigation problem in miniature.
+        */}
+        <div className="max-w-[46rem]">
+          <AskBar size="sm" placeholder="Ask for anything, or say what you want to work on…" />
+        </div>
+
+        {/*
+          THE WORKED EXAMPLE, FOR SOMEBODY WHO HAS NOTHING YET.
+
+          Its only button used to live on `/start`, and `/start` is gone — so
+          retiring that page quietly took away the one way a signed-in person
+          with an empty account could see what the product actually produces.
+          Here is where that offer belongs anyway: on the screen that would
+          otherwise be telling them they have no business.
+        */}
+        {!business && (
+          <div className="rail rail-mark py-1">
+            <Eyebrow className="text-mark">Not sure it&apos;s worth the time?</Eyebrow>
+            <p className="text-small mt-1.5 leading-relaxed max-w-prose">
+              Open a complete worked example — a real business with conversations,
+              competitors and numbers in it — and click through everything before
+              you put any of your own work in.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <OpenExampleButton />
+              <Badge tone="neutral">Nothing of yours is touched</Badge>
+            </div>
+          </div>
+        )}
+
+        {/*
+          ONE INSTRUCTION, THEN CONTEXT.
+
+          This was four blocks at equal weight — resume, next action, profile
+          prompt, stage — in a two-column grid, so the answer to "what should I
+          do now" was one of four things competing for it, and the reader had to
+          work out which. `NextActionCard` is the instruction; everything else
+          on this page is context for it and is set quieter and later.
+        */}
+        <div className="space-y-8">
+          <NextActionCard />
+          <ContinueCard />
+        </div>
+
+        <div className="rule pt-8 grid gap-10 lg:grid-cols-[1fr_1fr] lg:gap-14 items-start">
+          <StageCard />
+          <ProfilePrompt />
         </div>
 
         <JourneySpine />
-
-        <Section eyebrow="Elsewhere" title="Pick something up">
-          <div className="grid gap-x-10 sm:grid-cols-2">
-            <Door href="/lab?tab=shortlist" label="My ideas" detail={`${state.ideas.length} scored against your profile.`} />
-            <Door
-              href={withBusiness("/coach", business?.id ?? null)}
-              label="Ask your mentor"
-              detail="Free, and works without an API key."
-            />
-            <Door href="/opportunity" label="Best opportunity near me" detail="Rank ideas against your area." />
-            <Door
-              href={business ? withBusiness("/money", business.id) : "/lab?tab=generate"}
-              label={business ? "Run the numbers" : "Explore ideas"}
-              detail={business ? "Price, customers, and what you actually keep." : "Browse by category."}
-            />
-          </div>
-        </Section>
       </div>
     );
   }
@@ -255,19 +300,24 @@ export default function HomePage() {
                       What should I do today?
                     </Link>
                   </>
-                ) : (
-                  <>
-                    <LinkButton href="/start" variant="primary" size="lg">
-                      Start with what you have
-                    </LinkButton>
-                    <Link href="/start" className="inline-flex items-center min-h-10 text-sm font-medium underline underline-offset-4 decoration-border-strong hover:decoration-accent">
-                      Or open a worked example
-                    </Link>
-                  </>
-                )}
+                ) : null}
               </div>
 
-              <p className="text-small text-muted mt-6 leading-relaxed max-w-md">
+              {/*
+                THE INPUT IS THE PAGE'S PRIMARY ACTION, AND IT IS REAL.
+
+                Not a screenshot of one, and not a field that scrolls you to a
+                sign-up. Typing here reads the sentence and takes you into the
+                product — which is also the most honest possible demonstration
+                of what the product is, because it *is* the product.
+              */}
+              {ready && business ? null : (
+                <div className="mt-8">
+                  <AskBar autoFocus={false} />
+                </div>
+              )}
+
+              <p className="text-small text-muted mt-8 leading-relaxed max-w-md">
                 No account on a server, no API key, no cost.{" "}
                 {status?.configured
                   ? "An optional AI provider is configured on this deployment if you want it."
@@ -287,24 +337,26 @@ export default function HomePage() {
         />
       </section>
 
-      {/* Four doors, ruled. */}
+      {/*
+        The work, in order. A ruled sequence rather than a grid of tiles —
+        the numbers and the rules carry the structure, and nothing is boxed.
+      */}
       <Section
-        eyebrow="Where are you starting?"
-        title="Five ways in, and none of them is a questionnaire first"
-        description="You do not have to know what you want to build. You do have to tell it something true about yourself."
+        eyebrow="What happens if you start"
+        title="From a sentence to a business with customers"
+        description="Not a feature list. This is the order the work actually happens in, and the app carries you through it one step at a time."
       >
-        {/*
-          Two columns of ruled doors, using the canvas.
-          Capped at `max-w-3xl` these ran down the left of a 1440px page with
-          six hundred pixels of nothing beside them — the measure token already
-          keeps the prose inside each door readable, so the container was
-          narrowing the *layout* for a reason that no longer existed.
-        */}
-        <div className="grid gap-x-14 sm:grid-cols-2">
-          {DOORS.map((d) => (
-            <Door key={d.href} {...d} />
+        <ol className="grid gap-x-14 sm:grid-cols-2 lg:grid-cols-3">
+          {JOURNEY.map((j, i) => (
+            <li key={j.step} className={`py-4 ${i > 0 ? "rule sm:rule" : ""}`}>
+              <div className="flex items-baseline gap-3">
+                <Wedge size={9} className="text-section shrink-0 translate-y-[-1px]" />
+                <h3 className="text-h3 font-semibold">{j.step}</h3>
+              </div>
+              <p className="text-small text-muted mt-1.5 leading-relaxed pl-[1.3rem]">{j.body}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       </Section>
 
       {/*
@@ -342,7 +394,7 @@ export default function HomePage() {
                 the assumptions written out beside every figure.
               </p>
               <div className="mt-6">
-                <LinkButton href={hasProfile ? "/lab?tab=shortlist" : "/start"} variant="primary">
+                <LinkButton href={hasProfile ? "/lab?tab=shortlist" : "/lab?tab=generate"} variant="primary">
                   {hasProfile ? "Generate ideas" : "Try it with your own sentence"}
                 </LinkButton>
               </div>
@@ -398,28 +450,12 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col items-start gap-3">
             <LinkButton
-              href={business ? "/business" : hasProfile ? "/lab?tab=shortlist" : "/start"}
+              href={business ? "/business" : hasProfile ? "/lab?tab=shortlist" : "/lab?tab=generate"}
               variant="primary"
               size="lg"
             >
               {business ? "Open workspace" : hasProfile ? "Generate ideas" : "Start"}
             </LinkButton>
-            {/*
-              The long questionnaire, offered rather than imposed.
-              Routing everybody through it first was the single biggest reason
-              people left, which is why the primary action goes to `/start`.
-              But burying it three clicks deep is the opposite mistake: some
-              people would genuinely rather answer twenty questions once, and
-              they should not have to find it.
-            */}
-            {!business && !hasProfile && (
-              <Link
-                href="/onboarding"
-                className="inline-flex items-center min-h-10 text-sm text-muted underline underline-offset-4 decoration-border-strong hover:text-text hover:decoration-accent"
-              >
-                Or answer the full questionnaire instead
-              </Link>
-            )}
           </div>
         </div>
         {/* No `max-w-2xl` here: a fixed pixel width does not track font size, so

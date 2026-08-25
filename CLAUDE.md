@@ -36,7 +36,8 @@ npm run test:product   # 80 quality/consistency/variant/intake/sample/mode tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
 npm run test:describe  # natural-language founder profile tests
-npm test               # all eight
+npm run test:intent    # 46 intent-router tests: what it reads, and what it refuses
+npm test               # all nine
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
 npm run check:visual   # measures the look-and-feel invariants in a browser
@@ -320,6 +321,80 @@ optimism — "people tried it and it doesn't pay" first, "it's genuinely early"
 last — because that ordering is the only editorial work on the page that does
 anything.
 
+### One way in
+
+The funnel used to open with a choice nobody had the information to make. The
+landing page offered four doors under a heading that said five; `/start` offered
+three more, and the two lists did not agree — home had the industry explorer and
+the local-opportunity finder, `/start` had neither; `/start` had the worked
+example and an inline idea intake, home had neither. Two chooser screens for one
+decision, and then an eight-step questionnaire behind the most common answer.
+
+`components/ask-bar.tsx` replaces all of it with one input. You type a sentence
+and it takes you somewhere.
+
+**`lib/intent.ts` reads the sentence, and shows its working.** There is no
+language model — the core runs for nothing — so the reading is done with rules,
+and rules misread things. The response to that is not to hide the mechanism
+behind a chat bubble: it is to render what was understood as chips, with the
+interest ones removable. A founder who typed "I like sport" can see sport is
+being used, and take it off. That is the failure this product is most at risk of
+— quietly turning a passing mention into a filter — and it is now visible by
+construction rather than by discipline.
+
+It is modelled on `analyze/detect.ts` rather than `engine/coach.ts`: confidence
+is evidence *and* separation, so a sentence scoring 4 for two intents reports
+low and offers the runner-up, instead of picking one. `unknown` is a first-class
+result that asks one question.
+
+The parsers underneath already existed and are tested — `describeToProfile` for
+what somebody says about themselves, `intakeFromText` for what they say about a
+business. The router only decides the verb.
+
+Four things it got wrong first, all found by testing the sentences the product
+itself offers as examples:
+
+- **"Surprise me" read as `unknown`**, because the length floor ran before the
+  rules and it is one content word once "me" is dropped. A short sentence that
+  matches a conclusive pattern is not a short sentence, it is an instruction.
+- **"Something I can run online, part time" read as `unknown`**, because the
+  fallback counted only interests, budget and hours as a subject. A stated
+  preference is a subject.
+- **"Give me a business I could start with $300" scored 30%** — one of the
+  component's own example chips — because every "ideas" rule required the word
+  "ideas".
+- **"a dog grooming service for owners who can't get to a salon" read as
+  brainstorm**, so the app offered ten alternatives to the thing just
+  described. A sentence that *is* a business needed a structural rule.
+
+And the reverse case matters as much: **"I already have an idea — is it any
+good?" must not become a business.** It is an announcement, not a description,
+and running it through `intakeFromText` produced one named "I already have an
+idea —" with no customer and no problem. The component asks one follow-up
+instead, distinguished by whether the intake found a customer, a problem or a
+catalogue match.
+
+### A missing profile is a caveat, not a locked door
+
+`RequireProfile` replaced the whole page with "First, tell us about you". It
+guarded exactly one route — the brainstorming lab — which meant the one place
+somebody could find out what the product does was the one place that refused to
+show them until they had answered twenty-six questions.
+
+The engine has always coped with an empty profile; `fallbackIndustries` exists
+for "no capability matched" and returns a spread across categories. So the ideas
+are real, they are simply scored against defaults, and a line of text says so.
+Refusing to render was not more honest, only less useful.
+
+`/onboarding` is gone with it. It and `/profile` were the same twenty-six fields
+implemented twice — 1,210 lines — and `/settings` already carried a note about
+deleting a *third* copy for the same reason. `/profile` answers any field in any
+order and says what each gap costs; the ask bar fills in whatever the sentence
+contained before anybody arrives.
+
+`/start` is a redirect too. Both keep their URLs: one was the landing page's
+primary call to action for a long time.
+
 ### The navigation, and why you only see one section
 
 The sidebar used to render thirty-six links at once. That isn't a menu, it's a
@@ -329,8 +404,20 @@ apart, since all three called the same generator with a different angle
 constant. They're `/lab` now, three panels of one loop, and the old URLs
 redirect rather than 404.
 
-`shell.tsx` returns six sections and opens only the one you're in, so the
-sidebar shows six links plus wherever you currently are. Sections are never
+`nav-model.ts` returns five sections and `TOP_LEVEL` names the four that appear
+in the masthead — Home, Brainstorm, My business, Progress. It was six, which was
+still one level too flat: "My business", "Does it hold up?" and "Make it" are
+three *phases of one piece of work* sitting as siblings of each other and of
+Home, so finding the money page meant knowing it lived under one of them and
+pricing advice under another. They are one destination now with the phases
+inside it. "You" is still a section — it owns routes that need a hue and a crumb
+— but it is reached from the overflow menu, because a settings group is not
+somewhere you navigate to while building a business.
+
+**No route may belong to two sections.** `sectionFor` is longest-prefix-wins, so
+a route listed twice resolves by list order — silently, and differently
+depending on which list was edited last, giving the page a hue from one section
+while the nav marks another. `test:product` asserts it. Sections are never
 hidden when empty: one that appears once you have enough data reads as the app
 changing shape underneath you, while one that's present and says what it's
 waiting for reads as a plan. `sectionFor` matches longest-prefix-wins, so

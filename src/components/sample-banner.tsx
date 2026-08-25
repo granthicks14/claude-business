@@ -43,7 +43,7 @@ export function SampleBanner() {
       </div>
       <p className="text-caption text-muted mt-2 leading-relaxed max-w-prose">{SAMPLE_NOTE}</p>
       <div className="flex flex-wrap gap-2 mt-3">
-        <Button size="sm" onClick={() => router.push("/start")} icon={<Icon.arrowRight className="size-4" />}>
+        <Button size="sm" onClick={() => router.push("/")} icon={<Icon.arrowRight className="size-4" />}>
           Build my own instead
         </Button>
         <Button
@@ -52,7 +52,7 @@ export function SampleBanner() {
           onClick={() => {
             actions.clearSample(SAMPLE_BUSINESS_ID);
             toast(others ? "Example cleared" : "Example cleared — your own work is untouched", "good");
-            router.push(others ? "/business" : "/start");
+            router.push(others ? "/business" : "/");
           }}
         >
           Clear the example
