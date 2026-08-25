@@ -17,6 +17,7 @@ import {
   Input,
   Meter,
   NumberInput,
+  Section,
   SectionHeader,
   Select,
   Stat,
@@ -82,11 +83,10 @@ function Levers() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Which number deserves your attention"
           description="Each row improves one input by 10% and leaves the rest alone. The ordering is the useful part."
-        />
+        >
         <div className="space-y-4">
           {sens.map((s) => (
             <div key={s.input}>
@@ -108,13 +108,12 @@ function Levers() {
           ))}
         </div>
         <p className="text-xs text-muted mt-4 leading-relaxed">{SENSITIVITY_NOTE}</p>
-      </Card>
+      </Section>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="What one customer is worth"
           description="Per-sale arithmetic, plus the one figure most tools invent."
-        />
+        >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Stat label="Kept per sale" value={currency(economics.contributionPerSale)} tone={economics.contributionPerSale > 0 ? "good" : "bad"} />
           <Stat label="Gross margin" value={`${economics.grossMarginPct}%`} />
@@ -132,13 +131,12 @@ function Levers() {
             {w}
           </p>
         ))}
-      </Card>
+      </Section>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Four ways this could go"
           description="Including the one most tools leave out."
-        />
+        >
         <div className="space-y-3">
           {scenarios.map((s) => (
             <div
@@ -160,13 +158,12 @@ function Levers() {
           These are scenarios, not forecasts. They show what the arithmetic does at different volumes — nothing here
           predicts which one happens.
         </EstimateNote>
-      </Card>
+      </Section>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Working backwards from your goal"
           description="What the income goal in your profile actually asks of you."
-        />
+        >
         {goal.steps.length === 0 ? (
           <p className="text-sm text-muted">{goal.verdict}</p>
         ) : (
@@ -190,7 +187,7 @@ function Levers() {
             </p>
           </>
         )}
-      </Card>
+      </Section>
 
       <p className="text-xs text-muted leading-relaxed">{ECONOMICS_DISCLAIMER}</p>
     </div>
@@ -212,11 +209,10 @@ function Simulator({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-5">
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Your assumptions"
           description="Change anything and every figure below updates instantly. Start with what you'd charge and how many customers a month feels plausible."
-        />
+        >
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Price per sale" htmlFor="m-price">
@@ -251,7 +247,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
             <strong>{Math.round(funnelCustomers)} customers/month</strong> from your funnel.
           </p>
         )}
-      </Card>
+      </Section>
 
       {result.warnings.length > 0 && (
         <div className="rounded-xl border border-warn/30 bg-warn-soft px-4 py-3.5">

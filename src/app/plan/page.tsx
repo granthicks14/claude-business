@@ -13,6 +13,7 @@ import {
   Dialog,
   Disclosure,
   Input,
+  Section,
   SectionHeader,
   Tabs,
   Textarea,
@@ -1006,11 +1007,10 @@ function ExportSection({ business }: { business: SelectedBusiness }) {
         </p>
       </Card>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Share a public plan"
           description="Creates a link containing only the sections you tick. The data lives in the link itself — nothing is stored on a server, and your revenue, customers, journal and notes are never included."
-        />
+        >
 
         <div className="grid gap-2 sm:grid-cols-2 mb-5">
           {(Object.keys(DEFAULT_SHARE) as (keyof ShareOptions)[]).map((key) => (
@@ -1061,7 +1061,7 @@ function ExportSection({ business }: { business: SelectedBusiness }) {
             />
           </div>
         )}
-      </Card>
+      </Section>
     </div>
   );
 }

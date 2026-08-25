@@ -661,6 +661,13 @@
     border-top: 1px solid var(--border);
   }
 
+  /* Ruled top and bottom: a band, which is how an editorial page sets off a
+     specification without drawing a box around it. */
+  .rule-y {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
   /*
    * A block with a weighted rule down its left edge — a margin note, an aside,
    * a verdict. It carries a meaning colour without becoming a coloured card,

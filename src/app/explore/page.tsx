@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready } from "@/components/page";
 import { IdeasArt } from "@/components/art";
-import { Badge, Button, Card, Hi, LinkButton, Meter, SectionHeader } from "@/components/ui";
+import { Badge, Button, Card, Hi, LinkButton, Meter, Section, SectionHeader } from "@/components/ui";
 import { EXPLORE_NOTE, defaultPreferences, exploreIndustries, type ExplorePreferences, type IndustryFit } from "@/lib/explore";
 import { useAppState } from "@/lib/store";
 
@@ -58,8 +58,7 @@ function Explore() {
         description="Eighteen industries, ranked against your money, your hours and what you already know. Move a slider and the order changes — because there's no such thing as the best industry, only the best one for your situation."
       />
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="What matters most to you?"
           description="Set from your profile to start with. Change any of them and the ranking updates as you go."
           action={
@@ -67,7 +66,7 @@ function Explore() {
               {showSliders ? "Hide" : "Adjust"}
             </Button>
           }
-        />
+        >
         {showSliders ? (
           <div className="space-y-4">
             {SLIDERS.map((s) => (
@@ -107,7 +106,7 @@ function Explore() {
             )}
           </div>
         )}
-      </Card>
+      </Section>
 
       <div className="space-y-4 mt-6">
         {top.map((fit) => (

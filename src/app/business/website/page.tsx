@@ -145,7 +145,7 @@ function Website({ business }: { business: SelectedBusiness }) {
       />
 
       {/* The one button that matters */}
-      <Card className="p-5">
+      <div className="rule pt-5 mt-5">
         <div className="flex flex-wrap items-center gap-5">
           <ScoreRing score={readiness.score} size={76} label="Ready" glow />
           <div className="flex-1 min-w-[14rem]">
@@ -184,7 +184,7 @@ function Website({ business }: { business: SelectedBusiness }) {
           This fills in every field the app is confident about. Nothing is final — each one can be changed or removed
           below, and anything the app is unsure about is left for you.
         </p>
-      </Card>
+      </div>
 
       {/* Conflicts are the one thing that must never ship silently. */}
       {conflicts.length > 0 && (
@@ -262,7 +262,7 @@ function Website({ business }: { business: SelectedBusiness }) {
         className="mt-6"
       />
       {facts && (
-        <Card className="p-4">
+        <div className="rule pt-5 mt-5">
           <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
             <Fact label="Business" value={facts.name} missing="No name yet" />
             <Fact label="Customer" value={facts.customer} />
@@ -288,7 +288,7 @@ function Website({ business }: { business: SelectedBusiness }) {
               Edit the business details
             </LinkButton>
           </div>
-        </Card>
+        </div>
       )}
 
       {/* Structure */}
@@ -297,7 +297,7 @@ function Website({ business }: { business: SelectedBusiness }) {
         description="Chosen from your business model. Most people need fewer pages than they think."
         className="mt-6"
       />
-      <Card className="p-4">
+      <div className="rule pt-5 mt-5">
         <div className="flex flex-wrap items-center gap-3">
           <Select
             value={siteType}
@@ -329,7 +329,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             </li>
           ))}
         </ul>
-      </Card>
+      </div>
 
       {/* Homepage plan + preview */}
       <SectionHeader
@@ -343,7 +343,7 @@ function Website({ business }: { business: SelectedBusiness }) {
         sub={accepted["subheadline"] ?? plan?.recommendations.find((r) => r.id === "subheadline")?.value ?? ""}
         cta={accepted["cta"] ?? plan?.recommendations.find((r) => r.id === "cta")?.value ?? ""}
       />
-      <Card className="p-4 mt-3">
+      <div className="rule pt-5 mt-5">
         <ol className="space-y-2.5">
           {plan?.homepage.map((s, i) => (
             <li key={s.section} className="flex gap-3">
@@ -358,10 +358,10 @@ function Website({ business }: { business: SelectedBusiness }) {
             </li>
           ))}
         </ol>
-      </Card>
+      </div>
 
       <SectionHeader title="What photos to use" description="Your own work beats any stock photo, even taken on a phone." className="mt-6" />
-      <Card className="p-4">
+      <div className="rule pt-5 mt-5">
         <ul className="space-y-2">
           {plan?.imageBrief.map((img) => (
             <li key={img.where} className="text-xs flex gap-2">
@@ -370,7 +370,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             </li>
           ))}
         </ul>
-      </Card>
+      </div>
 
       {/* Critique */}
       {critique.length > 0 && (
@@ -402,7 +402,7 @@ function Website({ business }: { business: SelectedBusiness }) {
         description="This only ever changes design, layout and tone — never your prices, customer or offer."
         className="mt-6"
       />
-      <Card className="p-4">
+      <div className="rule pt-5 mt-5">
         <div className="flex flex-wrap gap-2">
           <div className="flex-1 min-w-[14rem]">
             <Input
@@ -455,7 +455,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             </p>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Hand off */}
       <SectionHeader
@@ -463,7 +463,7 @@ function Website({ business }: { business: SelectedBusiness }) {
         description="The app prepares the brief. A website builder does the building."
         className="mt-6"
       />
-      <Card className="p-4">
+      <div className="rule pt-5 mt-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
             <p className="font-medium text-sm">{HOSTINGER.name}</p>
@@ -569,7 +569,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             </p>
           )}
         </div>
-      </Card>
+      </div>
 
       <Card className="p-4 mt-4 flex items-start gap-2.5">
         <Icon.bolt className="size-4 text-warn shrink-0 mt-0.5" />
@@ -640,7 +640,7 @@ function Preview({
   const services = (business.identity?.services ?? []).filter((s) => s.name.trim());
 
   return (
-    <Card className="p-4">
+    <div className="rule pt-5 mt-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <p className="text-xs uppercase tracking-wide text-faint font-medium">Rough layout</p>
         <div className="flex gap-1.5" role="group" aria-label="Preview size">
@@ -705,7 +705,7 @@ function Preview({
         A rough layout, not a preview of the finished site — the builder decides the actual design. This shows what goes
         where and in what order.
       </p>
-    </Card>
+    </div>
   );
 }
 

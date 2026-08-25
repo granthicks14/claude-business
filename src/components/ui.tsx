@@ -27,28 +27,48 @@ type Variant = "primary" | "secondary" | "ghost" | "danger" | "subtle";
 type Size = "sm" | "md" | "lg";
 
 /*
- * Buttons carry no shadow.
+ * FOUR RANKS, AND THE DIFFERENCE IS WEIGHT RATHER THAN ELEVATION.
  *
- * A drop shadow on a button is a skeuomorphic reflex from a decade ago, and on
- * a page that also shadowed every card it meant nothing on screen sat flat.
- * The primary is a solid block of spruce, the secondary is a hairline outline,
- * and the difference between them is weight rather than elevation — which is
- * how a printed form has always distinguished the main action.
+ * Buttons carry no shadow. A drop shadow on a button is a skeuomorphic reflex
+ * from a decade ago, and on a page that also shadowed every card it meant
+ * nothing on screen sat flat.
+ *
+ * The ranks are meant to be told apart at a glance from across the room:
+ *
+ *   primary    a solid slab of ink. One per page. This is the thing we want
+ *              you to do, and on a page of hairlines it is unmissable.
+ *   secondary  a hairline outline. The useful alternative, and the rank a
+ *              repeated per-item action should use — "use this" appearing
+ *              twelve times as a primary is the same as having no primary.
+ *   ghost      no chrome at all. Low-priority and reversible.
+ *   danger     outlined in bad, filling on hover. Destructive actions announce
+ *              themselves without shouting before they are needed.
+ *
+ * `subtle` is kept as an alias of secondary rather than deleted: it is named at
+ * call sites and was never visually distinct from it, which is exactly the
+ * fifth rank that makes the other four stop meaning anything.
  */
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-accent text-white hover:bg-accent-hover disabled:bg-accent/50 dark:text-[oklch(16%_0.01_80)] font-semibold",
+    "bg-ink text-bg hover:bg-ink-hover disabled:bg-ink/40 font-semibold " +
+    "shadow-none focus-visible:outline-offset-[3px]",
   secondary:
-    "bg-transparent text-text border border-border-strong hover:border-accent hover:text-accent-text",
+    "bg-surface text-text border border-border-strong hover:border-ink hover:bg-surface-2",
   ghost: "text-muted hover:text-text hover:bg-surface-2",
-  subtle: "bg-surface-2 text-text border border-border hover:border-border-strong",
-  danger: "bg-transparent text-bad border border-bad/40 hover:bg-bad-soft",
+  subtle: "bg-surface text-text border border-border-strong hover:border-ink hover:bg-surface-2",
+  danger: "bg-transparent text-bad border border-bad/45 hover:bg-bad-soft hover:border-bad",
 };
 
+/*
+ * Heights are tap targets first and proportions second. `sm` at 36px clears
+ * the 32px minimum this project holds to with room to spare, and `md` at 44px
+ * is the figure Apple and Google both publish for a comfortable thumb — which
+ * matters because seventeen controls in this app were measured under it.
+ */
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs rounded-md gap-1.5",
-  md: "h-10 px-4 text-sm rounded-md gap-2",
-  lg: "h-12 px-7 text-sm rounded-md gap-2",
+  sm: "h-9 px-3.5 text-xs rounded-md gap-1.5",
+  md: "h-11 px-5 text-sm rounded-md gap-2",
+  lg: "h-13 px-7 text-base rounded-md gap-2.5",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ClaimList } from "@/components/claim";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
-import { Badge, Card, Disclosure, Hi, LinkButton, Meter, ScoreRing, SectionHeader, Tabs } from "@/components/ui";
+import { Badge, Card, Disclosure, Hi, LinkButton, Meter, ScoreRing, Section, SectionHeader, Tabs } from "@/components/ui";
 import { TalkArt } from "@/components/art";
 import {
   CALL_LABEL,
@@ -158,11 +158,10 @@ function Decide({ business }: { business: SelectedBusiness }) {
 
       {tab === "case" && (
         <div className="space-y-4 mt-4">
-          <Card className="p-5">
-            <SectionHeader
+          <Section
               title={bullBear.judge.headline}
               description={bullBear.judge.reasoning}
-            />
+            >
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
                 <p className="text-xs font-medium text-good uppercase tracking-wide mb-2">
@@ -181,7 +180,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
               Weight comes from what each point rests on, not how many points there are. One thing that actually
               happened outweighs four things that sound reasonable.
             </p>
-          </Card>
+          </Section>
         </div>
       )}
 
@@ -199,11 +198,10 @@ function Decide({ business }: { business: SelectedBusiness }) {
             </Card>
           )}
 
-          <Card className="p-5">
-            <SectionHeader
+          <Section
               title="Everything working against you"
               description="Ordered by how likely it is multiplied by how much damage it would do."
-            />
+            >
             <div className="space-y-4">
               {redTeam.threats.map((t) => (
                 <div key={t.id} className="border-b border-border last:border-0 pb-4 last:pb-0">
@@ -220,7 +218,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
                 </div>
               ))}
             </div>
-          </Card>
+          </Section>
 
           <Card className="p-5">
             <SectionHeader title="What would change my mind" description="The app arguing against its own argument." />
@@ -238,11 +236,10 @@ function Decide({ business }: { business: SelectedBusiness }) {
 
       {tab === "unknown" && (
         <div className="space-y-4 mt-4">
-          <Card className="p-5">
-            <SectionHeader
+          <Section
               title="What nobody knows yet"
               description="Named on purpose. A gap you can see beats a gap filled in with something plausible."
-            />
+            >
             {unknowns.length === 0 ? (
               <p className="text-sm text-muted">
                 Nothing significant is open, which usually means there isn&apos;t much recorded rather than that
@@ -267,14 +264,13 @@ function Decide({ business }: { business: SelectedBusiness }) {
                 ))}
               </div>
             )}
-          </Card>
+          </Section>
 
           {top && (
-            <Card className="p-5">
-              <SectionHeader
+            <Section
                 title="The experiment worth doing next"
                 description="Ranked by how much it would settle, divided by what it costs and how long it takes."
-              />
+              >
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-medium">{top.name}</h3>
                 <Badge tone={top.cost === "free" ? "good" : "warn"}>{COST_LABEL[top.cost]}</Badge>
@@ -317,14 +313,13 @@ function Decide({ business }: { business: SelectedBusiness }) {
                   Record what happens
                 </LinkButton>
               </div>
-            </Card>
+            </Section>
           )}
 
-          <Card className="p-5">
-            <SectionHeader
+          <Section
               title="The assumption ledger"
               description="Everything this business rests on, ordered by how much rides on it multiplied by how unsure you are."
-            />
+            >
             <div className="space-y-3">
               {intel.ledger.slice(0, 12).map((l) => (
                 <div key={l.id} className="flex gap-3">
@@ -341,7 +336,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
                 </div>
               ))}
             </div>
-          </Card>
+          </Section>
         </div>
       )}
 

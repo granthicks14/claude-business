@@ -7,7 +7,7 @@ import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { GrowthArt } from "@/components/art";
-import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, SectionHeader, Tabs } from "@/components/ui";
+import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, Section, SectionHeader, Tabs } from "@/components/ui";
 import { PositionMap, type MapPoint } from "@/components/position-map";
 import { withBusiness } from "@/lib/business-param";
 import { CONSISTENCY_NOTE, SEVERITY_LABEL, SEVERITY_TONE, checkConsistency } from "@/lib/consistency";
@@ -189,13 +189,12 @@ function Quality({ business }: { business: SelectedBusiness }) {
           )}
 
           {mapPoints.length > 0 && (
-            <Card className="p-5">
-              <SectionHeader
+            <Section
                 title="Worth it, against what it costs you to find out"
                 description="Opportunity and risk are already two rows on the scorecard. Against each other they answer a different question — whether the upside justifies the exposure."
-              />
+              >
               <PositionMap points={mapPoints} />
-            </Card>
+            </Section>
           )}
 
           <Card className="p-5">

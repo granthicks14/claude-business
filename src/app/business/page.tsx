@@ -21,12 +21,15 @@ import {
   LinkButton,
   Meter,
   ScoreRing,
+  Hi,
+  Section,
   SectionHeader,
   Select,
   Stat,
   Textarea,
   useToast,
 } from "@/components/ui";
+import { Vitals } from "@/components/vitals";
 import { withBusiness } from "@/lib/business-param";
 import { currency } from "@/lib/finance";
 import { assessEvidence } from "@/lib/engine";
@@ -57,53 +60,58 @@ function AtAGlance({
   const pct = target > 0 ? Math.min(100, Math.round((monthRevenue / target) * 100)) : 0;
 
   return (
-    <Card className="p-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <h2 className="text-xs uppercase tracking-wide text-faint font-medium">What you&apos;re building</h2>
-          <p className="text-sm mt-1 leading-relaxed">{business.idea.oneLiner}</p>
-        </div>
-        <div>
-          <h2 className="text-xs uppercase tracking-wide text-faint font-medium">What you&apos;re aiming for</h2>
-          <p className="text-sm mt-1 leading-relaxed">
+    /*
+     * Progress toward the target, and nothing else.
+     *
+     * This used to open with "What you're building" set beside the one-liner —
+     * which is the same sentence as the page title's subtitle, three hundred
+     * pixels below it. The vitals band above now carries what the business is,
+     * so this block does the one thing the band cannot: say how far along it
+     * is. A section rather than a card, because it is part of the page rather
+     * than an object on it.
+     */
+    <section className="rule pt-6 mt-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <div className="min-w-0">
+          <p className="eyebrow text-faint">Where you are</p>
+          <p className="text-body-lg mt-1.5 leading-snug">
             {target > 0 ? (
               <>
-                {currency(target)} a month. You&apos;re at {currency(monthRevenue)} this month
-                {customerCount > 0 ? ` from ${customerCount} ${customerCount === 1 ? "customer" : "customers"}` : " with no customers yet"}.
+                <Hi tone="mark">{currency(monthRevenue)}</Hi> of {currency(target)} this month
+                {customerCount > 0
+                  ? ` from ${customerCount} ${customerCount === 1 ? "customer" : "customers"}`
+                  : ", with no customers yet"}
+                .
               </>
             ) : (
               "No monthly target set yet — pick one in your plan so progress means something."
             )}
           </p>
         </div>
+        <span className="text-caption text-faint font-mono">{health.stage}</span>
       </div>
 
-      <div className="mt-4 pt-4 border-t border-border">
-        <div className="flex items-baseline justify-between gap-3 mb-1.5">
-          <h2 className="text-xs uppercase tracking-wide text-faint font-medium">How far you&apos;ve got</h2>
-          <span className="text-xs text-muted">{health.stage}</span>
-        </div>
-        <div className="h-2 rounded-full bg-surface-2 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-accent transition-[width] duration-500"
-            style={{ width: `${Math.max(4, pct)}%` }}
-          />
-        </div>
-        <p className="text-xs text-muted mt-2 leading-relaxed">
-          {monthRevenue > 0 ? (
-            <>
-              {pct}% of this month&apos;s target. The first{" "}
-              <Explain id="customer">customer</Explain> is the hard one — after that it&apos;s repetition.
-            </>
-          ) : (
-            <>
-              Nothing earned yet, which is exactly where every business starts. Your next step is below — do that one
-              thing rather than everything.
-            </>
-          )}
-        </p>
+      <div className="h-1 bg-border mt-4 overflow-hidden" role="img" aria-label={`${pct}% of this month's target`}>
+        <div
+          className="h-full bg-signal transition-[width] duration-500"
+          style={{ width: `${Math.max(2, pct)}%` }}
+        />
       </div>
-    </Card>
+
+      <p className="text-xs text-muted mt-3 leading-relaxed">
+        {monthRevenue > 0 ? (
+          <>
+            {pct}% of this month&apos;s target. The first{" "}
+            <Explain id="customer">customer</Explain> is the hard one — after that it&apos;s repetition.
+          </>
+        ) : (
+          <>
+            Nothing earned yet, which is exactly where every business starts. Your next step is below — do that one
+            thing rather than everything.
+          </>
+        )}
+      </p>
+    </section>
   );
 }
 
@@ -182,6 +190,14 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           ) : undefined
         }
       />
+
+      {/*
+        The five facts, above the fold.
+        Who buys it, how the money arrives, what it costs to start, how hard it
+        is and how good it is — previously scattered down four thousand pixels
+        of stacked panels, two of them not on this page at all.
+      */}
+      <Vitals idea={business.idea} score={business.idea.opportunityScore} scoreLabel="Opportunity" />
 
       {/* Where the business actually is, what the app currently thinks, and the
           two things it would rather the founder didn't scroll past. */}
@@ -332,8 +348,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
       </div>
       </AdvancedOnly>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Health breakdown"
           description="Weakest areas first. Scores move as you log real activity."
           action={
@@ -341,7 +356,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
               {business.health ? "Refresh advice" : "What should I fix?"}
             </Button>
           }
-        />
+        >
 
         <div className="grid gap-4 sm:grid-cols-2">
           {health.dimensions.map((d) => (
@@ -389,7 +404,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
             <GeneratedNote at={business.health.generatedAt} />
           </div>
         )}
-      </Card>
+      </Section>
 
       <LaunchReadinessCard business={business} />
 
@@ -469,8 +484,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         />
       </div>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Opportunity radar"
           description="Adjacent openings you're unusually well placed to act on, based on your profile and this business."
           action={
@@ -478,7 +492,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
               {business.radar.length ? "Refresh" : "Scan"}
             </Button>
           }
-        />
+        >
         {radar.error && <ErrorPanel error={radar.error} onRetry={runRadar} retrying={radar.loading} />}
         {radar.loading && <AILoading stage={radar.stage} stages={radar.stages} stageIndex={radar.stageIndex} compact />}
 
@@ -521,10 +535,9 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
             </p>
           )
         )}
-      </Card>
+      </Section>
 
-      <Card className="p-5">
-        <SectionHeader title="Manage" description="Switch focus, or archive this and keep what you learned." />
+      <Section title="Manage" description="Switch focus, or archive this and keep what you learned.">
         <div className="flex flex-wrap gap-2">
           <LinkButton href="/lab?tab=shortlist" size="sm">
             Start a different idea
@@ -533,7 +546,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
             Archive this business
           </Button>
         </div>
-      </Card>
+      </Section>
 
       <EstimateNote>
         Targets and projections here are illustrative. Verify licences, tax, insurance and permits for your area with a
@@ -608,8 +621,7 @@ function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
   const readiness = useMemo(() => assessReadiness(business), [business]);
 
   return (
-    <Card className="p-5">
-      <SectionHeader
+    <Section
         title="Launch readiness"
         description="Whether the business is prepared — separate from whether it suits you. Every tick is something you've actually recorded."
         action={
@@ -617,7 +629,7 @@ function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
             Full checklist
           </LinkButton>
         }
-      />
+      >
       <div className="flex flex-wrap items-center gap-5">
         <ScoreRing score={readiness.score} size={80} label={READINESS_LABEL[readiness.verdict]} glow />
         <div className="flex-1 min-w-[13rem]">
@@ -633,17 +645,50 @@ function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
           )}
         </div>
       </div>
-      <div className="mt-4 pt-4 border-t border-border flex flex-wrap gap-1.5">
+      {/*
+        A checklist, not a wall of pills.
+        These were eleven badges wrapped across three rows — every one a
+        different length, every one a rounded rectangle, and no way to see at a
+        glance which were done. A pill is for one short status; eleven of them
+        side by side is a paragraph set in boxes. Two columns of ticked rows
+        answers "what is left" in about a second.
+      */}
+      <ul className="mt-5 pt-5 border-t border-border grid gap-x-8 gap-y-2 sm:grid-cols-2">
         {readiness.items.map((item) => (
-          <Badge key={item.id} tone={item.done ? "good" : item.essential ? "warn" : "neutral"}>
-            {item.done ? "✓" : item.essential ? "!" : "·"} {item.label}
-          </Badge>
+          <li key={item.id} className="flex items-baseline gap-2.5 text-xs leading-snug">
+            <span
+              aria-hidden="true"
+              className={`shrink-0 font-mono text-caption ${
+                item.done ? "text-good" : item.essential ? "text-warn" : "text-faint"
+              }`}
+            >
+              {item.done ? "✓" : item.essential ? "!" : "·"}
+            </span>
+            <span className={item.done ? "text-muted line-through decoration-border" : ""}>
+              {item.label}
+            </span>
+            <span className="sr-only">
+              {item.done ? " — done" : item.essential ? " — still needed" : " — optional"}
+            </span>
+          </li>
         ))}
-      </div>
-    </Card>
+      </ul>
+    </Section>
   );
 }
 
+/**
+ * One route onward, as a ruled row rather than a box.
+ *
+ * There are nine of these on this page, and as bordered cards in a
+ * two-column grid they were a second navigation menu — the same destinations
+ * the sidebar already lists, restated as nine identical rectangles. Nine
+ * boxes of equal weight is not a set of choices, it is wallpaper.
+ *
+ * As rows on a hairline they read as a list of places to go, take a third of
+ * the vertical space, and stop competing with the parts of the page that are
+ * actually about this business.
+ */
 function ShortcutCard({
   href,
   icon,
@@ -658,20 +703,19 @@ function ShortcutCard({
   done?: boolean;
 }) {
   return (
-    <Link href={href} className="block group">
-      <Card className="p-4 h-full transition-all group-hover:shadow-card group-hover:border-accent-border">
-        <div className="flex items-start gap-3">
-          {icon}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium text-sm">{title}</h3>
-              {done && <Badge tone="good">Ready</Badge>}
-            </div>
-            <p className="text-xs text-muted mt-1 leading-relaxed">{description}</p>
-          </div>
-          <Icon.arrowRight className="size-4 text-faint group-hover:text-accent transition-colors shrink-0 mt-0.5" />
-        </div>
-      </Card>
+    <Link
+      href={href}
+      className="group rule flex items-baseline gap-3 py-3.5 -mx-3 px-3 rounded-md transition-colors hover:bg-surface-2"
+    >
+      <span className="shrink-0 text-faint group-hover:text-ink transition-colors self-start mt-0.5">{icon}</span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span className="font-medium text-sm group-hover:text-ink transition-colors">{title}</span>
+          {done && <Badge tone="good">Ready</Badge>}
+        </span>
+        <span className="block text-xs text-muted mt-0.5 leading-relaxed measure-full">{description}</span>
+      </span>
+      <Icon.arrowRight className="size-4 text-faint shrink-0 self-center transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-ink" />
     </Link>
   );
 }

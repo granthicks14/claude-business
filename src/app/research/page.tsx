@@ -19,6 +19,7 @@ import {
   Input,
   Meter,
   NumberInput,
+  Section,
   SectionHeader,
   Tabs,
   Textarea,
@@ -129,11 +130,10 @@ function Plan({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-4">
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="How much of this is actually known"
           description="Weighted — a gap in whether anyone will pay counts for more than a gap in industry growth."
-        />
+        >
         <Meter value={quality.completeness} label="Research completeness" tone={quality.completeness >= 60 ? "good" : "accent"} />
         <p className="text-sm text-muted mt-3 leading-relaxed">{quality.note}</p>
 
@@ -162,7 +162,7 @@ function Plan({ business }: { business: SelectedBusiness }) {
             </ul>
           </div>
         )}
-      </Card>
+      </Section>
 
       {plan.map((task) => {
         const found = existing(task.id);
@@ -267,11 +267,10 @@ function Size({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-4">
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Work it out from the bottom up"
           description="Five numbers you count yourself. The app multiplies them and shows every step, so you can find the one you disagree with."
-        />
+        >
 
         <div className="space-y-5">
           {SIZING_FIELDS.map((f) => (
@@ -288,7 +287,7 @@ function Size({ business }: { business: SelectedBusiness }) {
             </Field>
           ))}
         </div>
-      </Card>
+      </Section>
 
       <Card className="p-5">
         <SectionHeader title="Where the first number came from" description="So you can check it again in six months." />
@@ -361,11 +360,10 @@ function CompetitionRead({ business }: { business: SelectedBusiness }) {
   const searches = useMemo(() => competitorSearches(business), [business]);
 
   return (
-    <Card className="p-5">
-      <SectionHeader
+    <Section
         title="How crowded is this?"
         description="Competition is a reading, not a penalty. Both an empty field and a packed one are questions — they're just different questions."
-      />
+      >
 
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={read.density === "none-recorded" ? "warn" : read.density === "thin" ? "accent" : "good"}>
@@ -464,7 +462,7 @@ function CompetitionRead({ business }: { business: SelectedBusiness }) {
       </div>
 
       <p className="text-xs text-muted mt-3 leading-relaxed">{CONFIDENCE_MEANING[read.confidence]}</p>
-    </Card>
+    </Section>
   );
 }
 
@@ -505,19 +503,17 @@ function Competitors({ business }: { business: SelectedBusiness }) {
     <div className="space-y-4">
       <CompetitionRead business={business} />
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Why would someone choose you?"
           description="The answer this page exists to produce. It stays empty until you've looked at what your customer would choose instead."
-        />
+        >
         <p className="text-sm leading-relaxed">{gaps.bestAnswer}</p>
         <div className="mt-4">
           <ClaimList claims={gaps.claims} />
         </div>
-      </Card>
+      </Section>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Competitors you've looked at"
           description="Real ones, with a link and a date. The app won't generate these — an invented competitor is worse than none."
           action={
@@ -525,7 +521,7 @@ function Competitors({ business }: { business: SelectedBusiness }) {
               Add one
             </Button>
           }
-        />
+        >
 
         {competitors.length === 0 ? (
           <EmptyState
@@ -562,7 +558,7 @@ function Competitors({ business }: { business: SelectedBusiness }) {
             <p className="text-xs text-muted mt-3 leading-relaxed">{gaps.note}</p>
           </>
         )}
-      </Card>
+      </Section>
 
       {competitors.length > 0 && (
         <Card className="p-5">
@@ -606,11 +602,10 @@ function Competitors({ business }: { business: SelectedBusiness }) {
       )}
 
       {gaps.gaps.length > 0 && (
-        <Card className="p-5">
-          <SectionHeader
+        <Section
             title="Where there's a gap"
             description="A gap isn't where nobody does something — it's where everybody made the same choice. Each one comes with a reason it might exist."
-          />
+          >
           <div className="space-y-4">
             {gaps.gaps.map((g, i) => (
               <div key={i} className="border-b border-border last:border-0 pb-4 last:pb-0">
@@ -625,7 +620,7 @@ function Competitors({ business }: { business: SelectedBusiness }) {
               </div>
             ))}
           </div>
-        </Card>
+        </Section>
       )}
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Add a competitor">

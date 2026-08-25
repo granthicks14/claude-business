@@ -16,6 +16,7 @@ import {
   Field,
   Hi,
   Input,
+  Section,
   SectionHeader,
   Select,
   Tabs,
@@ -170,15 +171,14 @@ function ListCard({
 function Ask({ plan }: { plan: ReturnType<typeof interviewPlan> }) {
   return (
     <div className="space-y-4">
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="How to open"
           description="Word for word. The point is that it doesn't sound like a sales call, because it isn't one."
-        />
+        >
         <p className="text-sm rounded-lg border border-accent-border bg-accent-soft p-4 leading-relaxed">
           &ldquo;{plan.openingScript}&rdquo;
         </p>
-      </Card>
+      </Section>
 
       <Card className="p-5">
         <SectionHeader title="The rules" description="Break these and the conversation still feels good and teaches you nothing." />
@@ -192,11 +192,10 @@ function Ask({ plan }: { plan: ReturnType<typeof interviewPlan> }) {
         </ul>
       </Card>
 
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="The questions"
           description="Each one says what a useful answer sounds like and what a polite, useless one sounds like — so you can tell the difference while you're sitting there."
-        />
+        >
         <div className="space-y-5">
           {plan.questions.map((q, i) => (
             <div key={q.id} className="border-b border-border last:border-0 pb-5 last:pb-0">
@@ -226,7 +225,7 @@ function Ask({ plan }: { plan: ReturnType<typeof interviewPlan> }) {
             </div>
           ))}
         </div>
-      </Card>
+      </Section>
 
       <Card className="p-5">
         <SectionHeader title="Write these down the moment you finish" description="Within five minutes. It's gone by the evening." />
@@ -264,8 +263,7 @@ function Recorded({ business, plan }: { business: SelectedBusiness; plan: Return
 
   return (
     <div className="space-y-4">
-      <Card className="p-5">
-        <SectionHeader
+      <Section
           title="Conversations you've recorded"
           description="The outcome field is the one that matters — it's what the rest of the app counts as evidence."
           action={
@@ -273,7 +271,7 @@ function Recorded({ business, plan }: { business: SelectedBusiness; plan: Return
               Record one
             </Button>
           }
-        />
+        >
 
         {interviews.length === 0 ? (
           <EmptyState
@@ -329,7 +327,7 @@ function Recorded({ business, plan }: { business: SelectedBusiness; plan: Return
             ))}
           </div>
         )}
-      </Card>
+      </Section>
 
       <Dialog open={open} onClose={() => setOpen(false)} title="Record a conversation">
         <div className="space-y-4">
@@ -426,11 +424,10 @@ function Patterns({ report }: { report: ReturnType<typeof analyseInterviews> }) 
       </Card>
 
       {report.contradictions.length > 0 && (
-        <Card className="p-5">
-          <SectionHeader
+        <Section
             title="Where the conversations disagree with themselves"
             description="The section you least want and most need."
-          />
+          >
           <div className="space-y-4">
             {report.contradictions.map((c) => (
               <div key={c.finding} className="border-b border-border last:border-0 pb-4 last:pb-0">
@@ -442,15 +439,14 @@ function Patterns({ report }: { report: ReturnType<typeof analyseInterviews> }) 
               </div>
             ))}
           </div>
-        </Card>
+        </Section>
       )}
 
       {report.repeatedPhrases.length > 0 && (
-        <Card className="p-5">
-          <SectionHeader
+        <Section
             title="Words more than one person used"
             description="Lift these verbatim for your website. Your own phrasing will always be worse than theirs."
-          />
+          >
           <div className="space-y-3">
             {report.repeatedPhrases.map((p) => (
               <div key={p.phrase} className="flex gap-3">
@@ -464,7 +460,7 @@ function Patterns({ report }: { report: ReturnType<typeof analyseInterviews> }) 
               </div>
             ))}
           </div>
-        </Card>
+        </Section>
       )}
 
       <div className="grid sm:grid-cols-2 gap-4">
