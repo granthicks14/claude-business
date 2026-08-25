@@ -293,7 +293,14 @@ export default function HomePage() {
         title="Five ways in, and none of them is a questionnaire first"
         description="You do not have to know what you want to build. You do have to tell it something true about yourself."
       >
-        <div className="max-w-3xl">
+        {/*
+          Two columns of ruled doors, using the canvas.
+          Capped at `max-w-3xl` these ran down the left of a 1440px page with
+          six hundred pixels of nothing beside them — the measure token already
+          keeps the prose inside each door readable, so the container was
+          narrowing the *layout* for a reason that no longer existed.
+        */}
+        <div className="grid gap-x-14 sm:grid-cols-2">
           {DOORS.map((d) => (
             <Door key={d.href} {...d} />
           ))}
@@ -379,10 +386,10 @@ export default function HomePage() {
         two centred buttons under it, which is the other half of the template
         this page used to be.
       */}
-      <section className="rule pt-8 pb-4">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-xl">
-            <h2 className="text-h2">{business ? "Pick up where you left off" : "Start with what you already have"}</h2>
+      <section className="rule pt-10 pb-4">
+        <div className="grid gap-8 lg:grid-cols-[1.6fr_1fr] lg:gap-14 items-end">
+          <div className="min-w-0">
+            <h2 className="text-display">{business ? "Pick up where you left off" : "Start with what you already have"}</h2>
             <p className="text-muted mt-3 leading-relaxed">
               {business
                 ? `You're building ${business.idea.name}. The next step is waiting in your workspace.`

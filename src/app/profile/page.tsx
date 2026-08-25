@@ -220,7 +220,11 @@ function Profile() {
       <div className="grid gap-x-14 gap-y-10 lg:grid-cols-2 items-start">
         {FIELD_GROUPS.map((group) => (
           <section key={group.id} className="min-w-0">
-            <Eyebrow className="text-faint">{group.title}</Eyebrow>
+            {/* A real h2: the field labels below are h3, and a page that goes
+                h1 → h3 leaves anyone navigating by heading stepping over a
+                level that isn't there. Styled as an eyebrow, structured as a
+                heading — the two are independent. */}
+            <h2 className="eyebrow text-faint">{group.title}</h2>
             <p className="text-sm text-muted mt-1.5 mb-3 leading-relaxed measure-full">{group.blurb}</p>
 
             <div className="divide-y divide-border border-t border-border">

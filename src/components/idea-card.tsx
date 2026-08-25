@@ -78,11 +78,15 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
 
           {/* Noticeably heavier than the description under it: the title is the
               thing being chosen between, and it now says what the business is. */}
-          <h3 className="text-h3 font-semibold leading-tight tracking-tight">
+          {/* h2, not h3. An idea card is a top-level object on the page it
+              sits on, and the shortlist has nothing between the page title and
+              these — so an h3 left a reader navigating by heading stepping
+              over a level that does not exist. */}
+          <h2 className="text-h3 font-semibold leading-tight tracking-tight">
             <Link href={`/ideas/${idea.id}`} className="hover:text-accent-text transition-colors">
               {idea.name}
             </Link>
-          </h3>
+          </h2>
           <p className="text-sm text-muted mt-1.5 leading-relaxed line-clamp-2">{summary.what}</p>
         </div>
 
