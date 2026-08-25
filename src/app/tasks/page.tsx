@@ -417,7 +417,7 @@ function FirstMoneyView({ business }: { business: SelectedBusiness }) {
                   {milestone.steps.map((step, j) => (
                     <li key={j} className="flex gap-3">
                       <div className="shrink-0 text-center">
-                        <div className="text-label uppercase tracking-wide text-faint font-semibold">Day</div>
+                        <div className="eyebrow">Day</div>
                         <div className="size-7 rounded-lg bg-accent-soft text-accent-text grid place-items-center text-sm font-semibold tabular-nums">
                           {step.day}
                         </div>

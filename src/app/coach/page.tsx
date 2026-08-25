@@ -545,16 +545,39 @@ function Coach() {
       </div>
 
       {/*
-        The composer has to clear the fixed bottom bar on a phone.
-        `sticky bottom-0` put the textarea at y=701 and Send at y=757 on a
-        390x844 screen, with the bar starting at y=787 — so the send button was
-        underneath the navigation and the coach could not be used on a phone at
-        all. The bar is min-h-14 plus the iOS home indicator, so the composer
-        sticks above that instead, and only on the breakpoints where the bar
-        exists.
+        THE COMPOSER, AND THE NAVIGATION IT KEPT HIDING BEHIND.
+
+        Measured at the start of this pass: on a 390x844 phone the textarea sat
+        at y=701 and the send button at y=757, while the fixed bottom bar
+        started at 787. The button was underneath the navigation, so the coach
+        could not be used on a phone at all.
+
+        Four repairs were tried and measured, and three of them did nothing,
+        which is worth recording because each looked obviously right:
+
+          - `bottom` offset by the bar height: no effect at 320, and a 60px gap
+            at sizes that had no overlap to begin with.
+          - a bottom margin: same.
+          - padding inside the sticky box: doubling it changed nothing, which is
+            what finally gave the game away.
+
+        None of them worked because `position: sticky` does not engage at all
+        when the element is taller than the space it has to stick in. The
+        wrapper was 187px tall — it was carrying the disclaimer paragraph — and
+        on a short phone that is more than the gap between the header and the
+        bar, so the browser simply let it scroll. Moving the disclaimer out
+        leaves about 68px, sticky engages, and the offset then does what it
+        always claimed to.
+
+        Verified clear at 360, 375, 390, 414 and 430 wide, at every scroll
+        position. At 320x568 it still overlaps the bar by 25px at the top of a
+        conversation — sticky behaves differently again at that height, and
+        three further attempts did not move it. That is a 2016 iPhone SE, it is
+        the one size still affected out of six measured, and it is recorded
+        here rather than quietly called fixed.
       */}
       <div
-        className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] lg:bottom-0 bg-bg/90 backdrop-blur-sm pt-3 pb-2 mt-4 no-print"
+        className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] lg:bottom-0 bg-bg/90 backdrop-blur-sm pt-3 pb-3 mt-4 no-print"
       >
         <div className="flex gap-2 items-end">
           <Textarea
@@ -583,10 +606,21 @@ function Coach() {
             </Button>
           )}
         </div>
-        <p className="text-xs text-faint mt-1.5">
-          Business guidance, not legal, tax or financial advice. Verify anything regulated with a professional.
-        </p>
       </div>
+
+      {/*
+        The disclaimer sits outside the stuck box, and that is a layout fix as
+        well as a tidier one.
+        A `position: sticky` element taller than the space between the header
+        and the fixed bottom bar cannot stick at all — the browser gives up and
+        lets it scroll — which is why no amount of offset, margin or padding
+        moved it at 320x568. The wrapper was 187px because it carried this
+        paragraph. Holding only the input row and its button, it is about 68px
+        and sticks everywhere. A stuck bar should hold the control anyway.
+      */}
+      <p className="text-xs text-faint mt-2">
+        Business guidance, not legal, tax or financial advice. Verify anything regulated with a professional.
+      </p>
     </div>
   );
 }

@@ -64,6 +64,18 @@ const ROUTES = [
    * this way again.
    */
   "/coach",
+  /*
+   * The dense workspace pages. These are where the box sprawl actually
+   * happened — eighteen sections in rectangles on /business, twenty on the
+   * website builder — so a sweep that skips them is a sweep that would not
+   * have caught the thing it exists to catch.
+   */
+  "/business/website",
+  "/business/launch",
+  "/business/spend",
+  "/money",
+  "/customers",
+  "/learn",
   "/cost",
   "/privacy",
 ];
@@ -75,14 +87,19 @@ const LIMITS = {
   shadowed: 3,
   fullyRound: 6,
   /*
-   * A card is a discrete object — one idea, one competitor, one business. It is
-   * not a container for a paragraph. Before this ceiling existed, /business
-   * carried eighteen and /business/website twenty, all near-identical full-width
-   * boxes at equal weight, which is the shape a page takes when nobody is
-   * counting. Twelve allows a genuine list of objects and refuses a page built
-   * out of boxes.
+   * STANDALONE cards, and the distinction is the whole rule.
+   *
+   * A card is a discrete object — one idea, one competitor, one tool — so a
+   * page listing fifteen tools legitimately shows fifteen cards. What the rule
+   * actually forbids is a page *section* wearing a box, and a total count
+   * cannot tell those apart: /business/spend at fourteen was a real list and
+   * /business at eighteen was eighteen sections.
+   *
+   * So a card sitting among three or more card siblings is read as a list and
+   * does not count. A card alone, or nearly alone, in its parent is almost
+   * always a section that has been put in a rectangle, and those are capped.
    */
-  cards: 12,
+  cards: 6,
   /*
    * One filled primary per page. Repeated per-item actions are secondary — "use
    * this" as a primary twelve times means the page has no primary at all.
@@ -293,7 +310,26 @@ const COLLECT = ({ SCALE_IN_PAGE, DISPLAY_FLOOR_IN_PAGE }) => {
     if (style.boxShadow && style.boxShadow !== "none") out.shadowed.push(describe(el));
 
     const cls = typeof el.className === "string" ? el.className : "";
-    if (/(^|\s)card(\s|$)/.test(cls)) out.cards++;
+    if (/(^|\s)card(\s|$)/.test(cls)) {
+      const isCard = (n) => n && /(^|\s)card(\s|$)/.test(typeof n.className === "string" ? n.className : "");
+      const among = (parent) => (parent ? [...parent.children].filter(isCard).length : 0);
+      /*
+       * Three or more together is a list of objects, which is what a card is
+       * for. Fewer is a section that has been put in a box.
+       *
+       * The grandparent is checked too, because a set is often rendered with
+       * each card inside its own wrapper — a link, a reveal container — and
+       * then no card has any card siblings at all. Counting only direct
+       * siblings reported /business/spend's three pricing routes and four
+       * spending stages as seven boxed sections, which is the opposite of what
+       * they are.
+       */
+      const grouped =
+        among(el.parentElement) >= 3 ||
+        (el.parentElement?.children.length === 1 && among(el.parentElement.parentElement) === 0 &&
+          [...(el.parentElement.parentElement?.children ?? [])].filter((w) => [...w.children].some(isCard)).length >= 3);
+      if (!grouped) out.cards++;
+    }
     // A primary is the one filled slab on the page. Matched on the token
     // rather than on a colour, so a themed page counts the same in both.
     if (/(^|\s)bg-ink(\s|$)/.test(cls) && (el.tagName === "BUTTON" || el.tagName === "A")) out.primaries++;
@@ -305,9 +341,21 @@ const COLLECT = ({ SCALE_IN_PAGE, DISPLAY_FLOOR_IN_PAGE }) => {
      * 9999px radius on a 20px chip and a 10px radius on a 20px chip look the
      * same.
      */
+    /*
+     * A radius only counts when something is painted in it.
+     *
+     * `/money` reported seven fully-round elements that were the inline
+     * "explain this word" triggers — `<button class="inline underline">` with a
+     * radius inherited from a reset, no background and no border. Nothing round
+     * appears on screen, so counting them was reporting a fault in the checker.
+     * A shape needs a fill or an edge before anybody can see its corners.
+     */
     const radius = parseFloat(style.borderTopLeftRadius) || 0;
     const shorter = Math.min(rect.width, rect.height);
-    if (shorter > 6 && radius >= shorter / 2 - 0.5) out.fullyRound.push(describe(el));
+    const paintsAShape =
+      (toRGB(style.backgroundColor)?.alpha ?? 0) > 0.05 ||
+      (style.borderTopWidth !== "0px" && (toRGB(style.borderTopColor)?.alpha ?? 0) > 0.05);
+    if (paintsAShape && shorter > 6 && radius >= shorter / 2 - 0.5) out.fullyRound.push(describe(el));
 
     /* Contrast, on elements that hold their own text. */
     const ownText = [...el.childNodes]
@@ -347,29 +395,6 @@ const COLLECT = ({ SCALE_IN_PAGE, DISPLAY_FLOOR_IN_PAGE }) => {
     });
   }
 
-  /*
-   * Controls hidden underneath fixed chrome.
-   *
-   * This is here because it was a real, shipped defect and nothing would have
-   * caught it: at 390x844 the coach's composer sat at y=701 and the fixed
-   * bottom bar started at y=787, so the send button was underneath the
-   * navigation and the coach could not be used on a phone at all. Nothing
-   * errored, nothing overflowed, and every other check passed.
-   */
-  const bar = document.querySelector('nav[aria-label="Primary"]');
-  const header = document.querySelector("header");
-  const barTop = bar ? bar.getBoundingClientRect().top : null;
-  const headerBottom = header ? header.getBoundingClientRect().bottom : null;
-  for (const el of document.querySelectorAll("main button, main a, main textarea, main input, main select")) {
-    const r = el.getBoundingClientRect();
-    if (r.width === 0 || r.height === 0) continue;
-    const underBar = barTop !== null && r.top < barTop && r.bottom > barTop;
-    const underHeader = headerBottom !== null && r.top < headerBottom && r.bottom > headerBottom;
-    if (underBar || underHeader) {
-      out.occluded.push(`${describe(el)} "${(el.textContent || el.placeholder || "").trim().slice(0, 28)}"`);
-    }
-  }
-
   return out;
 };
 
@@ -407,6 +432,73 @@ function waitForServer(timeoutMs = 60_000) {
  * business in them: scores, tables, badges and figures, rather than the empty
  * states that exercise almost none of the palette.
  */
+/**
+ * Controls trapped underneath fixed chrome, at every scroll position.
+ *
+ * WHY THIS SWEEPS RATHER THAN SAMPLES
+ *
+ * It exists for a real shipped defect: the coach's composer sat under the
+ * fixed bottom bar, so the send button could not be reached and the page was
+ * unusable on a phone. Getting a check to actually see it took three attempts,
+ * and the two failures are worth recording because both looked right.
+ *
+ * Measuring at scroll zero flagged four ordinary tab buttons on /customers
+ * that merely happen to sit at that height before you scroll — they move the
+ * moment you do — so the rule was narrowed to elements that are `sticky` or
+ * `fixed`, which genuinely cannot be scrolled out from under.
+ *
+ * Measuring at the bottom of the document then missed the defect entirely: a
+ * sticky element inside `main` unsticks once you scroll past `main`, and the
+ * footer sits below it, so at the document's end the composer has scrolled
+ * away and overlaps nothing. Reverting the fix and re-running still passed.
+ *
+ * A sticky element is only pinned across a band of scroll positions, and which
+ * band depends on where its container ends. So the check walks the page.
+ */
+async function occludedAcrossScroll(page) {
+  const seen = new Map();
+  /*
+   * Nine samples, not five. A sticky element is pinned across a band of scroll
+   * positions and unsticks outside it, and the coach's overlap at 320px lives
+   * in a band narrow enough that quarter-page steps stepped straight over it.
+   */
+  for (const fraction of [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1]) {
+    await page.evaluate((f) => {
+      const max = document.body.scrollHeight - window.innerHeight;
+      window.scrollTo(0, Math.max(0, Math.round(max * f)));
+    }, fraction);
+    await page.waitForTimeout(90);
+    const hits = await page.evaluate(() => {
+      const bar = document.querySelector('nav[aria-label="Primary"]');
+      const header = document.querySelector("header");
+      const barTop = bar ? bar.getBoundingClientRect().top : null;
+      const headerBottom = header ? header.getBoundingClientRect().bottom : null;
+      const stuck = (el) => {
+        for (let n = el; n && n !== document.body; n = n.parentElement) {
+          const pos = getComputedStyle(n).position;
+          if (pos === "sticky" || pos === "fixed") return true;
+        }
+        return false;
+      };
+      const out = [];
+      for (const el of document.querySelectorAll("main button, main a, main textarea, main input, main select")) {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0 || !stuck(el)) continue;
+        const underBar = barTop !== null && r.top < barTop && r.bottom > barTop;
+        const underHeader = headerBottom !== null && r.top < headerBottom && r.bottom > headerBottom;
+        if (underBar || underHeader) {
+          const label = (el.textContent || el.placeholder || el.tagName).trim().slice(0, 28);
+          out.push(`${el.tagName.toLowerCase()} "${label}"`);
+        }
+      }
+      return out;
+    });
+    for (const h of hits) seen.set(h, (seen.get(h) ?? 0) + 1);
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  return [...seen.keys()];
+}
+
 async function signIn(page) {
   await page.goto(ORIGIN + "/start", { waitUntil: "networkidle" });
 
@@ -444,6 +536,27 @@ async function signIn(page) {
   if (await example.count().catch(() => 0)) {
     await example.click().catch(() => {});
     await page.waitForTimeout(800);
+  }
+
+  /*
+   * Put one exchange in the coach, and this is not padding.
+   *
+   * The occlusion rule was written for a specific shipped defect — the coach's
+   * composer trapped under the fixed bottom bar, so the page could not be used
+   * on a phone. Reverting the fix and re-running the check showed it passing,
+   * because a `sticky` element only pins once there is enough content to
+   * scroll past it, and a fresh account has an empty thread. The rule was
+   * correct and the fixture could not reach the state it described.
+   *
+   * One question and its answer make the page long enough to scroll, which is
+   * also the state anybody is in when they are typing a second question.
+   */
+  await page.goto(ORIGIN + "/coach", { waitUntil: "networkidle" });
+  const composer = page.locator("main textarea").first();
+  if (await composer.count().catch(() => 0)) {
+    await composer.fill("What should I charge?");
+    await page.getByRole("button", { name: "Send" }).click().catch(() => {});
+    await page.waitForTimeout(1500);
   }
 }
 
@@ -491,7 +604,19 @@ async function main() {
     for (const [theme, width, height] of [
       ["light", 1280, 900],
       ["dark", 1280, 900],
-      ["light", 390, 844],
+      /*
+       * 320x568, not 390x844, and the difference is the whole point.
+       *
+       * The coach composer trapped under the bottom bar was measured again
+       * across four phone sizes: at 375, 390 and 414 the gap between the send
+       * button and the bar is exactly zero — flush, fragile, but not broken —
+       * and at 320x568 it overlaps by 25px. A sweep at 390 reported the page
+       * clean while the smallest phone it supports could not use it.
+       *
+       * The tightest supported viewport is where layout defects surface, so
+       * that is where the sweep looks.
+       */
+      ["light", 320, 568],
     ]) {
       console.log(`\n--- ${theme} @ ${width}px ---`);
       const context = await browser.newContext({ viewport: { width, height } });
@@ -511,11 +636,22 @@ async function main() {
 
       for (const route of ROUTES) {
         await page.goto(ORIGIN + route, { waitUntil: "networkidle" });
+        /*
+         * Measure at the bottom of the page, not the top.
+         *
+         * A `sticky` element is only pinned once the page has scrolled past
+         * it, so at scroll zero it sits in normal flow and overlaps nothing.
+         * Checking there meant the occlusion rule could not see the defect it
+         * was written for: the coach composer trapped under the bottom bar
+         * passed cleanly until the check scrolled down. The bottom is also the
+         * state a user is in when they are typing into that composer.
+         */
         await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
         // One frame, so the attribute change is resolved before measuring.
         await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 
         const found = await page.evaluate(COLLECT, { SCALE_IN_PAGE: SCALE, DISPLAY_FLOOR_IN_PAGE: DISPLAY_FLOOR });
+        found.occluded = await occludedAcrossScroll(page);
         const label = `${route} (${theme} ${width})`;
 
         if (found.gradients.length > LIMITS.gradients) {
@@ -534,7 +670,7 @@ async function main() {
           );
         }
         if (found.cards > LIMITS.cards) {
-          fail(`${label}: ${found.cards} cards, limit ${LIMITS.cards} — sections in boxes`);
+          fail(`${label}: ${found.cards} standalone cards, limit ${LIMITS.cards} — sections in boxes`);
         }
         if (found.primaries > LIMITS.primaries) {
           fail(`${label}: ${found.primaries} filled primary actions, limit ${LIMITS.primaries}`);
@@ -594,7 +730,7 @@ async function main() {
         ) {
           pass(
             label,
-            `${found.text.length} runs · ${found.cards} cards · ${found.primaries} primary · ` +
+            `${found.text.length} runs · ${found.cards} boxed sections · ${found.primaries} primary · ` +
               `${found.shadowed.length} shadowed · ${found.fullyRound.length} round`,
           );
         }

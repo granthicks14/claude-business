@@ -1143,7 +1143,7 @@ export function Stat({
   return (
     <div className="min-w-0" data-metric>
       <div className={`font-semibold tabular-nums tracking-[-0.02em] truncate ${figure} ${color}`}>{value}</div>
-      <div className="text-label font-medium uppercase text-muted mt-1 truncate">{label}</div>
+      <div className="eyebrow text-muted mt-1 truncate">{label}</div>
       {hint && <div className="text-xs text-faint mt-1 leading-snug">{hint}</div>}
     </div>
   );

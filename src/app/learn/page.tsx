@@ -75,33 +75,45 @@ function Learn() {
           />
         </Card>
       ) : (
-        <div className="grid gap-3">
+        /*
+         * A glossary is a definition list, and it was thirty-three cards.
+         *
+         * One term per card is defensible by the "a card is one object" rule
+         * and still wrong: thirty-three identical boxes stacked down a page is
+         * not a set of objects a reader picks between, it is a wall. Set as a
+         * `dl` on hairlines it reads the way a reference is meant to — scan the
+         * terms, stop at the one you wanted — and it is the markup the content
+         * has always been.
+         */
+        <dl className="mt-2">
           {results.map((t) => (
-            <Card key={t.id} className="p-5">
-              <div className="flex flex-wrap items-baseline gap-2 mb-1.5">
-                <h2 className="font-semibold text-lg">{t.term}</h2>
+            <div key={t.id} className="rule py-5">
+              <dt className="flex flex-wrap items-baseline gap-2 mb-2">
+                <h2 className="text-h3 font-semibold">{t.term}</h2>
                 <Badge>{CATEGORY_LABEL[t.category]}</Badge>
                 {t.aka && t.aka.length > 0 && (
                   <span className="text-xs text-faint">also called {t.aka.slice(0, 2).join(", ")}</span>
                 )}
-              </div>
+              </dt>
 
-              <p className="text-sm leading-relaxed">{t.short}</p>
+              <dd>
+                <p className="text-sm leading-relaxed">{t.short}</p>
 
-              <p className="text-sm mt-3 pt-3 border-t border-border leading-relaxed">
-                <span className="text-xs uppercase tracking-wide text-faint font-medium">For example · </span>
-                {t.example}
-              </p>
-
-              {t.whyItMatters && (
-                <p className="text-sm text-muted mt-2 leading-relaxed">
-                  <span className="text-xs uppercase tracking-wide text-faint font-medium">Why it matters · </span>
-                  {t.whyItMatters}
+                <p className="text-sm mt-3 leading-relaxed">
+                  <span className="eyebrow mr-1.5">For example</span>
+                  {t.example}
                 </p>
-              )}
-            </Card>
+
+                {t.whyItMatters && (
+                  <p className="text-sm text-muted mt-2 leading-relaxed">
+                    <span className="eyebrow mr-1.5">Why it matters</span>
+                    {t.whyItMatters}
+                  </p>
+                )}
+              </dd>
+            </div>
           ))}
-        </div>
+        </dl>
       )}
 
       <p className="text-xs text-faint leading-relaxed">

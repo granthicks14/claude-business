@@ -117,13 +117,13 @@ function Spend({ business }: { business: SelectedBusiness }) {
           </li>
         ))}
       </ul>
-      <Card className="p-4 mt-3">
+      <div className="rule pt-5 mt-5">
         <p className="text-xs leading-relaxed">{affordabilityNote(business, profile)}</p>
         <p className="text-xs text-faint leading-relaxed mt-2">
           Your budget affects <em>when</em> you can start, not whether the business is any good. Those are scored
           separately for exactly this reason.
         </p>
-      </Card>
+      </div>
 
       {/* The actual decisions */}
       <SectionHeader
@@ -189,7 +189,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
         description="Pick an amount. The answer changes depending on whether anyone has told you they'd buy."
         className="mt-6"
       />
-      <Card className="p-4">
+      <div className="rule pt-5 mt-5">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Amount to spend">
           {[100, 250, 500, 1000].map((a) => (
             <button
@@ -231,7 +231,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
             </ol>
           </>
         )}
-      </Card>
+      </div>
 
       {/* The ladder */}
       <SectionHeader
@@ -251,11 +251,11 @@ function Spend({ business }: { business: SelectedBusiness }) {
         ))}
       </ol>
 
-      <Card className="p-4 mt-5">
+      <div className="rule pt-5 mt-5">
         <p className="text-xs text-muted leading-relaxed">
           <span className="font-medium text-text">About the numbers.</span> {PRICE_DISCLAIMER}
         </p>
-      </Card>
+      </div>
     </div>
   );
 }

@@ -114,11 +114,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
         description="Six things. None of them cost money, and all of them can be done this week."
         className="mt-6"
       />
-      <ul className="space-y-2">
-        {essentials.map((item, i) => (
-          <li key={item.id}>
-            <ChecklistRow item={item} delay={i * 60} />
-          </li>
+      <ul>
+        {essentials.map((item) => (
+          <ChecklistRow key={item.id} item={item} />
         ))}
       </ul>
 
@@ -127,11 +125,9 @@ function Launch({ business }: { business: SelectedBusiness }) {
         description="Do these when they're the thing in your way — not before. A website with nothing to sell is a hobby."
         className="mt-6"
       />
-      <ul className="space-y-2">
-        {extras.map((item, i) => (
-          <li key={item.id}>
-            <ChecklistRow item={item} delay={i * 60} />
-          </li>
+      <ul>
+        {extras.map((item) => (
+          <ChecklistRow key={item.id} item={item} />
         ))}
       </ul>
 
@@ -151,21 +147,33 @@ function Launch({ business }: { business: SelectedBusiness }) {
 
 function ChecklistRow({
   item,
-  delay,
 }: {
   item: ReturnType<typeof assessReadiness>["items"][number];
-  delay: number;
 }) {
   return (
-    <Card className="p-3.5" delay={delay} interactive={!item.done}>
+    /*
+       A checklist row, not a card.
+       Twelve of these were boxed and grouped in twos and threes, so the page
+       read as a stack of small rectangles rather than as a list you work down.
+       A checklist is the clearest structure in interface design and it does not
+       need a border around each line; the tick and the rule do the work.
+    */
+    <li className="rule py-3.5">
       <div className="flex items-start gap-3">
+        {/*
+          A mark, not a bubble.
+          Twelve outlined circles down a checklist is twelve round shapes on a
+          page whose whole register is hairlines and type, and it was a second
+          checklist style besides the one on the business overview. The same
+          glyph does the job in a quarter of the space.
+        */}
         <span
-          className={`shrink-0 mt-0.5 size-5 rounded-full grid place-items-center border ${
-            item.done ? "bg-good-soft border-good/30" : "border-border-strong"
+          className={`shrink-0 mt-0.5 w-4 text-center font-mono text-sm leading-6 ${
+            item.done ? "text-good" : "text-faint"
           }`}
           aria-hidden
         >
-          {item.done && <Icon.check className="size-3 text-good" />}
+          {item.done ? "✓" : "·"}
         </span>
         <div className="flex-1 min-w-0">
           <p className={`text-sm font-medium ${item.done ? "text-muted line-through decoration-border" : ""}`}>
@@ -182,6 +190,6 @@ function ChecklistRow({
           </Link>
         )}
       </div>
-    </Card>
+    </li>
   );
 }
