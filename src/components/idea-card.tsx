@@ -109,11 +109,20 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
       </div>
 
       <div className="flex items-center gap-1 flex-wrap">
+        {/*
+          One obvious action, and it says what happens.
+          "See the reasoning" was a text link describing the app's own working
+          rather than the reader's next move, and it sat at the same weight as
+          the four icon buttons beside it — so a card offering one real choice
+          looked like it offered five.
+        */}
         <Link
           href={`/ideas/${idea.id}`}
-          className="text-xs font-medium text-accent-text hover:underline underline-offset-2 px-2 py-1.5"
+          className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md border border-border-strong
+                     text-xs font-medium hover:border-ink hover:bg-surface-2 transition-colors"
         >
-          See the reasoning
+          Explore this
+          <Icon.arrowRight className="size-3.5" aria-hidden="true" />
         </Link>
         <span className="flex-1" />
         <IconAction

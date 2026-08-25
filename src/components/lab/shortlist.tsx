@@ -133,27 +133,33 @@ export function Shortlist() {
       )}
 
       {/*
-        Direction before constraints.
+        THE CONTROLS FOR THE *NEXT* BATCH GO BEHIND ONE DISCLOSURE.
 
-        A dial is a preference the app weighs; a constraint is a hard limit it
-        will not break. Putting the softer control first matches how somebody
-        actually narrows down — nudge, look, nudge again — and keeps the
-        typed-constraints box for the cases a chip cannot express.
+        Measured: four rows of chrome sat between the tabs and the first
+        result — a sentence, six direction chips, a constraints bar, then six
+        filter chips and a sort menu. Around 420px of controls before a founder
+        saw a single idea, on the page whose entire job is showing them ideas.
+
+        The filters below stay out, because they act on the list you are looking
+        at. Everything that shapes the *next* batch — the dials and the typed
+        constraints — is one line until you want it. Direction before
+        constraints inside it: a dial is a preference the app weighs, a
+        constraint is a limit it will not break, and people nudge before they
+        forbid.
       */}
-      {ideas.length > 0 && <Dials />}
-
       {(ideas.length > 0 || showConstraints) && (
-        <Card className="p-4">
+        <div className="rule pt-4">
           <button
             onClick={() => setShowConstraints((v) => !v)}
-            className="flex items-center gap-2 text-sm font-medium w-full text-left"
+            className="flex items-center gap-2 text-sm font-medium w-full text-left min-h-11"
             aria-expanded={showConstraints}
           >
-            <Icon.bolt className="size-4 text-accent" />
-            Add constraints for the next batch
+            <Icon.bolt className="size-4 text-signal" />
+            Shape the next batch
             <span className="flex-1" />
             <span className="text-xs text-muted">{showConstraints ? "Hide" : "Show"}</span>
           </button>
+          {showConstraints && ideas.length > 0 && <Dials />}
           {showConstraints && (
             <div className="mt-3 space-y-3">
               <Textarea
@@ -173,7 +179,7 @@ export function Shortlist() {
               </div>
             </div>
           )}
-        </Card>
+        </div>
       )}
 
       {ideas.length > 0 && (
@@ -254,7 +260,15 @@ export function Shortlist() {
               />
             </Card>
           ) : (
-            <ul className="grid gap-3">
+            /*
+             * Two columns from `lg`, not fifteen full-width slabs.
+             * Stacked one per row the shortlist ran to 7,500px: identical boxes
+             * at identical width, so comparing the third idea with the ninth
+             * meant scrolling three screens and holding both in your head. Side
+             * by side is what a shortlist is for, and it takes a third of the
+             * height.
+             */
+            <ul className="grid gap-3 lg:grid-cols-2">
               {visible.map((idea, i) => (
                 <IdeaCard key={idea.id} idea={idea} index={i} rank={sort === "score" ? i + 1 : undefined} />
               ))}
