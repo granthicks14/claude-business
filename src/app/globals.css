@@ -146,6 +146,17 @@
   --measure-heading: 22ch;
 
   /*
+   * THE CANVAS.
+   *
+   * How wide a page is allowed to be, decided in one place. The frame used to
+   * be a 248px sidebar beside a `max-w-5xl` column, which on a 1440px screen
+   * meant 1024px of content and 168px of nothing beside it. With the
+   * navigation across the top the page gets the room, and the measure token
+   * above keeps prose readable inside it rather than the container doing it.
+   */
+  --canvas: 84rem;
+
+  /*
    * Spacing. One scale, powers of the same 4px unit, so vertical rhythm is a
    * decision made once rather than a number typed per component.
    */
@@ -444,6 +455,31 @@
     font-weight: 400;
     letter-spacing: -0.021em;
     text-wrap: balance;
+  }
+
+  /*
+   * A HEADING SET AT A UI SIZE IS A LABEL, NOT A MASTHEAD.
+   *
+   * The rule above applies the display face to every `h1`–`h4` in the product,
+   * which is right for the sixty that are titles and wrong for the ninety that
+   * are `<h3 className="font-medium text-sm">` — a field label, a card
+   * heading, a row title. Instrument Serif is a high-contrast display face:
+   * at 14px its thin strokes drop below a pixel and it reads as a rendering
+   * fault rather than as a serif. The profile page was a column of them.
+   *
+   * Matched on the size utility rather than on a new class, so it corrects
+   * every existing call site at once and any future one too — the same
+   * approach the radius and type scales use. `:where()` keeps specificity at
+   * zero, so a heading that genuinely wants the display face small can still
+   * ask with a plain utility and win.
+   */
+  /* `:is()` and not `:where()` on the element half: `:where()` scores zero, so
+     the plain `h1, h2, h3, h4` rule above it won and nothing changed. `:is()`
+     takes the specificity of its most specific argument, which ties, and a tie
+     goes to whichever comes later — this one. */
+  :is(h1, h2, h3, h4):where(.text-xs, .text-sm, .text-base, .text-lg, .text-caption, .text-small) {
+    font-family: var(--font-sans);
+    letter-spacing: normal;
   }
 
   /*

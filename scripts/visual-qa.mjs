@@ -520,7 +520,18 @@ async function signIn(page) {
     await page.getByRole("radio", { name: /stay signed in on this device/i }).check();
     await page.getByRole("checkbox").last().check();
     await page.getByRole("button", { name: "Create account" }).click();
-    await page.waitForSelector("nav[aria-label='Main']", { timeout: 20_000 });
+    /*
+     * Wait for the create form to go, not for the navigation to appear.
+     *
+     * This waited on `nav[aria-label='Main']` becoming visible, which broke the
+     * moment the frame moved from a sidebar to a masthead: the section nav is
+     * `hidden lg:flex`, so at the 320px pass it exists and is never visible,
+     * and the whole sweep timed out on a page that had signed in perfectly
+     * well. The absence of the form is the thing actually being waited for.
+     */
+    await page
+      .getByRole("button", { name: "Create account" })
+      .waitFor({ state: "detached", timeout: 20_000 });
   }
 
   /*

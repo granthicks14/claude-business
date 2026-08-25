@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  Eyebrow,
   Input,
   NumberInput,
   Select,
@@ -141,70 +142,105 @@ function Profile() {
       )}
 
       {/*
-        One figure and one suggestion, not a list of everything blank.
+        THE FOUNDER, NOT A FORM.
 
-        This used to say "eleven things are still blank" and name three. That is
-        a chore presented as a prompt, and it treats every field as equally
-        overdue when four of them do most of the work — somebody can reach a
-        confident-looking profile having skipped their budget and their hours.
-        The percentage is weighted by what the scoring actually reads (see
-        `profileCompleteness`), and the ask is a single field with the reason it
-        matters, because one decision is actionable and eleven is a backlog.
+        This was five stacked cards each holding a divided list of rows — a
+        questionnaire in boxes, and the thing the app tells people they never
+        have to fill in again. It is a portrait now: who you are, set at the
+        top with the strata from the mark showing how much of it is known, and
+        the fields in two columns so the whole of it is on one screen rather
+        than a scroll.
+
+        One figure and one suggestion, never a list of everything blank. This
+        used to say "eleven things are still blank" and name three, which is a
+        chore presented as a prompt and treats every field as equally overdue
+        when four of them do most of the work. The percentage is weighted by
+        what the scoring actually reads; the ask is a single field with the
+        reason it matters, because one decision is actionable and eleven is a
+        backlog.
       */}
-      {completeness.percent < 100 && (
-        <Card className="p-5">
-          <div className="flex items-baseline justify-between gap-4">
-            <h2 className="font-semibold">
-              {completeness.requiredMissing > 0 ? "Worth filling in" : "Your profile is in good shape"}
-            </h2>
-            <span className="font-mono text-sm tabular-nums text-muted">{completeness.percent}%</span>
-          </div>
-          <div className="h-1 bg-border mt-3" aria-hidden="true">
-            <div className="h-full bg-accent" style={{ width: `${completeness.percent}%` }} />
-          </div>
-          {completeness.next && (
-            <p className="text-sm mt-3 leading-relaxed">
-              The one that would help most is{" "}
-              <button
-                onClick={() => {
-                  setEditing(completeness.next!.id);
-                  document.getElementById(completeness.next!.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-                className="underline underline-offset-2 decoration-accent/60 hover:decoration-accent font-medium"
-              >
-                {completeness.next.label.toLowerCase()}
-              </button>{" "}
-              — {completeness.next.affects}
+      <section className="rule-y py-6">
+        <div className="grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:gap-14 items-start">
+          <div className="min-w-0">
+            <Eyebrow className="text-faint">What the scoring knows</Eyebrow>
+            <p className="text-h2 font-display mt-2 leading-tight measure-full">
+              {completeness.percent >= 90
+                ? "Enough to score you properly."
+                : completeness.requiredMissing > 0
+                  ? "There are gaps that change the answers."
+                  : "Good enough to work with."}
             </p>
-          )}
-          <p className="text-caption text-faint mt-3 leading-relaxed">
-            Nothing here is compulsory. Skipping a field lowers the confidence on a score, never the score itself.
-          </p>
-        </Card>
-      )}
-
-      {FIELD_GROUPS.map((group) => (
-        <Card key={group.id} className="p-5">
-          <h2 className="font-semibold">{group.title}</h2>
-          <p className="text-sm text-muted mt-0.5 mb-4">{group.blurb}</p>
-
-          <div className="divide-y divide-border">
-            {PROFILE_FIELDS.filter((f) => f.group === group.id).map((field) => (
-              <FieldRow
-                key={field.id}
-                field={field}
-                profile={state.profile}
-                editing={editing === field.id}
-                onEdit={() => setEditing(editing === field.id ? null : field.id)}
-                onCancel={() => setEditing(null)}
-                onSave={(patch) => save(field, patch)}
-              />
-            ))}
+            <p className="text-sm text-muted mt-3 leading-relaxed measure-full">
+              Nothing here is compulsory. Skipping a field lowers the confidence on a
+              score, never the score itself — and changing anything updates every
+              recommendation immediately.
+            </p>
           </div>
-        </Card>
-      ))}
 
-      <Card className="p-4">
+          <div className="min-w-0">
+            <div className="flex items-baseline justify-between gap-4">
+              <Eyebrow className="text-faint">Complete</Eyebrow>
+              <span className="figure text-ink leading-none">{completeness.percent}</span>
+            </div>
+            {/* Strata: the tick marks from the mark, one per ten per cent. */}
+            <div className="flex gap-1 mt-3" aria-hidden="true">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1 flex-1 ${completeness.percent >= (i + 1) * 10 ? "bg-ink" : "bg-border"}`}
+                />
+              ))}
+            </div>
+            {completeness.next && (
+              <p className="text-sm mt-4 leading-relaxed">
+                Worth adding next:{" "}
+                <button
+                  onClick={() => {
+                    setEditing(completeness.next!.id);
+                    document
+                      .getElementById(completeness.next!.id)
+                      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }}
+                  className="underline underline-offset-4 decoration-border-strong hover:decoration-ink font-medium"
+                >
+                  {completeness.next.label.toLowerCase()}
+                </button>{" "}
+                <span className="text-muted">— {completeness.next.affects}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/*
+        Two columns of ruled groups. On a wide screen the whole profile is one
+        view, which is the difference between reading who you are and scrolling
+        a form.
+      */}
+      <div className="grid gap-x-14 gap-y-10 lg:grid-cols-2 items-start">
+        {FIELD_GROUPS.map((group) => (
+          <section key={group.id} className="min-w-0">
+            <Eyebrow className="text-faint">{group.title}</Eyebrow>
+            <p className="text-sm text-muted mt-1.5 mb-3 leading-relaxed measure-full">{group.blurb}</p>
+
+            <div className="divide-y divide-border border-t border-border">
+              {PROFILE_FIELDS.filter((f) => f.group === group.id).map((field) => (
+                <FieldRow
+                  key={field.id}
+                  field={field}
+                  profile={state.profile}
+                  editing={editing === field.id}
+                  onEdit={() => setEditing(editing === field.id ? null : field.id)}
+                  onCancel={() => setEditing(null)}
+                  onSave={(patch) => save(field, patch)}
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      <div className="rule pt-5">
         <p className="text-sm text-muted leading-relaxed">
           All of this stays on this device, encrypted under your passphrase. There&apos;s no server copy — which is also why clearing
           your browser data would lose it. Export a backup from{" "}
@@ -213,7 +249,7 @@ function Profile() {
           </a>{" "}
           if that matters to you.
         </p>
-      </Card>
+      </div>
     </div>
   );
 }

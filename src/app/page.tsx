@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { IdeasArt, ShopArt } from "@/components/art";
 import { Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
+import { JourneySpine, ProfilePrompt } from "@/components/journey";
 import { withBusiness } from "@/lib/business-param";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
 import { useAIStatus } from "@/lib/useAI";
@@ -135,37 +136,52 @@ export default function HomePage() {
   // next step. The marketing page is for first-time visitors.
   if (ready && hasProfile) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-10">
+        {/*
+          THE DESK, NOT A DASHBOARD.
+
+          Asymmetric on purpose: the one thing to do next takes two thirds of
+          the measure and is set at display size, and everything that is context
+          rather than instruction sits in the margin beside it. Stacked at equal
+          width — which is what this was — a founder has to read four blocks to
+          find out which one is the instruction.
+        */}
         <header className="animate-in">
-          <Eyebrow className="mb-3">Groundwork</Eyebrow>
-          <div className="flex items-end justify-between gap-8">
-            <div className="min-w-0">
-              <h1 className="text-h1">
-                {state.profile.name ? `Welcome back, ${state.profile.name}.` : "Welcome back."}
-              </h1>
-              <p className="text-body-lg text-muted mt-3 leading-relaxed">
-                {business ? (
-                  <>
-                    You&apos;re building <Hi>{business.idea.name}</Hi>.
-                  </>
-                ) : (
-                  "You haven't picked a business yet — that's the first thing below."
-                )}
-              </p>
-            </div>
-            <div className="hidden sm:block shrink-0 w-24 text-muted/60">
-              {business ? <ShopArt className="w-full" /> : <IdeasArt className="w-full" />}
-            </div>
-          </div>
-          <div className="rule mt-6" />
+          <Eyebrow className="mb-4">
+            {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+          </Eyebrow>
+          <h1 className="text-display measure-full">
+            {state.profile.name ? `Morning, ${state.profile.name}.` : "Welcome back."}
+          </h1>
+          {business && (
+            <p className="text-body-lg text-muted mt-4 leading-relaxed">
+              You&apos;re building <Hi>{business.idea.name}</Hi>.
+            </p>
+          )}
+          {!business && (
+            <p className="text-body-lg text-muted mt-4 leading-relaxed">
+              You haven&apos;t picked a business yet — that&apos;s the first thing below.
+            </p>
+          )}
         </header>
 
-        <ContinueCard />
-        <NextActionCard />
-        <StageCard />
+        <div className="grid gap-10 lg:grid-cols-[1.9fr_1fr] lg:gap-14 items-start">
+          <div className="min-w-0 space-y-8">
+            <ContinueCard />
+            <NextActionCard />
+          </div>
+
+          {/* The margin: context, never instruction. */}
+          <aside className="min-w-0 space-y-8 lg:pt-1">
+            <ProfilePrompt />
+            <StageCard />
+          </aside>
+        </div>
+
+        <JourneySpine />
 
         <Section eyebrow="Elsewhere" title="Pick something up">
-          <div className="max-w-2xl">
+          <div className="grid gap-x-10 sm:grid-cols-2">
             <Door href="/lab?tab=shortlist" label="My ideas" detail={`${state.ideas.length} scored against your profile.`} />
             <Door
               href={withBusiness("/coach", business?.id ?? null)}

@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { Wedge } from "@/components/brand";
 import { Icon } from "@/components/icons";
 import { CoachContext } from "@/components/discuss";
 import { Markdown } from "@/components/markdown";
 import { PageHeader, Ready } from "@/components/page";
-import { Badge, Button, Card, Spinner, Textarea } from "@/components/ui";
+import { Badge, Button, Card, Eyebrow, Spinner, Textarea } from "@/components/ui";
 import { effectiveProfile, newId, update, useAppState } from "@/lib/store";
 import { useBusinessRoute } from "@/lib/business-route";
 import { DRAFT_LIMIT, type AIMessage } from "@/lib/types";
@@ -436,25 +437,18 @@ function Coach() {
         }
       />
 
-      <CoachContext business={business} topic={topic} from={from} />
+      {/*
+        A WORKING SURFACE, NOT A CHAT WINDOW.
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Badge tone={intelligence === "engine" ? "accent" : "info"}>
-          {intelligence === "engine" ? "Business Intelligence Engine" : "AI provider"}
-        </Badge>
-        <p className="text-xs text-muted">
-          {intelligence === "engine"
-            ? "Answers are generated locally by a structured system — free, instant, works offline. Not a language model, so it's best on specific business questions."
-            : noProvider
-              ? "AI is selected but no provider is configured — the built-in engine will answer instead."
-              : "Answers come from the configured AI provider, which costs money per message."}{" "}
-          <Link href="/settings" className="text-accent-text underline underline-offset-2">
-            Change
-          </Link>
-        </p>
-      </div>
-
-      <div className="flex-1 space-y-4">
+        The conversation takes the left two thirds at a readable measure; what
+        the coach knows and what is answering sits in the margin. Stacked full
+        width — which is what this was — the context strip, the engine badge and
+        its paragraph pushed the first question three hundred pixels down the
+        page, and the answers were set at chat width with half the screen empty
+        beside them.
+      */}
+      <div className="grid gap-8 lg:grid-cols-[1.7fr_1fr] lg:gap-14 items-start flex-1">
+        <div className="min-w-0 space-y-5 order-2 lg:order-1">
         {/*
           Shown whether or not an AI provider is configured.
 
@@ -466,82 +460,124 @@ function Coach() {
           the way in as well left an empty box and a text field.
         */}
         {messages.length === 0 && (
-          <Card className="p-5">
-            <p className="text-sm text-muted">
-              Ask anything. It answers for <em>your</em> situation, and it will tell you when it thinks you&apos;re
-              wrong — that&apos;s more useful than agreement.
+          <div>
+            <p className="text-body-lg text-muted leading-relaxed measure-full">
+              Ask anything. It answers for <em>your</em> situation, and it will tell you
+              when it thinks you&apos;re wrong — which is more useful than agreement.
             </p>
-            <div className="grid gap-2 mt-4 sm:grid-cols-2">
-              {suggestions.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => send(s)}
-                  className="text-left px-3.5 py-3 rounded-xl border border-border hover:border-accent-border hover:bg-surface-2 transition-colors text-sm min-h-12"
-                >
-                  {s}
-                </button>
+            <ul className="mt-6">
+              {suggestions.map((q) => (
+                <li key={q}>
+                  <button
+                    onClick={() => send(q)}
+                    className="group rule w-full text-left flex items-baseline gap-3 py-4 -mx-3 px-3
+                               rounded-md transition-colors hover:bg-surface-2 min-h-12"
+                  >
+                    <Wedge
+                      size={10}
+                      className="text-border-strong group-hover:text-ink transition-colors mt-1 shrink-0"
+                    />
+                    <span className="text-body-lg font-display leading-snug">{q}</span>
+                  </button>
+                </li>
               ))}
-            </div>
-          </Card>
+            </ul>
+          </div>
         )}
 
-        {messages.map((message) => (
-          <div key={message.id} className={message.role === "user" ? "flex justify-end" : ""}>
-            {message.role === "user" ? (
-              <div className="bg-accent-soft border border-accent-border rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%]">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-              </div>
-            ) : (
-              <Card className={`p-4 ${message.error ? "border-bad/30 bg-bad-soft" : ""}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="size-5 rounded-md bg-accent grid place-items-center shrink-0">
-                    <Icon.spark className="size-3 text-white dark:text-[oklch(15%_0.02_265)]" />
-                  </span>
-                  <span className="text-xs font-medium text-muted">Coach</span>
-                  {message.error && <Badge tone="bad">Failed</Badge>}
-                </div>
-                <Markdown text={message.content} />
-                {message.error && (
-                  <Button
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => {
-                      const lastUser = [...messages].reverse().find((m) => m.role === "user");
-                      if (lastUser) send(lastUser.content);
-                    }}
-                  >
-                    Try again
-                  </Button>
-                )}
+        {/*
+          A TRANSCRIPT, NOT A CHAT WINDOW.
 
-                {/* Only on the latest answer: older ones would stack up chips
-                    down the whole conversation. */}
-                {!message.error && !streaming && message.id === lastCoachId && (
-                  <FollowUps onPick={send} disabled={streaming} />
-                )}
-              </Card>
-            )}
-          </div>
-        ))}
+          This was right-aligned bubbles for the founder and, for every answer,
+          a card with a purple sparkle avatar labelled "Coach" — the exact
+          arrangement every chatbot on the internet ships, including the ones
+          this product is trying not to be mistaken for. It also cost the
+          answer its measure: the thing worth reading was inside a box inside a
+          column, set at chat width.
+
+          So it reads as an interview. The question is set large in the display
+          face with the mark's wedge beside it, the way a printed Q&A sets its
+          questions; the answer is plain prose at full measure underneath. No
+          avatar — there is only one other party in the conversation and the
+          typography already says which lines are theirs.
+        */}
+        {messages.map((message) =>
+          message.role === "user" ? (
+            <div key={message.id} className="rule pt-7 first:border-t-0 first:pt-0">
+              <div className="flex gap-3">
+                <Wedge size={12} className="text-ink mt-2.5 shrink-0" />
+                <h2 className="text-h3 font-display leading-snug measure-full whitespace-pre-wrap">
+                  {message.content}
+                </h2>
+              </div>
+            </div>
+          ) : (
+            <div
+              key={message.id}
+              className={message.error ? "rail rail-bad py-1" : "pl-[1.4rem]"}
+            >
+              {message.error && (
+                <p className="eyebrow text-bad mb-2">That didn&apos;t work</p>
+              )}
+              <Markdown text={message.content} />
+              {message.error && (
+                <Button
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => {
+                    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+                    if (lastUser) send(lastUser.content);
+                  }}
+                >
+                  Try again
+                </Button>
+              )}
+              {/* Only on the latest answer: older ones would stack up chips
+                  down the whole conversation. */}
+              {!message.error && !streaming && message.id === lastCoachId && (
+                <FollowUps onPick={send} disabled={streaming} />
+              )}
+            </div>
+          ),
+        )}
 
         {streaming && (
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="size-5 rounded-md bg-accent grid place-items-center shrink-0">
-                <Icon.spark className="size-3 text-white dark:text-[oklch(15%_0.02_265)]" />
-              </span>
-              <span className="text-xs font-medium text-muted">Coach</span>
-              {!streamText && <Spinner className="size-3.5 text-muted" />}
-            </div>
+          <div className="pl-[1.4rem]">
             {streamText ? (
               <Markdown text={streamText} />
             ) : (
-              <p className="text-sm text-muted">Thinking about your situation…</p>
+              <p className="flex items-center gap-2.5 text-sm text-muted">
+                <Spinner className="size-3.5" />
+                Working through your situation…
+              </p>
             )}
-          </Card>
+          </div>
         )}
 
-        <div ref={endRef} />
+          <div ref={endRef} />
+        </div>
+
+        {/* The margin: what it has in front of it, and what is answering. */}
+        <aside className="min-w-0 space-y-6 order-1 lg:order-2 lg:sticky lg:top-32">
+          <CoachContext business={business} topic={topic} from={from} />
+
+          <div className="rule pt-4">
+            <Eyebrow className="mb-2">Answering</Eyebrow>
+            <p className="text-sm font-medium">
+              {intelligence === "engine" ? "Business Intelligence Engine" : "AI provider"}
+            </p>
+            <p className="text-caption text-muted mt-1.5 leading-relaxed">
+              {intelligence === "engine"
+                ? "Generated locally by a structured system — free, instant, works offline. Not a language model, so it is best on specific business questions."
+                : noProvider
+                  ? "AI is selected but no provider is configured — the built-in engine will answer instead."
+                  : "From the configured AI provider, which costs money per message."}{" "}
+              <Link href="/settings" className="text-ink underline underline-offset-2">
+                Change
+              </Link>
+            </p>
+          </div>
+        </aside>
       </div>
 
       {/*

@@ -29,6 +29,8 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
+import { GroundProfile } from "@/components/ground-profile";
+import { businessQuality } from "@/lib/quality";
 import { ModelDiagram } from "@/components/model-diagram";
 import { Vitals } from "@/components/vitals";
 import { withBusiness } from "@/lib/business-param";
@@ -132,6 +134,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
   const toast = useToast();
   const health = useMemo(() => computeHealth(business), [business]);
   const profile = useAppState(effectiveProfile);
+  const quality = useMemo(() => businessQuality(business, profile), [business, profile]);
   const evidence = useMemo(() => assessEvidence(business, profile), [business, profile]);
   const advice = useAITask<Omit<HealthReport, "score" | "generatedAt">>("health");
   const radar = useAITask<{ items: Omit<RadarItem, "id" | "createdAt">[] }>("radar");
@@ -199,6 +202,13 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         of stacked panels, two of them not on this page at all.
       */}
       <Vitals idea={business.idea} score={business.idea.opportunityScore} scoreLabel="Opportunity" />
+
+      {/*
+        The survey. See `ground-profile.tsx` — every depth in it is read off
+        this business, so two businesses never draw the same picture and a
+        founder can see at a glance whether they are on rock or on fill.
+      */}
+      <GroundProfile quality={quality} seed={business.id} className="my-8" />
 
       {/*
         The loop, drawn. Problem → offer → payment → growth was four paragraphs
