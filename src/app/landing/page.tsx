@@ -40,7 +40,7 @@ function Landing({ business }: { business: SelectedBusiness }) {
 
   if (!chosen) {
     return (
-      <div className="max-w-3xl">
+      <div className="page-column">
         <EmptyState
           icon={<Icon.doc className="size-6" />}
           title="Not enough to write a page yet"
@@ -62,7 +62,7 @@ function Landing({ business }: { business: SelectedBusiness }) {
   ].join("\n");
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Your landing page, three ways"
         art={<SignArt className="w-full" />}

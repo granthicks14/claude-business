@@ -131,7 +131,7 @@ function Analyze() {
 
   if (phase === "reading") {
     return (
-      <div className="max-w-3xl">
+      <div className="page-column">
         <Card className="p-8 text-center">
           <div className="mx-auto w-fit text-accent">
             <Icon.spark className="size-8 animate-pulse" />
@@ -148,7 +148,7 @@ function Analyze() {
 
   if (phase === "result" && analysis) {
     return (
-      <div className="max-w-3xl">
+      <div className="page-column">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
@@ -341,7 +341,7 @@ function Analyze() {
   /* ------------------------------------------------------------- the form --- */
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <div className="text-center py-6 sm:py-8">
         <div className="mx-auto w-40 text-muted/70 mb-3" aria-hidden="true">
           <ShopArt className="w-full" />

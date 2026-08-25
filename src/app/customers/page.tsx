@@ -1,5 +1,7 @@
 "use client";
 
+import { AdvancedOnly } from "@/components/teach";
+
 import { useMemo, useState } from "react";
 
 import { ClaimList } from "@/components/claim";
@@ -63,7 +65,7 @@ function Customers({ business }: { business: SelectedBusiness }) {
   const report = useMemo(() => analyseInterviews(interviews), [interviews]);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Who buys this, and what they told you"
         art={<TalkArt className="w-full" />}
@@ -105,6 +107,13 @@ function Who({ icp }: { icp: ReturnType<typeof idealCustomer> }) {
         <p className="text-sm text-muted mt-2 leading-relaxed">{icp.basis}</p>
       </Card>
 
+      {/*
+        Six lists about the ideal customer. The two that decide the sale are
+        called out below in both modes; this is the full picture behind them,
+        and twenty-odd bullet points is a lot to meet before you know which
+        ones matter.
+      */}
+      <AdvancedOnly summary="The full customer picture — six lists">
       <div className="grid sm:grid-cols-2 gap-4">
         <ListCard title="How you'd know it's one of them" items={icp.qualifiers} icon="check" />
         <ListCard title="Where they actually are" items={icp.findAt} icon="compass" />
@@ -113,6 +122,7 @@ function Who({ icp }: { icp: ReturnType<typeof idealCustomer> }) {
         <ListCard title="What stops them buying" items={icp.objections} icon="scales" tone="warn" />
         <ListCard title="How they'd hear about you" items={icp.discoveryChannels} icon="megaphone" />
       </div>
+      </AdvancedOnly>
 
       <Card className="p-5">
         <SectionHeader title="The two that decide the sale" />

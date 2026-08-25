@@ -12,7 +12,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { writeFileSync, rmSync } from "node:fs";
+import { writeFileSync, rmSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -570,6 +570,52 @@ check("home still resolves", r.navMatching.homeResolves);
 check("breadcrumbs still build", r.navMatching.crumbsStillBuild);
 check("and the section crumb carries the business too", r.navMatching.crumbHrefCarriesTheBusiness);
 check("a section's own page gets no crumb pointing at itself", r.navMatching.sectionPageHasNoSelfCrumb);
+
+
+/** Every file under a directory, recursively. */
+function walk(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) out.push(...walk(full));
+    else out.push(full);
+  }
+  return out;
+}
+
+/* ---------------------------------------------------- Simple vs Detail --- */
+
+/*
+ * THE TOGGLE THAT CHANGED FOUR BLOCKS IN A FORTY-ROUTE APP.
+ *
+ * `experienceMode` has a control in the masthead on every page and a
+ * `/settings` panel promising "full metrics and score breakdowns visible by
+ * default", "nothing collapsed behind a summary" and "financial and market
+ * detail up front". `AdvancedOnly` — the only thing that reads the mode — had
+ * four call sites, so all three claims were false and pressing the control did
+ * nothing a user could see on 37 of 40 routes.
+ *
+ * This is a source-level floor rather than a rendering test, deliberately:
+ * these suites are pure node with no DOM, and the failure being guarded
+ * against is not "the component is broken" — it is "the component stopped
+ * being used", which is exactly what a call-site count catches. The real
+ * rendered difference is measured in the browser by check:visual's sweep.
+ */
+{
+  const files = walk("src");
+  let sites = 0;
+  const inFiles = new Set();
+  for (const f of files) {
+    if (!f.endsWith(".tsx")) continue;
+    const src = readFileSync(f, "utf8");
+    const n = (src.match(/<AdvancedOnly/g) ?? []).length;
+    if (n > 0) { sites += n; inFiles.add(f); }
+  }
+  check("Simple mode collapses detail in more than a handful of places", sites >= 14,
+    `${sites} <AdvancedOnly> call sites`);
+  check("and the detail it hides is spread across the workspace, not one page", inFiles.size >= 8,
+    `${inFiles.size} files`);
+}
 
 console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

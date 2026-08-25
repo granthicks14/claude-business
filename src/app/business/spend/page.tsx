@@ -70,7 +70,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
   );
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="What's worth paying for"
         art={<GrowthArt className="w-full" />}

@@ -174,9 +174,24 @@ export function useIsBeginner() {
 }
 
 /**
- * Content only an experienced user needs. In beginner mode it collapses behind
- * a summary rather than disappearing — hiding information outright would make
- * the app feel like it was keeping things from you.
+ * Content only an experienced user needs. In Simple mode it collapses behind a
+ * summary rather than disappearing — hiding information outright would make the
+ * app feel like it was keeping things from you.
+ *
+ * THIS IS THE MECHANISM THE MASTHEAD SWITCH DRIVES, AND FOR A LONG TIME IT WAS
+ * ATTACHED TO ALMOST NOTHING.
+ *
+ * There were four call sites in the whole product, against a control on every
+ * one of forty routes and a `/settings` page promising "full metrics and score
+ * breakdowns visible by default", "nothing collapsed behind a summary" and
+ * "financial and market detail up front". Three claims, none of them true. A
+ * two-state control that changes nothing you can see is worse than no control:
+ * people press it, watch nothing happen, and correctly conclude the app is not
+ * listening.
+ *
+ * A hairline and a mono label rather than a bordered box, because these now
+ * appear several times on a page and twenty tinted rectangles is precisely the
+ * look the rest of the design work removed.
  */
 export function AdvancedOnly({
   summary = "More detail",
@@ -191,27 +206,27 @@ export function AdvancedOnly({
   if (!beginner) return <>{children}</>;
 
   return (
-    <div className="rounded-xl border border-border bg-surface-2/50">
+    <div className="rule pt-3">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left text-sm font-medium hover:text-accent-text transition-colors min-h-11"
+        className="w-full flex items-center gap-2.5 text-left min-h-11 group"
       >
         <svg
           viewBox="0 0 24 24"
-          className={`size-4 shrink-0 text-muted transition-transform ${open ? "rotate-90" : ""}`}
+          className={`size-3.5 shrink-0 text-section transition-transform ${open ? "rotate-90" : ""}`}
           fill="none"
           stroke="currentColor"
-          strokeWidth="2.2"
+          strokeWidth="2.4"
           aria-hidden="true"
         >
-          <path d="m9 6 6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="m9 6 6 6-6 6" strokeLinecap="square" />
         </svg>
-        <span className="flex-1">{summary}</span>
-        <Badge>Detail</Badge>
+        <span className="eyebrow flex-1 group-hover:text-text transition-colors">{summary}</span>
+        <span className="text-caption text-faint shrink-0">{open ? "Hide" : "Show"}</span>
       </button>
-      {open && <div className="px-4 pb-4">{children}</div>}
+      {open && <div className="pt-2 pb-2">{children}</div>}
     </div>
   );
 }

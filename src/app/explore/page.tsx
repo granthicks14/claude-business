@@ -51,7 +51,7 @@ function Explore() {
   const top = ranked.slice(0, 8);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Which industry is worth your time?"
         art={<IdeasArt className="w-full" />}

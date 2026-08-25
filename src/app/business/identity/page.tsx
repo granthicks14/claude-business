@@ -122,7 +122,7 @@ function Wizard({ business }: { business: SelectedBusiness }) {
   const totalFields = STEPS.reduce((n, s) => n + s.fields.length, 0);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Your business details"
         art={<SignArt className="w-full" />}

@@ -56,7 +56,7 @@ function Operations({ business }: { business: SelectedBusiness }) {
   const needed = econ.unitsFor(target);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="How this business runs"
         art={<ToolboxArt className="w-full" />}

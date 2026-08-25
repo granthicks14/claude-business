@@ -77,7 +77,7 @@ function Builder({ business }: { business: SelectedBusiness }) {
   );
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Build something for your business"
         art={<ToolboxArt className="w-full" />}

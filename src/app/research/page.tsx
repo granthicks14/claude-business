@@ -1,5 +1,7 @@
 "use client";
 
+import { AdvancedOnly } from "@/components/teach";
+
 import { useMemo, useState } from "react";
 
 import { ClaimList } from "@/components/claim";
@@ -71,7 +73,7 @@ function Research({ business }: { business: SelectedBusiness }) {
   const research = business.research;
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="What you actually know"
         art={<ToolboxArt className="w-full" />}
@@ -290,6 +292,7 @@ function Size({ business }: { business: SelectedBusiness }) {
       </Section>
 
       <Card className="p-5">
+        <AdvancedOnly summary="Where each number came from">
         <SectionHeader title="Where the first number came from" description="So you can check it again in six months." />
         <div className="grid sm:grid-cols-2 gap-4">
           <Field label="What you counted" htmlFor="ms-what">
@@ -309,6 +312,7 @@ function Size({ business }: { business: SelectedBusiness }) {
             />
           </Field>
         </div>
+        </AdvancedOnly>
       </Card>
 
       <Card className="p-5">
@@ -562,6 +566,7 @@ function Competitors({ business }: { business: SelectedBusiness }) {
 
       {competitors.length > 0 && (
         <Card className="p-5">
+          <AdvancedOnly summary="Side by side, every competitor">
           <SectionHeader title="Side by side" description="Fill in your own column — that's where the differences become visible." />
           <div className="overflow-x-auto -mx-5 px-5">
             <table className="w-full min-w-[32rem] text-sm border-collapse">
@@ -598,6 +603,7 @@ function Competitors({ business }: { business: SelectedBusiness }) {
               </tbody>
             </table>
           </div>
+          </AdvancedOnly>
         </Card>
       )}
 

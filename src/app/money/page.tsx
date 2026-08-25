@@ -24,7 +24,7 @@ import {
   Tabs,
   useToast,
 } from "@/components/ui";
-import { Explain } from "@/components/teach";
+import { AdvancedOnly, Explain } from "@/components/teach";
 import { currency, customersFromTraffic, runMoneyModel } from "@/lib/finance";
 import { ECONOMICS_DISCLAIMER, SENSITIVITY_NOTE, useIntel } from "@/lib/intel";
 import { actions, effectiveProfile, newId, useAppState } from "@/lib/store";
@@ -110,6 +110,13 @@ function Levers() {
         <p className="text-xs text-muted mt-4 leading-relaxed">{SENSITIVITY_NOTE}</p>
       </Section>
 
+      {/*
+        Per-sale arithmetic, the scenario spread, and the goal reverse-engineer
+        are the three blocks that are unambiguously working rather than answer.
+        Simple mode leads with the model's own headline and puts the arithmetic
+        one click away; Detail has all of it inline.
+      */}
+      <AdvancedOnly summary="What one customer is worth — the per-sale arithmetic">
       <Section
           title="What one customer is worth"
           description="Per-sale arithmetic, plus the one figure most tools invent."
@@ -132,7 +139,9 @@ function Levers() {
           </p>
         ))}
       </Section>
+      </AdvancedOnly>
 
+      <AdvancedOnly summary="Four ways this could go — the scenario spread">
       <Section
           title="Four ways this could go"
           description="Including the one most tools leave out."
@@ -159,7 +168,9 @@ function Levers() {
           predicts which one happens.
         </EstimateNote>
       </Section>
+      </AdvancedOnly>
 
+      <AdvancedOnly summary="Working backwards from your income goal">
       <Section
           title="Working backwards from your goal"
           description="What the income goal in your profile actually asks of you."
@@ -188,6 +199,7 @@ function Levers() {
           </>
         )}
       </Section>
+      </AdvancedOnly>
 
       <p className="text-xs text-muted leading-relaxed">{ECONOMICS_DISCLAIMER}</p>
     </div>
@@ -221,12 +233,6 @@ function Simulator({ business }: { business: SelectedBusiness }) {
           <Field label="Customers per month" htmlFor="m-customers">
             <NumberInput id="m-customers" value={inputs.customersPerMonth} onChange={(customersPerMonth) => set({ customersPerMonth })} label="Customers per month" />
           </Field>
-          <Field label="Monthly traffic / leads" htmlFor="m-traffic" hint="Leave at 0 if you're not modelling a funnel.">
-            <NumberInput id="m-traffic" value={inputs.monthlyTraffic} onChange={(monthlyTraffic) => set({ monthlyTraffic })} label="Monthly traffic" />
-          </Field>
-          <Field label={<><Explain id="conversion-rate">Conversion rate</Explain></>} htmlFor="m-conv">
-            <NumberInput id="m-conv" value={inputs.conversionRate} onChange={(conversionRate) => set({ conversionRate })} suffix="%" max={100} step={0.1} label="Conversion rate" />
-          </Field>
           <Field label={<>Cost to get a <Explain id="cac">customer</Explain></>} htmlFor="m-cac" hint="Ads, samples, travel, your time if you pay for it.">
             <NumberInput id="m-cac" value={inputs.cac} onChange={(cac) => set({ cac })} prefix="$" label="Customer acquisition cost" />
           </Field>
@@ -236,10 +242,30 @@ function Simulator({ business }: { business: SelectedBusiness }) {
           <Field label={<><Explain id="fixed-costs">Fixed</Explain> monthly expenses</>} htmlFor="m-fixed" hint="Software, insurance, rent, subscriptions.">
             <NumberInput id="m-fixed" value={inputs.monthlyExpenses} onChange={(monthlyExpenses) => set({ monthlyExpenses })} prefix="$" label="Fixed monthly expenses" />
           </Field>
-          <Field label="Refund / cancellation rate" htmlFor="m-refund">
-            <NumberInput id="m-refund" value={inputs.refundRate} onChange={(refundRate) => set({ refundRate })} suffix="%" max={100} step={0.5} label="Refund rate" />
-          </Field>
         </div>
+
+        {/*
+          The funnel and the refund rate, one click away in Simple mode.
+
+          Price, customers, costs and expenses are the four numbers everybody
+          has to answer. A traffic-and-conversion funnel is a different mental
+          model — it assumes an online business with measurable visitors — and
+          meeting it in the same grid as "price per sale" is how somebody
+          concludes the app is asking for figures they do not have.
+        */}
+        <AdvancedOnly summary="Funnel and refunds — traffic, conversion, cancellations">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Monthly traffic / leads" htmlFor="m-traffic" hint="Leave at 0 if you're not modelling a funnel.">
+              <NumberInput id="m-traffic" value={inputs.monthlyTraffic} onChange={(monthlyTraffic) => set({ monthlyTraffic })} label="Monthly traffic" />
+            </Field>
+            <Field label={<><Explain id="conversion-rate">Conversion rate</Explain></>} htmlFor="m-conv">
+              <NumberInput id="m-conv" value={inputs.conversionRate} onChange={(conversionRate) => set({ conversionRate })} suffix="%" max={100} step={0.1} label="Conversion rate" />
+            </Field>
+            <Field label="Refund / cancellation rate" htmlFor="m-refund">
+              <NumberInput id="m-refund" value={inputs.refundRate} onChange={(refundRate) => set({ refundRate })} suffix="%" max={100} step={0.5} label="Refund rate" />
+            </Field>
+          </div>
+        </AdvancedOnly>
 
         {inputs.monthlyTraffic > 0 && inputs.conversionRate > 0 && (
           <p className="text-xs text-muted mt-4 pt-3 border-t border-border">

@@ -330,9 +330,25 @@ const COLLECT = ({ SCALE_IN_PAGE, DISPLAY_FLOOR_IN_PAGE }) => {
           [...(el.parentElement.parentElement?.children ?? [])].filter((w) => [...w.children].some(isCard)).length >= 3);
       if (!grouped) out.cards++;
     }
-    // A primary is the one filled slab on the page. Matched on the token
-    // rather than on a colour, so a themed page counts the same in both.
-    if (/(^|\s)bg-ink(\s|$)/.test(cls) && (el.tagName === "BUTTON" || el.tagName === "A")) out.primaries++;
+    /*
+     * A primary is the one filled slab on the page. Matched on the token
+     * rather than on a colour, so a themed page counts the same in both.
+     *
+     * Scoped to `main`, and that is a correction rather than a convenience.
+     * The rule is about how many things compete to be *the* action on a page;
+     * the masthead's controls are not page actions. The Simple/Detail switch
+     * marks its live half with `bg-ink` — the same "this is the one" gesture
+     * used everywhere else — and counting it added a phantom fourth primary to
+     * every route in the product, which showed up as a failure on the one page
+     * already sitting at the ceiling.
+     */
+    if (
+      /(^|\s)bg-ink(\s|$)/.test(cls) &&
+      (el.tagName === "BUTTON" || el.tagName === "A") &&
+      el.closest("main")
+    ) {
+      out.primaries++;
+    }
 
     /*
      * "Fully round" means a pill or a circle: a radius at least half the
@@ -469,10 +485,30 @@ async function occludedAcrossScroll(page) {
     }, fraction);
     await page.waitForTimeout(90);
     const hits = await page.evaluate(() => {
-      const bar = document.querySelector('nav[aria-label="Primary"]');
+      /*
+       * A HIDDEN BAR HAS A RECT OF ALL ZEROES, AND THAT MATTERS NOW.
+       *
+       * The bottom bar is `lg:hidden`, so at 1280px it is `display: none` and
+       * `getBoundingClientRect().top` is 0 — the top of the viewport. The old
+       * condition survived that by accident, because it also required
+       * `r.top < barTop` and nothing on screen has a negative top. Tightening
+       * the rule to `r.bottom > barTop` removed the accident and every visible
+       * control on every desktop page suddenly counted as occluded.
+       *
+       * So the bar only participates when it is actually rendered. Measured
+       * from its box rather than from a breakpoint, because the check should
+       * not have to know where `lg` is.
+       */
+      const barEl = document.querySelector('nav[aria-label="Primary"]');
+      const barBox = barEl ? barEl.getBoundingClientRect() : null;
+      const barShown = !!barBox && barBox.height > 0 && barBox.width > 0;
+
       const header = document.querySelector("header");
-      const barTop = bar ? bar.getBoundingClientRect().top : null;
-      const headerBottom = header ? header.getBoundingClientRect().bottom : null;
+      const headerBox = header ? header.getBoundingClientRect() : null;
+      const headerShown = !!headerBox && headerBox.height > 0;
+
+      const barTop = barShown ? barBox.top : null;
+      const headerBottom = headerShown ? headerBox.bottom : null;
       const stuck = (el) => {
         for (let n = el; n && n !== document.body; n = n.parentElement) {
           const pos = getComputedStyle(n).position;

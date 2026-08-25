@@ -822,6 +822,29 @@
 
   /* A hairline that separates two blocks. The primary structural device in
      the whole product, and the reason most sections need no border. */
+  /*
+   * THE PAGE COLUMN.
+   *
+   * Twenty routes carried `max-w-3xl` — 768px — as their root wrapper. That was
+   * the right number when the frame was a 248px sidebar beside a `max-w-5xl`
+   * column. The frame became a full-width masthead over an 84rem canvas, and
+   * the pages were never revisited, so on a 1440px screen the navigation and
+   * the datum line ran the full width while the content stopped two thirds of
+   * the way across and left 480px of nothing beside it. That gap is most of
+   * what reads as unfinished in a screenshot.
+   *
+   * 64rem rather than the whole canvas: prose is already held to `--measure`,
+   * but a card is not, and a single card stretched to 1248px with one line in
+   * it looks worse than the dead space did. This is the width at which a
+   * two-column grid still has room and a single column has not become a band.
+   *
+   * One class, so the next adjustment is one number rather than twenty.
+   */
+  .page-column {
+    width: 100%;
+    max-width: 64rem;
+  }
+
   .rule {
     border-top: 1px solid var(--border);
   }

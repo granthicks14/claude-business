@@ -137,7 +137,7 @@ function Website({ business }: { business: SelectedBusiness }) {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Build your website"
         art={<SignArt className="w-full" />}

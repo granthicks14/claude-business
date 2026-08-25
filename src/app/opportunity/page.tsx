@@ -95,7 +95,7 @@ function Finder() {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Find the best opportunity where you live"
         art={<GrowthArt className="w-full" />}

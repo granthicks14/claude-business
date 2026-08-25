@@ -49,7 +49,7 @@ function Improve({ business }: { business: SelectedBusiness }) {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Make it better"
         art={<IdeasArt className="w-full" />}

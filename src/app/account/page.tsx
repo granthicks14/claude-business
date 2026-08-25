@@ -60,7 +60,7 @@ function Account() {
   }, []);
 
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="page-column space-y-6">
       <PageHeader
         title="Your account"
         description="Everything you create here is encrypted with your passphrase and stored in this browser. There is no server copy, so nobody — including whoever runs this site — can read it."

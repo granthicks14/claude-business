@@ -41,7 +41,7 @@ function Launch({ business }: { business: SelectedBusiness }) {
   const extras = readiness.items.filter((i) => !i.essential);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Are you ready to launch?"
         art={<ChecklistArt className="w-full" />}

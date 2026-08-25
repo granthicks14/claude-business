@@ -44,7 +44,7 @@ function Start() {
   };
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <div className="text-center py-6 sm:py-10">
         <h1 className="text-[2rem] leading-[1.12] sm:text-4xl font-semibold tracking-tight">
           Where are you starting from?

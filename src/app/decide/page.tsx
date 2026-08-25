@@ -1,5 +1,7 @@
 "use client";
 
+import { AdvancedOnly } from "@/components/teach";
+
 import Link from "next/link";
 import { useState } from "react";
 
@@ -58,7 +60,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
   const top = experiments[0];
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Should you actually do this?"
         art={<TalkArt className="w-full" />}
@@ -198,6 +200,13 @@ function Decide({ business }: { business: SelectedBusiness }) {
             </Card>
           )}
 
+          {/*
+            The single biggest threat is above this and stays above it in both
+            modes. This is the long tail — real, useful when you are ready for
+            it, and a wall of twelve ranked risks is not the thing to meet
+            immediately after being told the business might not work.
+          */}
+          <AdvancedOnly summary="The full threat list, ranked">
           <Section
               title="Everything working against you"
               description="Ordered by how likely it is multiplied by how much damage it would do."
@@ -219,6 +228,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
               ))}
             </div>
           </Section>
+          </AdvancedOnly>
 
           <Card className="p-5">
             <SectionHeader title="What would change my mind" description="The app arguing against its own argument." />
@@ -316,6 +326,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
             </Section>
           )}
 
+          <AdvancedOnly summary="The assumption ledger, in full">
           <Section
               title="The assumption ledger"
               description="Everything this business rests on, ordered by how much rides on it multiplied by how unsure you are."
@@ -337,6 +348,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
               ))}
             </div>
           </Section>
+          </AdvancedOnly>
         </div>
       )}
 
@@ -377,6 +389,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
 
       {tab === "history" && <History business={business} />}
 
+      <AdvancedOnly summary="How to read this page">
       <Card className="p-5 mt-6">
         <SectionHeader title="How to read this page" />
         <p className="text-sm text-muted leading-relaxed">{EPISTEMICS_NOTE}</p>
@@ -393,6 +406,7 @@ function Decide({ business }: { business: SelectedBusiness }) {
           for which number matters most.
         </p>
       </Card>
+      </AdvancedOnly>
     </div>
   );
 }

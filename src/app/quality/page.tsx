@@ -7,6 +7,7 @@ import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { GrowthArt } from "@/components/art";
+import { AdvancedOnly } from "@/components/teach";
 import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, Section, SectionHeader, Tabs } from "@/components/ui";
 import { PositionMap, type MapPoint } from "@/components/position-map";
 import { withBusiness } from "@/lib/business-param";
@@ -88,7 +89,7 @@ function Quality({ business }: { business: SelectedBusiness }) {
   }, [others, business, profile, quality]);
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="Is this a good business?"
         art={<GrowthArt className="w-full" />}
@@ -197,6 +198,13 @@ function Quality({ business }: { business: SelectedBusiness }) {
             </Section>
           )}
 
+          {/*
+            Thirteen weighted meters. Genuinely useful, and genuinely not the
+            first thing a beginner needs — the two lists above already say what
+            is strong and what is dragging, which is the actionable half of
+            this table.
+          */}
+          <AdvancedOnly summary="Every dimension, scored">
           <Card className="p-5">
             <SectionHeader title="Every dimension" description="Each one computed from something recorded, never assigned." />
             <div className="space-y-4">
@@ -217,6 +225,7 @@ function Quality({ business }: { business: SelectedBusiness }) {
             </div>
             <p className="text-xs text-muted mt-5 leading-relaxed">{QUALITY_NOTE}</p>
           </Card>
+          </AdvancedOnly>
         </div>
       )}
 

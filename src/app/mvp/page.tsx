@@ -40,7 +40,7 @@ function MVP({ business }: { business: SelectedBusiness }) {
   const must = plan.features.filter((f) => f.bucket === "must");
 
   return (
-    <div className="max-w-3xl">
+    <div className="page-column">
       <PageHero
         title="The smallest thing you could sell"
         art={<ToolboxArt className="w-full" />}

@@ -1,5 +1,7 @@
 "use client";
 
+import { AdvancedOnly } from "@/components/teach";
+
 import Link from "next/link";
 
 import { useState } from "react";
@@ -212,6 +214,11 @@ function Validation({ business }: { business: SelectedBusiness }) {
                 )}
               </Card>
 
+              {/*
+                Seven evidence cards, each a list of graded claims. The verdict
+                and the confidence are above; this is the working behind them.
+              */}
+              <AdvancedOnly summary="Every piece of evidence, by question">
               <div className="grid gap-3 sm:grid-cols-2">
                 <EvidenceCard title="Who the customers are" items={report.customers} />
                 <EvidenceCard title="Does the problem exist?" items={report.problemEvidence} />
@@ -221,6 +228,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
                 <EvidenceCard title="Market trends" items={report.trends} />
                 <EvidenceCard title="Complaints about existing options" items={report.complaints} />
               </div>
+              </AdvancedOnly>
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <Card className="p-5">
@@ -403,6 +411,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
         </AIPanel>
       )}
 
+      <AdvancedOnly summary="What these labels mean">
       <Card className="p-5">
         <SectionHeader
           title="What these labels mean"
@@ -422,6 +431,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
           ))}
         </ul>
       </Card>
+      </AdvancedOnly>
     </div>
   );
 }
