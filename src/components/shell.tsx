@@ -8,7 +8,7 @@ import { Footer } from "./footer";
 import { Icon, type IconName } from "./icons";
 import { Wedge, Wordmark } from "./brand";
 import { stageLabel } from "./journey";
-import { ToastProvider } from "./ui";
+import { Button, Dialog, ToastProvider } from "./ui";
 import { AccountGate, signOut } from "./account-gate";
 import { withBusiness } from "@/lib/business-param";
 import { actions, activeBusiness, useAppState } from "@/lib/store";
@@ -500,30 +500,84 @@ function ModeToggle({ className = "" }: { className?: string }) {
 function LockNow() {
   const open = useAppOpen();
   const guest = useGuest();
+  const [asking, setAsking] = useState(false);
   if (!open) return null;
 
   return (
-    <button
-      onClick={() => signOut()}
-      /*
-       * A guest has no passphrase, so "the passphrase will be needed again"
-       * would be a false description of the only exit on screen — and the
-       * thing they actually need warning about is the opposite of a lock: the
-       * work goes, and there is nothing to come back to.
-       */
-      title={
-        guest
-          ? "Stop looking around — this session and everything in it is discarded"
-          : "Lock now — the passphrase will be needed again"
-      }
-      aria-label={guest ? "End this session" : "Lock now"}
-      className="size-9 grid place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
-    >
-      <svg viewBox="0 0 24 24" className="size-[17px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <rect x="4" y="10.5" width="16" height="10" rx="2" />
-        <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
-      </svg>
-    </button>
+    <>
+      <button
+        onClick={() => setAsking(true)}
+        title={
+          guest
+            ? "Stop looking around — this session and everything in it is discarded"
+            : "Lock or sign out"
+        }
+        aria-label={guest ? "End this session" : "Lock or sign out"}
+        className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
+      >
+        <svg viewBox="0 0 24 24" className="size-[17px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <rect x="4" y="10.5" width="16" height="10" rx="2" />
+          <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+        </svg>
+        {/*
+          A LABEL, AND A QUESTION BEFORE IT ACTS.
+
+          This was an unlabelled 36px padlock wired straight to `signOut()`,
+          which calls `forgetKeys()` — so one stray click on an ambiguous icon
+          silently deleted a week-long "stay signed in on this device" key, with
+          no confirmation and nothing said. That is the most plausible cause of
+          "it keeps logging me out even though I ticked the box", and it is why
+          the two very different things this button did are now two choices.
+        */}
+        <span className="hidden sm:inline text-sm font-medium">{guest ? "End" : "Lock"}</span>
+      </button>
+
+      {asking && (
+        <Dialog open onClose={() => setAsking(false)} title={guest ? "End this session?" : "Lock, or sign out?"}>
+          {guest ? (
+            <div className="space-y-4">
+              <p className="text-body leading-relaxed">
+                You are browsing without an account, so everything in this session
+                — including anything you have made — is discarded and cannot be
+                recovered.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="danger" onClick={() => signOut()}>
+                  End it and discard everything
+                </Button>
+                <Button variant="ghost" onClick={() => setAsking(false)}>
+                  Keep looking around
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="rule pb-4">
+                <p className="text-body font-medium">Lock now</p>
+                <p className="text-caption text-muted mt-1 leading-relaxed">
+                  Asks for your passphrase again straight away. This device stays
+                  remembered, so it is the passphrase and not the week.
+                </p>
+                <Button className="mt-3" variant="primary" onClick={() => signOut({ keepDevice: true })}>
+                  Lock
+                </Button>
+              </div>
+              <div>
+                <p className="text-body font-medium">Sign out of this device</p>
+                <p className="text-caption text-muted mt-1 leading-relaxed">
+                  Also stops this browser remembering you, so the next visit
+                  starts from the sign-in screen. Nothing is deleted — your work
+                  stays encrypted here and your passphrase opens it again.
+                </p>
+                <Button className="mt-3" variant="secondary" onClick={() => signOut()}>
+                  Sign out
+                </Button>
+              </div>
+            </div>
+          )}
+        </Dialog>
+      )}
+    </>
   );
 }
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
+import { describeIntent, locksGeneration } from "@/lib/business-intent";
 import { IdeaCard } from "@/components/idea-card";
 import { SourceNote } from "@/components/page";
 import {
@@ -11,6 +12,7 @@ import {
   Button,
   Card,
   ErrorPanel,
+  Eyebrow,
   Field,
   Input,
   LinkButton,
@@ -144,6 +146,19 @@ function StartHere() {
   const state = useAppState((s) => s);
   const { generate, loading, stage, stages, stageIndex, progress, error, retry, clearError } = useIdeaGeneration();
   const toast = useToast();
+
+  /*
+   * THE DIRECTION THEY GAVE, READ BACK BEFORE ANYTHING IS GENERATED.
+   *
+   * A founder who typed "I want to build a car detailing business" has already
+   * answered the only question that matters, and the four guide questions below
+   * are the repetitive onboarding they were promised they would not meet. More
+   * importantly they need to see, before the batch runs, that the app heard
+   * them — because until this release it demonstrably had not.
+   */
+  const direction = state.businessIntent ?? null;
+  const locked = locksGeneration(direction);
+
   /*
    * The questions come first for somebody with nothing yet, and never again.
    *
@@ -152,14 +167,13 @@ function StartHere() {
    * founder who already has ideas has moved past that — re-asking would be the
    * repetitive questioning this pass is meant to remove — so the guide is shown
    * once and the dials on the shortlist carry steering from then on.
+   *
+   * Skipped entirely for a locked direction: somebody who named their trade is
+   * not looking for help choosing one.
    */
-  const [guided, setGuided] = useState(state.ideas.length > 0);
+  const [guided, setGuided] = useState(state.ideas.length > 0 || locked);
 
-  if (!guided) {
-    return <Guide onDone={() => setGuided(true)} />;
-  }
-
-  const run = async () => {
+  const run = useCallback(async () => {
     clearError();
     const found = await generate({
       profile: state.profile,
@@ -167,22 +181,78 @@ function StartHere() {
       avoid: state.ideas.map((i) => i.name),
     });
     if (found.length) toast(`${found.length} options added to your shortlist`, "good");
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.profile, state.ideas.length]);
+
+  /*
+   * THE CLICK THAT SUBMITTED THE SENTENCE IS THE CLICK THAT GENERATES.
+   *
+   * Before this, typing a request took you to a page with a Generate button on
+   * it — so the app collected an instruction, navigated away from it, and then
+   * asked for it again. Whatever else that is, it is not listening.
+   *
+   * Guarded by a ref rather than by the dependency list, because the effect
+   * must fire exactly once per arrival: `state.ideas` changes the moment the
+   * batch lands, and anything that re-ran on it would generate forever.
+   */
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current || !locked || loading) return;
+    if (state.ideas.length > 0) return;
+    started.current = true;
+    void run();
+  }, [locked, loading, state.ideas.length, run]);
+
+  if (!guided) {
+    return <Guide onDone={() => setGuided(true)} />;
+  }
+
+  /* Fewer than asked for is a fact about the trade, not a failure to hide. */
+  const shortfall = locked && !loading && state.ideas.length > 0 && state.ideas.length < 5;
 
   return (
     <Card className="p-5">
+      {direction && (
+        <div className="rail rail-good py-1 mb-5">
+          <Eyebrow className="text-good">Your direction</Eyebrow>
+          <p className="text-body-lg mt-1.5 leading-snug">{describeIntent(direction)}</p>
+          <p className="text-caption text-muted mt-2 leading-relaxed">
+            From what you typed: &ldquo;{direction.originalText}&rdquo;
+          </p>
+          <div className="mt-3">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                actions.clearBusinessIntent();
+                started.current = true; // Do not immediately re-run on the cleared state.
+                toast("Direction cleared — the next batch is open again", "good");
+              }}
+            >
+              Not what you meant? Change direction
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-56 flex-1">
           <h2 className="font-semibold">
-            {state.ideas.length === 0 ? "Not sure where to start? Don't choose — react." : "Add another spread"}
+            {locked
+              ? state.ideas.length === 0
+                ? "Ways to build it"
+                : "More ways to build it"
+              : state.ideas.length === 0
+                ? "Not sure where to start? Don't choose — react."
+                : "Add another spread"}
           </h2>
           <p className="text-sm text-muted mt-1 leading-relaxed">
-            Three angles run at once — best all-round, fastest to a first payment, biggest ceiling — so you get
-            genuinely different options rather than one idea five times. Built locally from your profile, free, in
-            about a second.
+            {locked
+              ? `Every option below is a ${direction!.label} business. They differ in who buys, how it is delivered and at what scale — which is the choice actually worth making once the trade is settled.`
+              : "Three angles run at once — best all-round, fastest to a first payment, biggest ceiling — so you get genuinely different options rather than one idea five times. Built locally from your profile, free, in about a second."}
           </p>
         </div>
-        <Button variant="primary" size="lg" onClick={run} loading={loading} icon={<Icon.bolt />}>
+        <Button variant="primary" size="lg" onClick={run} loading={loading} disabled={loading} icon={<Icon.bolt />}>
           {state.ideas.length === 0 ? "Generate ideas" : "More ideas"}
         </Button>
       </div>
@@ -190,6 +260,18 @@ function StartHere() {
       {error && (
         <div className="mt-4">
           <ErrorPanel error={error} onRetry={retry} retrying={loading} />
+        </div>
+      )}
+
+      {shortfall && (
+        <div className="rail rail-warn py-1 mt-4">
+          <p className="text-caption text-muted leading-relaxed">
+            That is everything the engine can build inside {direction!.label} without
+            repeating itself. It is not a short answer because something failed —
+            a single trade only supports so many genuinely different shapes.
+            Widen with <strong>Change direction</strong> if you want to see
+            neighbouring options too.
+          </p>
         </div>
       )}
 

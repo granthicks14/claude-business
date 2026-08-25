@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { GroundworkDiagram } from "@/components/groundwork-diagram";
 import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { IdeasArt, ShopArt } from "@/components/art";
 import { AskBar } from "@/components/ask-bar";
-import { useAppOpen } from "@/components/account-gate";
+import { CreateAccount, UnlockAnyAccount, useAppOpen } from "@/components/account-gate";
 import { Wedge } from "@/components/brand";
-import { Badge, Button, Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
+import { Badge, Button, Dialog, Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
 import { JourneySpine, ProfilePrompt } from "@/components/journey";
 import { withBusiness } from "@/lib/business-param";
-import { actions, activeBusiness, useAppState, useStoreReady } from "@/lib/store";
+import { actions, activeBusiness, markReadyEmpty, useAppState, useStoreReady } from "@/lib/store";
+import { startGuest } from "@/lib/vault";
 import { sampleBusiness } from "@/lib/sample";
 import { useAIStatus } from "@/lib/useAI";
 
@@ -112,6 +114,63 @@ function ContinueCard() {
  * `clearSample` puts everything back. Nothing the founder has made is touched,
  * which is what the badge beside it says.
  */
+/**
+ * Create an account, sign in, or look around first.
+ *
+ * The hierarchy is deliberate and is the one thing this block has to get
+ * right: creating an account is the primary, signing in is plainly available
+ * next to it, and trying the product without either is offered underneath in
+ * the register of an aside. Somebody who has never seen Groundwork should be
+ * able to answer all three questions without reading a paragraph.
+ */
+function SignInDoors() {
+  const [mode, setMode] = useState<"create" | "signin" | null>(null);
+  const open = useAppOpen();
+  if (open) return null;
+
+  return (
+    <>
+      <div className="mt-8 flex flex-wrap items-center gap-2.5">
+        <Button variant="primary" size="lg" onClick={() => setMode("create")}>
+          Create account
+        </Button>
+        <Button variant="secondary" size="lg" onClick={() => setMode("signin")}>
+          Sign in
+        </Button>
+      </div>
+      <p className="text-caption text-muted mt-3 leading-relaxed max-w-md">
+        No email and nothing sent anywhere — an account is a name and a
+        passphrase that encrypts your work in this browser.{" "}
+        <button
+          onClick={() => {
+            markReadyEmpty();
+            actions.loadSample(sampleBusiness());
+            startGuest();
+          }}
+          className="text-section underline underline-offset-2 font-medium"
+        >
+          Or look around first, without one
+        </button>
+        .
+      </p>
+
+      {mode && (
+        <Dialog
+          open
+          onClose={() => setMode(null)}
+          title={mode === "create" ? "Create your account" : "Sign in"}
+        >
+          {mode === "create" ? (
+            <CreateAccount legacy={null} hasOthers={false} onDone={() => setMode(null)} />
+          ) : (
+            <UnlockAnyAccount onDone={() => setMode(null)} onCreate={() => setMode("create")} />
+          )}
+        </Dialog>
+      )}
+    </>
+  );
+}
+
 function OpenExampleButton() {
   const router = useRouter();
   return (
@@ -341,6 +400,24 @@ export default function HomePage() {
                   <AskBar autoFocus={false} />
                 </div>
               )}
+
+              {/*
+                THE THREE DOORS, NAMED.
+
+                Before this the landing page had no way to make an account and
+                no way to sign in: both of its buttons went to
+                `/lab?tab=generate`, and the only routes to an account were to
+                guess `/account` or to wander into a private route and meet the
+                gate. A first-time visitor could not answer "how do I sign up?"
+                and a returning one could not answer "where do I sign in?".
+
+                Opened in a dialog rather than by navigation, and that is a
+                correctness requirement rather than a preference: a guest's work
+                lives in a module variable, so a full document load destroys it
+                — which is exactly why `guest-banner.tsx` opens the same form the
+                same way.
+              */}
+              <SignInDoors />
 
               <p className="text-small text-muted mt-8 leading-relaxed max-w-md">
                 No account on a server, no API key, no cost.{" "}

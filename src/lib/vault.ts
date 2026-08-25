@@ -819,6 +819,29 @@ export function lock(): void {
   emit();
 }
 
+/**
+ * Lock the screen without revoking the week.
+ *
+ * `lock()` calls `forgetKeys()`, which deletes the device key — correct for
+ * "sign out of this device" and much too strong for "ask me for my passphrase
+ * again". The masthead only offered the strong one, behind an unlabelled
+ * padlock, which is how a deliberately chosen seven-day session got ended by a
+ * stray click with nothing said about it.
+ *
+ * The tab key still goes: it is this tab's own choice and this is that tab
+ * locking itself.
+ */
+export function lockKeepingDevice(): void {
+  session = null;
+  guest = false;
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    /* Storage disabled. Nothing was written, so nothing to clear. */
+  }
+  emit();
+}
+
 /** Encrypt and store the current state. No-op while locked, never a throw. */
 export async function saveState(state: unknown): Promise<boolean> {
   if (!session) return false;

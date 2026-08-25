@@ -232,9 +232,22 @@ async function main() {
     /* --------------------------------------------- sign out, and back in ----- */
     console.log("\n--- signing out and back in ---");
     await page2.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
-    const lock = page2.getByRole("button", { name: /lock now|sign out/i }).first();
+    /*
+     * The masthead control asks before it acts now, and that is the fix: it was
+     * an unlabelled padlock wired straight to signOut(), which deletes the
+     * week-long device key. One stray click ended a session somebody had
+     * deliberately chosen, silently.
+     */
+    const lock = page2.getByRole("button", { name: /lock or sign out/i }).first();
     if (await lock.count()) {
       await lock.click();
+      await page2.waitForTimeout(500);
+      check(
+        await mentions(page2, "This device stays remembered"),
+        "locking asks first, and separates locking from signing out",
+      );
+      // Scoped to the dialog: /account carries its own "Sign out" button too.
+      await page2.getByRole("dialog").getByRole("button", { name: "Sign out", exact: true }).click();
       await page2.waitForTimeout(1000);
       const field = page2.getByLabel("Passphrase", { exact: true });
       check((await field.count()) > 0, "locking asks for the passphrase again");
@@ -289,6 +302,46 @@ async function main() {
       await mentions(stranger, "Most tools help you build faster"),
       "somebody with no account still gets the pitch, which is who it is for",
     );
+    /* ================================================ the car detailing run == */
+    console.log("\n--- telling it what to build, and being heard (the §51 run) ---");
+
+    const buyer = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await buyer.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
+    await createAccountOnScreen(buyer, "Detailer");
+    await buyer.waitForTimeout(800);
+
+    await buyer.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    const ask = buyer.locator("main input, main textarea").first();
+    await ask.fill("I want to build a car detailing business in Coppell with $500 and 10 hours a week");
+    await ask.press("Enter");
+    await buyer.waitForTimeout(4000);
+
+    check(buyer.url().includes("/lab"), "an explicit request goes straight to the lab", buyer.url());
+    check(await mentions(buyer, "car detailing"), "and the app reads the direction back before generating");
+    check(
+      await mentions(buyer, "I want to build a car detailing business"),
+      "quoting the sentence they actually typed",
+    );
+
+    // The batch is started by the click that submitted the sentence.
+    await buyer.waitForTimeout(3000);
+    const listed = await buyer.locator("main").innerText();
+    const cards = (listed.match(/Detailing/gi) ?? []).length;
+    check(cards >= 3, "ideas appear without a second Generate click", `${cards} mentions of the trade`);
+    check(
+      !/Toolkit for Content Teams|Busy Parents|Tenancy/i.test(listed),
+      "and nothing unrelated to what was asked for is in the list",
+    );
+
+    await buyer.reload({ waitUntil: "networkidle" });
+    await buyer.waitForTimeout(1500);
+    check(await mentions(buyer, "car detailing"), "the direction survives a refresh");
+
+    const fresh2 = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await fresh2.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    await fresh2.waitForTimeout(800);
+    check(await mentions(fresh2, "Create account"), "a stranger is offered an account on the landing page");
+    check(await mentions(fresh2, "Sign in"), "and a way back in if they already have one");
   } catch (error) {
     fail("the run itself threw", String(error?.message ?? error));
   } finally {

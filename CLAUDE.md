@@ -38,10 +38,11 @@ npm run test:competition # 52 competition-reading tests
 npm run test:describe  # 56 natural-language founder profile tests
 npm run test:intent    # 59 intent-router tests: what it reads, and what it refuses
 npm run test:iq        # 37 pipeline tests: the audit that started the work
-npm test               # all ten
+npm run test:direction # 20 tests: an instruction is not an interest
+npm test               # all eleven
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
-npm run check:persist  # 27 browser checks: does the work survive every path
+npm run check:persist  # 40 browser checks: does the work survive every path
 npm run check:visual   # measures the look-and-feel invariants in a browser
 ```
 
@@ -429,6 +430,81 @@ changing shape underneath you, while one that's present and says what it's
 waiting for reads as a plan. `sectionFor` matches longest-prefix-wins, so
 `/business/website` opens "Make it" rather than "My business" — getting that
 wrong breaks nothing visibly, which is exactly why it needs the test.
+
+### An instruction is not an interest
+
+`match.ts` treats every stated interest as a market signal that *ranks* and
+never *gates*, and that rule is right — it is why naming an interest cannot
+shrink your options. But it makes an interest the weakest possible
+representation of what somebody said, and everything typed into the ask bar was
+being routed into one.
+
+**Measured.** A founder types *"I want to build a car detailing business in
+Coppell with $500 and 10 hours a week"*. `readIntent` returned the verb
+`brainstorm` at 30% confidence; `readUnderstood` reduced the sentence to
+`interests: ["detailing"]`; the sentence itself was discarded, because nothing
+in `AppState` could hold it. The generator then returned an AI workflow toolkit,
+a tenancy turnaround service and a training toolkit for busy parents — four of
+ten automotive, and **zero detailing businesses**. `test:direction` keeps that
+0/10 as a witness.
+
+`business-intent.ts` adds the level the app was missing. Three, not one:
+
+```
+"I like cars."                          interest    ranks
+"I'd prefer something with cars."       preference  weights
+"I want to build a car detailing …"     explicit    LOCKS
+```
+
+Only `explicit` locks, so nothing about interests changed.
+
+**The lock is to the trade, not the industry.** Locking to `automotive` alone
+still returns pre-purchase inspections and quote-checking services. Problems
+carry a `trades` list — the words a founder uses for the job, as against the
+customer's-point-of-view label the problem is written in. Nobody types
+"Vehicles that look neglected"; they type "car detailing". A trade named with no
+industry ("ceramic coating") resolves through the same list.
+
+**Inside a lock the diversity caps measure the wrong thing.** Every candidate
+shares industry, problem and topic by construction, so the one-per-problem rule
+cut a ten-idea request to **one** and the industry cap would have held it to
+three. They re-key to customer, delivery model and scale — which is the variety
+actually wanted once the trade is settled: mobile against shop-based, one car
+against a dealership's forecourt.
+
+Two smaller things fell out of it. Titles use the founder's word, so the list
+reads "Car Detailing Service for Small Fleets and Dealers" rather than "Vehicle
+Presentation Service". And `handsOn` stops a physical trade being sold as online
+delivery — "Car Detailing Service, online" was real output.
+
+**`aliasPattern`'s plural floor was one too high.** It required five characters,
+which excluded `cars`, `dogs`, `cats`, `pets`, so `\bcars\b` did not match
+"car" — and the most obviously automotive sentence possible matched only on
+"detailing", which `home-services` also lists, and resolved to home services.
+
+### The three doors
+
+The landing page had no way to make an account and no way to sign in: both of
+its buttons went to `/lab?tab=generate`, and the only routes to an account were
+to guess `/account` or to wander into a private route and meet the gate. A
+first-time visitor could not answer "how do I sign up?" and a returning one
+could not answer "where do I sign in?".
+
+Create account, Sign in, and look around first — opened in a dialog rather than
+by navigation, for the reason `guest-banner.tsx` gives: a guest's work is in a
+module variable and a full document load destroys it.
+
+### The padlock that revoked the week
+
+"It keeps logging me out even though I ticked stay signed in." The device key
+is a seven-day sliding expiry and `resumeSession()` restores it correctly, so
+the mechanism was never the problem. `LockNow` was: an **unlabelled 36px
+padlock** in the masthead, no confirmation, wired straight to `signOut()` →
+`lock()` → `forgetKeys()`, which deletes the device key.
+
+Two different things were one button. `lockKeepingDevice()` asks for the
+passphrase again and leaves the week alone; `lock()` also stops the browser
+remembering you. The control now has a label and asks which you meant.
 
 ### The engine
 

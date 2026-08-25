@@ -381,6 +381,63 @@ function SignIn() {
   );
 }
 
+/**
+ * Sign in from somewhere that is not the gate — the landing page's "Sign in".
+ *
+ * The gate itself already knows which account to offer, because it runs on a
+ * route somebody was trying to reach. This one is opened deliberately, so it
+ * does the same thing the gate does: the most recently used account first,
+ * since `listAccounts` sorts by last use and that is almost always the person
+ * standing there, with the others one click away.
+ *
+ * Says so plainly when there is no account on this browser rather than showing
+ * an empty picker, because "sign in" with nothing to sign in to is the kind of
+ * dead end that makes people assume they have lost something.
+ */
+export function UnlockAnyAccount({ onDone, onCreate }: { onDone: () => void; onCreate: () => void }) {
+  const [accounts, setAccounts] = useState<AccountRecord[]>([]);
+  const [selected, setSelected] = useState<AccountRecord | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const found = listAccounts();
+    setAccounts(found);
+    setSelected(found[0] ?? null);
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
+
+  if (!selected) {
+    return (
+      <div className="space-y-4">
+        <p className="text-body leading-relaxed">
+          There is no account on this browser yet. Accounts are local — they are
+          not on a server, so one made on another device or in another browser
+          cannot be signed into here.
+        </p>
+        <p className="text-caption text-muted leading-relaxed">
+          If you have an exported backup file, create an account and import it
+          from Settings.
+        </p>
+        <Button variant="primary" onClick={onCreate}>
+          Create an account
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <UnlockAccount
+      account={selected}
+      otherAccounts={accounts.length - 1}
+      onSwitch={() => setSelected(null)}
+      onCreate={onCreate}
+      onDone={onDone}
+    />
+  );
+}
+
 /* ------------------------------------------------------------------ pick --- */
 
 function PickAccount({
@@ -719,12 +776,21 @@ function relativeDay(ts: number): string {
   return new Date(ts).toLocaleDateString();
 }
 
-/** Signs out: drops the key and wipes the decrypted copy from memory. */
-export function signOut(): void {
+/**
+ * Signs out: drops the key and wipes the decrypted copy from memory.
+ *
+ * `keepDevice` separates two things that were one button. Locking is "ask me
+ * for the passphrase again"; signing out is "and stop remembering this browser
+ * for the week I asked for". Conflating them meant the only way to lock the
+ * screen in front of you was to revoke a persistent session you had
+ * deliberately chosen — and the control that did it was an unlabelled padlock.
+ */
+export function signOut(options: { keepDevice?: boolean } = {}): void {
   // Order matters. Locking first means any render that happens between these
   // two calls sees the gate rather than the outgoing account's data.
-  import("@/lib/vault").then(({ lock }) => {
-    lock();
+  import("@/lib/vault").then(({ lock, lockKeepingDevice }) => {
+    if (options.keepDevice) lockKeepingDevice();
+    else lock();
     clearInMemoryState();
   });
 }
