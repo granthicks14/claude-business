@@ -141,6 +141,27 @@ export interface FounderProfile {
   constraints: string[];
 
   updatedAt: number;
+  /**
+   * VESTIGIAL. Still written, deliberately never read.
+   *
+   * This was the app's answer to "has this person told us about themselves",
+   * and it could not be. Three places set it — `/describe`, the ask bar and
+   * `sampleProfile()` — and `/profile`, the page the whole product links to for
+   * exactly this, did not: `/onboarding` used to, and was retired into
+   * `/profile` in an earlier pass with the setter left behind. So somebody
+   * could fill in every field through the front door and the flag stayed false
+   * for ever, which showed up as an unticked journey step, a permanent
+   * "scored against defaults" caveat, and a first-time-visitor marketing page
+   * on the home screen.
+   *
+   * `hasUsableProfile()` in `profile-fields.ts` answers it from the profile
+   * itself now, so it cannot disagree with the thing it describes.
+   *
+   * The field stays because removing it needs a stored-state migration and
+   * because `store.ts:isSampleFounder` compares the sample profile field by
+   * field — including this one — to find and clear the founder profiles an old
+   * `loadSample` overwrote. Keep writing it; do not add a reader.
+   */
   completedOnboarding: boolean;
 }
 

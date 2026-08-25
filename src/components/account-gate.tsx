@@ -592,11 +592,16 @@ export function CreateAccount({
     hydrateFrom(initial);
     if (legacy && claim) discardLegacyState();
     /*
-     * The guest session ends only now, after the encrypted copy exists. Ending
-     * it any earlier — on the button press, say — would drop the gate back to
-     * the sign-in screen while the account was still being written, and a
-     * failure at that point would have thrown the work away to show an error
-     * about not being able to save it.
+     * The guest session ends only now, after the encrypted copy exists — and
+     * "exists" means `createAccount` has read its own blob back and decrypted
+     * it, not merely that a write did not throw.
+     *
+     * Ending it any earlier — on the button press, say — would drop the gate
+     * back to the sign-in screen while the account was still being written, and
+     * a failure at that point would have thrown the work away to show an error
+     * about not being able to save it. The `!result.ok` branch above returns
+     * before reaching here, so a failed create leaves the guest session and the
+     * legacy plaintext exactly as they were, and the work stays on screen.
      */
     endGuest();
     onDone();

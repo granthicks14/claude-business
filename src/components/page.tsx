@@ -10,6 +10,7 @@ import { useGuest } from "./account-gate";
 import { useBreadcrumbs, useSectionLabel } from "@/lib/nav";
 import { AILoading, Button, Card, EmptyState, ErrorPanel, Eyebrow, LinkButton, SectionHeader, Skeleton } from "./ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
+import { hasUsableProfile } from "@/lib/profile-fields";
 import { useBusinessRoute } from "@/lib/business-route";
 import type { SelectedBusiness } from "@/lib/types";
 import { useIntelligence, type AIError, type AIMeta } from "@/lib/useAI";
@@ -85,7 +86,7 @@ export function Ready({ children }: { children: ReactNode }) {
  * The notice stays, and it stays until the profile is filled in.
  */
 export function RequireProfile({ children }: { children: ReactNode }) {
-  const done = useAppState((s) => s.profile.completedOnboarding);
+  const done = useAppState((s) => hasUsableProfile(s.profile));
 
   return (
     <>

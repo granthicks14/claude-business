@@ -88,6 +88,34 @@ export function profileCompleteness(profile: FounderProfile): {
   };
 }
 
+/**
+ * Is there enough here for the scoring to mean anything?
+ *
+ * WHAT THIS REPLACES, AND WHY IT IS DERIVED RATHER THAN STORED
+ *
+ * `FounderProfile.completedOnboarding` was the app's answer to this, and it was
+ * a boolean with three writers and no front door. `/describe` set it,
+ * `ask-bar.tsx` set it, and `sampleProfile()` set it — and `/profile`, the one
+ * page in the product whose entire job is filling this in, never did:
+ * `app/profile/page.tsx` calls `actions.saveProfile(patch)` and the flag is not
+ * in the patch. `/onboarding` used to set it and was retired into `/profile` in
+ * an earlier pass; the setter went with it and nobody noticed, because nothing
+ * fails loudly when a boolean stays false.
+ *
+ * Three things were quietly broken by that for anybody who used the front door:
+ * the journey spine's "Founder profile" step could never be ticked, the
+ * "scored against defaults" caveat never went away, and the home page showed a
+ * first-time-visitor marketing pitch to somebody who had filled in every field.
+ *
+ * A stored flag can disagree with the thing it claims to describe. A derived
+ * one cannot. This reads the profile itself, so it is right by construction
+ * whichever route the answers arrived through — the ask bar, the description
+ * page, the profile editor, or a restored backup.
+ */
+export function hasUsableProfile(profile: FounderProfile): boolean {
+  return profileCompleteness(profile).requiredMissing === 0;
+}
+
 export const FIELD_GROUPS: { id: ProfileField["group"]; title: string; blurb: string }[] = [
   { id: "about", title: "About you", blurb: "Who you are and what you can already do." },
   { id: "resources", title: "What you have", blurb: "Money, time and things you can use." },

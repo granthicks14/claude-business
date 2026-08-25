@@ -1,4 +1,5 @@
 import type { FounderProfile, SelectedBusiness } from "../types";
+import { hasUsableProfile } from "../profile-fields";
 import { money, openingPrice, resolveContext, titleCase } from "./context";
 
 /**
@@ -125,8 +126,16 @@ type Rule = (c: Context) => NextAction | null;
 const RULES: Rule[] = [
   /* ------------------------------------------------ prerequisites first --- */
 
+  /*
+   * Read off the profile, not off a flag.
+   *
+   * This asked `profile.completedOnboarding`, which `/profile` — the page this
+   * very action links to — does not set. So somebody could follow the
+   * instruction, fill in every field, come back, and be told to finish their
+   * profile again, for ever. See `hasUsableProfile`.
+   */
   ({ profile }) =>
-    profile.completedOnboarding
+    hasUsableProfile(profile)
       ? null
       : {
           id: "finish-profile",

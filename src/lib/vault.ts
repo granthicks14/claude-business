@@ -655,9 +655,59 @@ export async function createAccount(label: string, passphrase: string, initialSt
 
   // Write the vault before the registry entry: an account row pointing at a
   // vault that does not exist would be an account nobody can ever open.
-  const blob = await encryptWith(key, JSON.stringify(initialState));
+  const plaintext = JSON.stringify(initialState);
+  const blob = await encryptWith(key, plaintext);
   if (!trySet(VAULT_PREFIX + id, JSON.stringify(blob))) {
     return { ok: false, error: "This browser is out of storage space, so the account wasn't created. Free some space and try again." };
+  }
+
+  /*
+   * READ IT BACK AND DECRYPT IT BEFORE ANYTHING IRREVERSIBLE HAPPENS.
+   *
+   * THE DEFECT THIS CLOSES
+   *
+   * `discardLegacyState()` at the bottom of this file carries a comment saying
+   * it is "called only once the same data is confirmed readable inside a
+   * vault, because doing it any earlier would be deleting the sole copy of
+   * someone's work on the strength of an encryption round-trip nobody has
+   * verified." That was a description of a guarantee this function did not
+   * implement. It checked that `trySet` returned true — that a write did not
+   * throw — and returned `ok`. The caller then deleted the plaintext.
+   *
+   * The same shape covered the guest path: `account-gate.tsx` calls
+   * `endGuest()` on `ok`, and a guest's work exists nowhere but this tab's
+   * memory. Both were one storage quirk away from destroying the only copy of
+   * somebody's work in order to report that it had been saved.
+   *
+   * WHY A FULL DECRYPT RATHER THAN A LENGTH CHECK
+   *
+   * The failure modes worth catching are not "the write threw". They are a
+   * quota-full browser that silently truncates, a storage layer that returns
+   * something other than what went in, and a key that does not round-trip.
+   * Only decrypting and comparing catches all three, and it costs one AES-GCM
+   * pass over a payload measured at 0.29MB in the worst case this app has.
+   */
+  let verified = false;
+  try {
+    const readBack = readBlob(id);
+    verified = !!readBack && (await decryptWith(key, readBack)) === plaintext;
+  } catch {
+    // A throw here is a failed verification like any other, and is handled by
+    // the rollback below rather than escaping to the caller as a crash.
+    verified = false;
+  }
+
+  if (!verified) {
+    try {
+      window.localStorage.removeItem(VAULT_PREFIX + id);
+    } catch {
+      /* Nothing more to do — no registry row was written, so nothing points at it. */
+    }
+    return {
+      ok: false,
+      error:
+        "This browser saved the account but couldn't read it back, so it was removed rather than left half-made. Nothing you were working on has been touched — it is still on screen. Free some storage space and try again.",
+    };
   }
 
   const record: AccountRecord = {
@@ -906,6 +956,11 @@ export function hasLegacyState(): boolean {
  * Called only once the same data is confirmed readable inside a vault, because
  * doing it any earlier would be deleting the sole copy of someone's work on
  * the strength of an encryption round-trip nobody has verified.
+ *
+ * That sentence was aspirational for a while and is now enforced by the code it
+ * describes: `createAccount` reads its own blob back and decrypts it before
+ * returning `ok`, and this is only reached on `ok`. A comment claiming a
+ * guarantee is worth nothing; the guarantee is the read-back.
  */
 export function discardLegacyState(): void {
   window.localStorage.removeItem(LEGACY_KEY);

@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { NextActionCard, StageCard } from "@/components/next-action";
 import { IdeasArt, ShopArt } from "@/components/art";
 import { AskBar } from "@/components/ask-bar";
+import { useAppOpen } from "@/components/account-gate";
 import { Wedge } from "@/components/brand";
 import { Badge, Button, Eyebrow, Hi, LinkButton, Section, Split } from "@/components/ui";
 import { JourneySpine, ProfilePrompt } from "@/components/journey";
@@ -149,11 +150,35 @@ export default function HomePage() {
   const state = useAppState((s) => s);
   const { status } = useAIStatus();
   const business = activeBusiness(state);
-  const hasProfile = state.profile.completedOnboarding;
+  /*
+   * THE PITCH IS FOR PEOPLE WHO HAVE NOT DECIDED YET, AND THAT IS A VAULT
+   * QUESTION RATHER THAN A PROFILE QUESTION.
+   *
+   * This asked `state.profile.completedOnboarding`, and that flag is set by
+   * `/describe`, by the ask bar, and by `sampleProfile()` — but not by
+   * `/profile`, which is the page the whole app links to for exactly this.
+   * `/onboarding` used to set it and was retired into `/profile`; the setter
+   * went with it and nothing failed loudly, because nothing ever does when a
+   * boolean stays false.
+   *
+   * Three people were being shown a first-time-visitor marketing page as a
+   * result, all of whom had plainly decided already:
+   *
+   *  - somebody who had filled in every field at `/profile`, for ever;
+   *  - somebody who had just created an account — so the "open the worked
+   *    example" offer below, whose whole purpose is to catch a person with no
+   *    business yet, was unreachable by the only people it is for;
+   *  - a guest, who had pressed "look around first" and had the worked example
+   *    loaded and active, because `loadSample` deliberately no longer writes
+   *    `state.profile` (the demo founder lives on `SelectedBusiness.demoProfile`).
+   *
+   * `useAppOpen()` is the vault's own answer to "is there somebody here" —
+   * an unlocked account or a guest session. It cannot drift from the thing it
+   * describes, because it is not a copy of it.
+   */
+  const open = useAppOpen();
 
-  // Someone who has already started doesn't need the pitch — they need the
-  // next step. The marketing page is for first-time visitors.
-  if (ready && hasProfile) {
+  if (ready && open) {
     return (
       <div className="space-y-10">
         {/*
@@ -394,8 +419,18 @@ export default function HomePage() {
                 the assumptions written out beside every figure.
               </p>
               <div className="mt-6">
-                <LinkButton href={hasProfile ? "/lab?tab=shortlist" : "/lab?tab=generate"} variant="primary">
-                  {hasProfile ? "Generate ideas" : "Try it with your own sentence"}
+                {/*
+                  No "have they got a profile yet" branch here any more.
+
+                  Everything below this point renders only when `open` is false
+                  — nobody is signed in and no guest session exists — which
+                  means the store has never been hydrated and the profile is
+                  empty by construction. The conditional had exactly one
+                  reachable side, and it was reading the retired
+                  `completedOnboarding` flag to choose it.
+                */}
+                <LinkButton href="/lab?tab=generate" variant="primary">
+                  Try it with your own sentence
                 </LinkButton>
               </div>
             </div>
@@ -449,12 +484,10 @@ export default function HomePage() {
             </p>
           </div>
           <div className="flex flex-col items-start gap-3">
-            <LinkButton
-              href={business ? "/business" : hasProfile ? "/lab?tab=shortlist" : "/lab?tab=generate"}
-              variant="primary"
-              size="lg"
-            >
-              {business ? "Open workspace" : hasProfile ? "Generate ideas" : "Start"}
+            {/* Same reasoning as above: on the locked branch there is no
+                profile and no business, so only one side was ever reachable. */}
+            <LinkButton href="/lab?tab=generate" variant="primary" size="lg">
+              Start
             </LinkButton>
           </div>
         </div>

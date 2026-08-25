@@ -108,6 +108,17 @@ function Quality({ business }: { business: SelectedBusiness }) {
               <Badge tone={quality.confidence === "high" ? "good" : quality.confidence === "medium" ? "accent" : "neutral"}>
                 {quality.confidence.charAt(0).toUpperCase() + quality.confidence.slice(1)} confidence
               </Badge>
+              {/*
+                The cap, stated on the score rather than only in the paragraph.
+
+                Without this the number looks like the whole answer, and the one
+                thing worth knowing about it — that it is a ceiling and not a
+                measurement — is three lines further down in prose somebody
+                reading a score is unlikely to reach.
+              */}
+              {quality.capped && (
+                <Badge tone="warn">Held at {quality.score} — structure alone scores {quality.uncappedScore}</Badge>
+              )}
               {consistency.contradictions.length > 0 && (
                 <Badge tone="warn">
                   {consistency.contradictions.length} contradiction{consistency.contradictions.length === 1 ? "" : "s"}

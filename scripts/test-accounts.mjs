@@ -31,7 +31,29 @@ writeFileSync(
 class FakeStorage {
   private map = new Map<string, string>();
   full = false;
-  getItem(k: string) { return this.map.has(k) ? this.map.get(k)! : null; }
+  /*
+   * Reads that do not match the write.
+   *
+   * The failure createAccount now guards against is not "setItem threw" -- it
+   * is a storage layer that accepts a write and then hands back something
+   * else: a quota-full browser that truncates, or a corrupted entry. That
+   * cannot be simulated by making writes fail, so the fake has to be able to
+   * lie on the way out.
+   */
+  corruptPrefix: string | null = null;
+  getItem(k: string) {
+    if (!this.map.has(k)) return null;
+    const v = this.map.get(k)!;
+    if (this.corruptPrefix && k.startsWith(this.corruptPrefix)) {
+      const blob = JSON.parse(v);
+      // Valid JSON, valid shape, wrong ciphertext: it has to get past the
+      // shape check in readBlob and fail at the decrypt, which is where a
+      // real truncation would land too.
+      blob.data = blob.data.slice(0, Math.max(0, blob.data.length - 8));
+      return JSON.stringify(blob);
+    }
+    return v;
+  }
   setItem(k: string, v: string) {
     if (this.full) throw new DOMException("QuotaExceededError");
     this.map.set(k, v);
@@ -354,6 +376,37 @@ results.forgetDevice = {
   results.guest = guestResults;
 }
 
+/* --------------------------------------- the write nobody verified ------ */
+
+/*
+ * createAccount used to return ok on the strength of setItem not throwing, and
+ * account-gate.tsx then deleted the pre-vault plaintext and ended the guest
+ * session on that word alone. Both destroy the only copy of somebody work.
+ */
+{
+  /* Exactly which vault blobs exist before the attempt, so the assertion is
+     "this attempt added none" rather than a total that earlier tests shape. */
+  const blobsBefore = storage.keys().filter((k) => k.startsWith("abb:vault:")).sort().join("|");
+  storage.setItem("abb:state", JSON.stringify({ legacy: "the only copy" }));
+
+  storage.corruptPrefix = "abb:vault:";
+  const bad = await vault.createAccount("Corrupted", PASS + "-corrupt", { who: "corrupted" });
+  storage.corruptPrefix = null;
+
+  const rows = JSON.parse(storage.raw("abb:accounts") ?? "[]");
+  results.verifiedWrite = {
+    refused: bad.ok === false,
+    saysWorkIsSafe: (bad.error ?? "").indexOf("still on screen") >= 0,
+    noRegistryRow: !rows.some((x: any) => x.label === "Corrupted"),
+    noOrphanBlob: storage.keys().filter((k) => k.startsWith("abb:vault:")).sort().join("|") === blobsBefore,
+    legacyUntouched: storage.getItem("abb:state") !== null,
+    /* And the same storage, telling the truth, still works. */
+    goodOneStillWorks: (await vault.createAccount("Honest", PASS + "-honest", { who: "honest" })).ok,
+  };
+
+  storage.removeItem("abb:state");
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -453,6 +506,14 @@ check("ending a guest session closes the app again", r.guest.endedCleanly);
 check("Lock now ends a guest session as well", r.guest.lockEndsGuest);
 check("a guest session cannot start over a signed-in one", r.guest.refusedWhileUnlocked);
 check("an account seeded from guest work round-trips intact", r.guest.seededAccountRoundTrips);
+
+console.log("\n--- a write is not a save until it has been read back ---");
+check("a vault that cannot be read back refuses to become an account", r.verifiedWrite.refused);
+check("and the error says the work is still on screen", r.verifiedWrite.saysWorkIsSafe);
+check("no registry row is left pointing at nothing", r.verifiedWrite.noRegistryRow);
+check("no orphan blob is left behind", r.verifiedWrite.noOrphanBlob);
+check("the pre-vault plaintext is NOT discarded", r.verifiedWrite.legacyUntouched);
+check("honest storage still creates accounts normally", r.verifiedWrite.goodOneStillWorks);
 
 console.log(failures === 0 ? "\nALL ACCOUNT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

@@ -7,6 +7,7 @@ import { Wedge } from "./brand";
 import { Eyebrow, LinkButton } from "./ui";
 import { withBusiness } from "@/lib/business-param";
 import { activeBusiness, useAppState } from "@/lib/store";
+import { hasUsableProfile } from "@/lib/profile-fields";
 import { profileCompleteness } from "@/lib/profile-fields";
 import type { AppState, SelectedBusiness } from "@/lib/types";
 
@@ -101,7 +102,7 @@ function selectJourney(s: AppState): {
     {
       name: "Foundation",
       steps: [
-        { label: "Founder profile", done: s.profile.completedOnboarding, next: "Finish your founder profile", href: "/profile" },
+        { label: "Founder profile", done: hasUsableProfile(s.profile), next: "Finish your founder profile", href: "/profile" },
       ],
     },
     {

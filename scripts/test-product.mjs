@@ -95,6 +95,27 @@ results.quality = {
    * low confidence, always below a business with evidence.
    */
   coldNeverStrong: ideaSet.every((i) => businessQuality(business({ idea: i }), base).band !== "strong"),
+  /*
+   * The finding this became. With nothing recorded, three of these twelve used
+   * to come back "Promising" -- a confident middling verdict on a business
+   * nobody has looked at, which is the one output the app exists not to
+   * produce. EVIDENCE_CAP in quality.ts holds them at the top of "Early".
+   */
+  coldNeverPromising: ideaSet.every((i) => {
+    const b = businessQuality(business({ idea: i }), base).band;
+    return b === "early" || b === "weak";
+  }),
+  coldBandsSeen: Array.from(new Set(ideaSet.map((i) => businessQuality(business({ idea: i }), base).band))).sort(),
+  /* A cap the reader cannot see is a cap that will be argued with later. */
+  coldSaysItIsCapped: ideaSet
+    .map((i) => businessQuality(business({ idea: i }), base))
+    .filter((q) => q.capped)
+    .every((q) => q.uncappedScore > q.score && q.summary.indexOf("recorded") >= 0),
+  /* The structural figure survives, so comparing shape to shape is still possible. */
+  coldKeepsUncapped: ideaSet.every((i) => businessQuality(business({ idea: i }), base).uncappedScore >= 0),
+  /* Evidence lifts the ceiling: the worked example is high-confidence and uncapped. */
+  sampleNotCapped: qSample.capped === false,
+  sampleBand: qSample.band,
   coldAlwaysLowConfidence: ideaSet.every((i) => businessQuality(business({ idea: i }), base).confidence === "low"),
   coldAlwaysBelowSample: ideaSet.every((i) => businessQuality(business({ idea: i }), base).score < qSample.score),
 };
@@ -514,6 +535,10 @@ check("an untested business is labelled low confidence", r.quality.coldConfidenc
 check("and one with evidence isn't", r.quality.sampleConfidenceHigher);
 check("it names the fastest improvement", r.quality.hasFastestImprovement && r.quality.improvementPointsSomewhere);
 check("an empty business is never called strong", r.quality.coldNeverStrong, `cold score ${r.quality.coldScore}`);
+check("nor promising — the finding this fixed", r.quality.coldNeverPromising, r.quality.coldBandsSeen.join(", "));
+check("and every capped score says so and shows the uncapped one", r.quality.coldSaysItIsCapped);
+check("the structural figure survives the cap", r.quality.coldKeepsUncapped);
+check("evidence lifts the ceiling — the worked example is uncapped", r.quality.sampleNotCapped, r.quality.sampleBand);
 check("and is always low confidence", r.quality.coldAlwaysLowConfidence);
 check("and always scores below one with evidence", r.quality.coldAlwaysBelowSample);
 

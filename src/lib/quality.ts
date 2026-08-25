@@ -108,8 +108,13 @@ export interface QualityFactor {
 }
 
 export interface QualityReport {
+  /** What the reader sees. Capped by evidence — see `EVIDENCE_CAP`. */
   score: number;
   band: "strong" | "promising" | "early" | "weak";
+  /** The structural figure before the evidence cap. Same name as `FitScore`. */
+  uncappedScore: number;
+  /** True when the evidence cap held the score down. */
+  capped: boolean;
   factors: QualityFactor[];
   strengths: QualityFactor[];
   weaknesses: QualityFactor[];
@@ -130,6 +135,44 @@ export const QUALITY_BAND_LABEL: Record<QualityReport["band"], string> = {
 };
 
 const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+
+/**
+ * THE CEILING A BUSINESS CANNOT PASS WITHOUT EVIDENCE.
+ *
+ * THE DEFECT, MEASURED
+ *
+ * Twelve ideas were generated from one profile and scored with nothing at all
+ * recorded against them — no customers, no payments, no interviews, no
+ * competitors, no price. They scored between 46 and 54, and three of the twelve
+ * came back **"Promising"**.
+ *
+ * That is the exact output this app exists not to produce: a confident middling
+ * verdict on a business nobody has looked at, delivered to somebody who will
+ * act on it. The same reasoning is already written down for the analyser —
+ * `score: null` with a grade of `unknown` beats a plausible fifty — and it was
+ * not being applied here.
+ *
+ * WHY THE ARITHMETIC COULD NOT FIX ITSELF
+ *
+ * One of the thirteen dimensions reads evidence (`validationReadiness`, weight
+ * 1.4, joint-heaviest). The other twelve are structural: they describe the
+ * shape of the idea, and the shape of a reasonable idea is reasonable whether
+ * or not anybody has tested it. So the weighted mean has a floor somewhere near
+ * 46 and no amount of re-weighting moves it without making the other twelve
+ * dimensions meaningless.
+ *
+ * The answer is a cap rather than a re-weighting, which is what `fit.ts`
+ * already does for a different reason: `REALISM_CAP` stops upside rescuing a
+ * business that cannot be started. This stops structure rescuing a business
+ * nobody has checked. Both keep the uncapped figure alongside, both say they
+ * capped and why.
+ *
+ * The numbers are the tops of the two bands, so there is ONE mechanism rather
+ * than two: `band` stays a pure function of `score`, and capping the score is
+ * what stops the label overclaiming. A second cap applied to the band could
+ * disagree with the number printed next to it.
+ */
+const EVIDENCE_CAP = { low: 51, medium: 69 } as const;
 
 const LEVEL_SCORE: Record<string, number> = {
   "very-low": 12,
@@ -382,7 +425,21 @@ export function businessQuality(business: SelectedBusiness, profile: FounderProf
 
   const weighted = factors.reduce((n, f) => n + f.score * f.weight, 0);
   const weightSum = factors.reduce((n, f) => n + f.weight, 0);
-  const score = clamp(weighted / weightSum);
+  const uncappedScore = clamp(weighted / weightSum);
+
+  /*
+   * Confidence is computed before the score is final, not after it.
+   *
+   * It used to be worked out at the very bottom, next to `confidenceReason`,
+   * and by then the band had already been decided — so the app knew perfectly
+   * well that it was scoring a plan rather than a business, wrote that down in
+   * a sentence, and let the headline number say something else.
+   */
+  const confidence: QualityReport["confidence"] = e.weight >= 12 ? "high" : e.weight >= 3 ? "medium" : "low";
+
+  const ceiling = confidence === "high" ? 100 : EVIDENCE_CAP[confidence];
+  const capped = uncappedScore > ceiling;
+  const score = capped ? ceiling : uncappedScore;
 
   const band = score >= 70 ? "strong" : score >= 52 ? "promising" : score >= 34 ? "early" : "weak";
 
@@ -422,7 +479,6 @@ export function businessQuality(business: SelectedBusiness, profile: FounderProf
       }
     : null;
 
-  const confidence: QualityReport["confidence"] = e.weight >= 12 ? "high" : e.weight >= 3 ? "medium" : "low";
   const confidenceReason =
     confidence === "high"
       ? "Enough has actually happened that this score is measuring a business rather than a plan."
@@ -430,8 +486,13 @@ export function businessQuality(business: SelectedBusiness, profile: FounderProf
         ? "Some of this rests on recorded evidence; the rest is structural. Treat it as a direction, not a verdict."
         : "Almost nothing has been recorded yet, so this is scoring the shape of the idea rather than the business. It will move a lot with the first real evidence.";
 
-  const summary =
-    band === "strong"
+  const summary = capped
+    ? `The shape of this scores ${uncappedScore}, and it is held at ${score} because almost nothing has been recorded against it. That is a statement about the evidence rather than about the idea — ${
+        confidence === "low"
+          ? "nobody has been asked and nobody has paid"
+          : "there is some evidence, but not yet enough to call this proven"
+      }. ${weaknesses[0]?.reason ?? ""} The ceiling lifts as soon as real evidence exists.`
+    : band === "strong"
       ? `This holds up well. ${strengths[0] ? strengths[0].reason : ""} The remaining work is narrow rather than fundamental.`
       : band === "weak"
         ? `There's a real problem here rather than a missing detail. ${weaknesses[0]?.reason ?? ""} That's worth fixing before anything else gets built.`
@@ -440,6 +501,8 @@ export function businessQuality(business: SelectedBusiness, profile: FounderProf
   return {
     score,
     band,
+    uncappedScore,
+    capped,
     factors,
     strengths,
     weaknesses,
