@@ -41,9 +41,15 @@ export function CommandCentre() {
           Stage {readiness.stage}/10 · {readiness.label}
         </Badge>
         <Badge tone={CALL_TONE[decision.call]}>{CALL_LABEL[decision.call]}</Badge>
+        {/*
+          The quality score is a figure in the vitals band at the top of the
+          page now, not a tag down here. Two scores four hundred pixels apart,
+          with different names and similar numbers, is a reader wondering which
+          one is the real one. The band it falls in is still worth a word.
+        */}
         {quality && (
           <Badge tone={quality.band === "strong" ? "good" : quality.band === "weak" ? "warn" : "accent"}>
-            Quality {quality.score} · {QUALITY_BAND_LABEL[quality.band]}
+            {QUALITY_BAND_LABEL[quality.band]}
           </Badge>
         )}
         {contradictions > 0 && (

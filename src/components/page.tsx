@@ -314,7 +314,13 @@ export function PageHero({
           )}
           {action && <div className="mt-5 flex flex-wrap gap-2">{action}</div>}
         </div>
-        {art && <div className="hidden md:block shrink-0 w-32 lg:w-40 text-muted/60">{art}</div>}
+        {/*
+          Full strength, and bigger. At `text-muted/60` in a 128px box these
+          measured about 2:1 against the paper and read as a smudge rather than
+          as an illustration — a drawing nobody can see is worse than no
+          drawing, because it looks like something went wrong.
+        */}
+        {art && <div className="hidden md:block shrink-0 w-40 lg:w-52 text-border-strong">{art}</div>}
       </div>
       <div className="rule mt-6" />
     </header>

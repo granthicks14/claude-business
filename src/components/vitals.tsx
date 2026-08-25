@@ -41,7 +41,7 @@ export function Vitals({
   const summary = ideaSummary(idea);
 
   const cells: { label: string; value: string; wide?: boolean }[] = [
-    { label: "Who buys it", value: summary.whoPays || "Not defined yet", wide: true },
+    { label: "Who buys it", value: summary.whoPays || idea.targetCustomer || "Not defined yet", wide: true },
     { label: "How you earn", value: summary.howYouEarn },
     {
       label: "To start",

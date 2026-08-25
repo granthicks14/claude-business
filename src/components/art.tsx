@@ -1,6 +1,17 @@
 /**
  * Illustrations.
  *
+ * THEY USED TO BE INVISIBLE, WHICH IS WORSE THAN ABSENT.
+ *
+ * Every page hero rendered one of these at `text-muted/60` — measured at about
+ * 2:1 against the paper — inside a 128px box. At that contrast a line drawing
+ * is not a drawing, it is a smudge in the corner, and it read as a rendering
+ * fault rather than as art. They are placed at full strength now, and larger.
+ *
+ * The one colour in them is `--signal`. When the brand was a green accent the
+ * fills used it; the brand is achromatic now, so an accent fill would be a
+ * black blob sitting in the middle of a line drawing.
+ *
  * All drawn here as inline SVG rather than fetched. Three reasons, and they're
  * the same reasons the rest of the app is built the way it is:
  *
@@ -49,21 +60,21 @@ export function ShopArt({ className = "", label }: { className?: string; label?:
   return (
     <Frame className={className} label={label}>
       {/* awning */}
-      <path d="M28 52h144l-10-22H38z" className="draw" pathLength={1} fill="var(--accent-soft)" />
+      <path d="M28 52h144l-10-22H38z" className="draw" pathLength={1} fill="var(--signal-soft)" />
       <path d="M62 30 56 52M90 30l-2 22M118 30l2 22M146 30l6 22" className="draw" pathLength={1} style={{ ["--d" as string]: "67ms" }} />
       {/* building */}
       <path d="M36 52v76h128V52" className="draw" pathLength={1} style={{ ["--d" as string]: "112ms" }} />
       <path d="M24 128h152" className="draw" pathLength={1} style={{ ["--d" as string]: "157ms" }} />
       {/* window with an OPEN card */}
       <rect x="50" y="66" width="52" height="38" rx="3" className="draw" pathLength={1} style={{ ["--d" as string]: "189ms" }} />
-      <path d="M62 82h28M62 91h18" className="draw" pathLength={1} stroke="var(--accent)" style={{ ["--d" as string]: "252ms" }} />
+      <path d="M62 82h28M62 91h18" className="draw" pathLength={1} stroke="var(--signal)" style={{ ["--d" as string]: "252ms" }} />
       {/* door */}
       <path d="M118 128V74h30v54" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
-      <circle cx="141" cy="102" r="2.5" fill="var(--accent)" stroke="none" />
+      <circle cx="141" cy="102" r="2.5" fill="var(--signal)" stroke="none" />
       {/* hanging sign */}
       <g>
         <path d="M100 18v10" className="draw" pathLength={1} />
-        <rect x="74" y="4" width="52" height="16" rx="5" fill="var(--accent)" stroke="none" />
+        <rect x="74" y="4" width="52" height="16" rx="5" fill="var(--signal)" stroke="none" />
       </g>
       {/* plant, because every real shopfront has one */}
       <path d="M176 128v-14" className="draw" pathLength={1} style={{ ["--d" as string]: "288ms" }} />
@@ -82,12 +93,12 @@ export function ToolboxArt({ className = "", label }: { className?: string; labe
       <path d="M78 78V66a8 8 0 0 1 8-8h28a8 8 0 0 1 8 8v12" className="draw" pathLength={1} style={{ ["--d" as string]: "90ms" }} />
       {/* things sticking out of it */}
       <g>
-        <path d="M64 78V44" className="draw" pathLength={1} stroke="var(--accent)" style={{ ["--d" as string]: "144ms" }} />
-        <path d="M58 44h12l-6-12z" fill="var(--accent)" stroke="none" />
+        <path d="M64 78V44" className="draw" pathLength={1} stroke="var(--signal)" style={{ ["--d" as string]: "144ms" }} />
+        <path d="M58 44h12l-6-12z" fill="var(--signal)" stroke="none" />
       </g>
       <g>
-        <rect x="126" y="34" width="26" height="34" rx="3" fill="var(--accent-soft)" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "171ms" }} />
-        <path d="M133 45h12M133 53h8" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "225ms" }} />
+        <rect x="126" y="34" width="26" height="34" rx="3" fill="var(--signal-soft)" stroke="var(--signal)" className="draw" pathLength={1} style={{ ["--d" as string]: "171ms" }} />
+        <path d="M133 45h12M133 53h8" stroke="var(--signal)" className="draw" pathLength={1} style={{ ["--d" as string]: "225ms" }} />
       </g>
       {/* sparks */}
       <path d="M100 30v-9M88 38l-6-6M112 38l6-6" stroke="var(--warn)" className="draw" pathLength={1} style={{ ["--d" as string]: "252ms" }} />
@@ -104,11 +115,11 @@ export function SignArt({ className = "", label }: { className?: string; label?:
       <path d="M62 20v12M138 20v12" className="draw" pathLength={1} style={{ ["--d" as string]: "54ms" }} />
       <g>
         <rect x="46" y="32" width="108" height="72" rx="8" fill="var(--surface-2)" className="draw" pathLength={1} style={{ ["--d" as string]: "90ms" }} />
-        <path d="M64 54h72" stroke="var(--accent)" strokeWidth="3" className="draw" pathLength={1} style={{ ["--d" as string]: "171ms" }} />
+        <path d="M64 54h72" stroke="var(--signal)" strokeWidth="3" className="draw" pathLength={1} style={{ ["--d" as string]: "171ms" }} />
         <path d="M64 70h54M64 84h36" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
       </g>
       <path d="M84 126h32" className="draw" pathLength={1} style={{ ["--d" as string]: "270ms" }} />
-      <circle cx="100" cy="118" r="3" fill="var(--accent)" stroke="none" />
+      <circle cx="100" cy="118" r="3" fill="var(--signal)" stroke="none" />
     </Frame>
   );
 }
@@ -123,7 +134,7 @@ export function ChecklistArt({ className = "", label }: { className?: string; la
   return (
     <Frame className={className} label={label}>
       <rect x="34" y="18" width="132" height="118" rx="10" fill="var(--surface-2)" className="draw" pathLength={1} />
-      <rect x="76" y="8" width="48" height="20" rx="7" fill="var(--accent)" stroke="none" />
+      <rect x="76" y="8" width="48" height="20" rx="7" fill="var(--signal)" stroke="none" />
       {[0, 1, 2].map((i) => {
         const y = 48 + i * 30;
         const done = i < 2;
@@ -196,7 +207,7 @@ export function IdeasArt({ className = "", label }: { className?: string; label?
           width={r.w}
           height={r.h}
           fill="none"
-          stroke="var(--accent)"
+          stroke="var(--signal)"
           strokeDasharray="5 4"
           className="draw"
           pathLength={1}
@@ -246,8 +257,8 @@ export function GrowthArt({ className = "", label }: { className?: string; label
           width="20"
           height={b.h}
           rx="4"
-          fill={i === 3 ? "var(--accent-soft)" : "var(--surface-2)"}
-          stroke={i === 3 ? "var(--accent)" : "currentColor"}
+          fill={i === 3 ? "var(--signal-soft)" : "var(--surface-2)"}
+          stroke={i === 3 ? "var(--signal)" : "currentColor"}
           className="draw"
           pathLength={1}
           style={{ ["--d" as string]: `${81 + i * 58}ms` }}
@@ -267,11 +278,11 @@ export function TalkArt({ className = "", label }: { className?: string; label?:
     <Frame className={className} label={label}>
       <circle cx="56" cy="52" r="16" fill="var(--surface-2)" className="draw" pathLength={1} />
       <path d="M30 128v-18a26 26 0 0 1 52 0v18" className="draw" pathLength={1} style={{ ["--d" as string]: "72ms" }} />
-      <circle cx="144" cy="52" r="16" fill="var(--accent-soft)" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "108ms" }} />
-      <path d="M118 128v-18a26 26 0 0 1 52 0v18" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "153ms" }} />
+      <circle cx="144" cy="52" r="16" fill="var(--signal-soft)" stroke="var(--signal)" className="draw" pathLength={1} style={{ ["--d" as string]: "108ms" }} />
+      <path d="M118 128v-18a26 26 0 0 1 52 0v18" stroke="var(--signal)" className="draw" pathLength={1} style={{ ["--d" as string]: "153ms" }} />
       <g>
         <path d="M78 28h44a8 8 0 0 1 8 8v10a8 8 0 0 1-8 8h-16l-8 8v-8H78a8 8 0 0 1-8-8V36a8 8 0 0 1 8-8z" fill="var(--surface)" className="draw" pathLength={1} style={{ ["--d" as string]: "198ms" }} />
-        <path d="M86 41h28" stroke="var(--accent)" className="draw" pathLength={1} style={{ ["--d" as string]: "270ms" }} />
+        <path d="M86 41h28" stroke="var(--signal)" className="draw" pathLength={1} style={{ ["--d" as string]: "270ms" }} />
       </g>
     </Frame>
   );

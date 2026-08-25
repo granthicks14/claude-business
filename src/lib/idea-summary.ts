@@ -99,9 +99,18 @@ function readWhoPays(idea: BusinessIdea): string {
     if (segment) return segment.label;
   }
 
-  const tagged = idea.tags?.[2];
-  if (tagged && !VAGUE.test(tagged)) return tagged;
-
+  /*
+   * There used to be a `idea.tags[2]` branch here, on the reasoning that the
+   * third tag is the segment label. That is true of engine-generated ideas —
+   * `tags: [industry, model, segment]` — and those already returned above from
+   * the segment itself, so the branch could only ever fire for an idea that
+   * did NOT come from the engine, where nothing guarantees what position two
+   * holds. On the worked example it held the category, so the business page
+   * answered "who buys it" with the word "service".
+   *
+   * A positional index into a free-form array is a guess. `targetCustomer` is
+   * the field that exists for this question.
+   */
   const clause = idea.targetCustomer.split(/,| with | who | that /i)[0]?.trim() ?? "";
   if (clause.length >= 4 && clause.length <= 60 && !VAGUE.test(clause)) return clause.toLowerCase();
   return "";

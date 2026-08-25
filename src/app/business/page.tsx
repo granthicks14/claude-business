@@ -29,6 +29,7 @@ import {
   Textarea,
   useToast,
 } from "@/components/ui";
+import { ModelDiagram } from "@/components/model-diagram";
 import { Vitals } from "@/components/vitals";
 import { withBusiness } from "@/lib/business-param";
 import { currency } from "@/lib/finance";
@@ -198,6 +199,13 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         of stacked panels, two of them not on this page at all.
       */}
       <Vitals idea={business.idea} score={business.idea.opportunityScore} scoreLabel="Opportunity" />
+
+      {/*
+        The loop, drawn. Problem → offer → payment → growth was four paragraphs
+        in four places on this page, and assembling them into a sequence was
+        work the reader was doing for us.
+      */}
+      <ModelDiagram idea={business.idea} price={business.money?.price} />
 
       {/* Where the business actually is, what the app currently thinks, and the
           two things it would rather the founder didn't scroll past. */}
