@@ -487,6 +487,68 @@ export function isUnlocked(): boolean {
   return session !== null;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Guest — the fourth state                                                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * SOMEBODY LOOKING AROUND WITHOUT AN ACCOUNT.
+ *
+ * The app used to have three states — no account, locked, unlocked — and the
+ * first two both showed a passphrase box. Which meant the only way to find out
+ * what the product does was to invent a passphrase for a thing you had not
+ * seen yet, and a passphrase that cannot be reset, on a product with no
+ * password recovery because there is no server. That is a lot to ask before
+ * the first screen.
+ *
+ * A guest is a fourth state and deliberately NOT a variant of unlocked:
+ *
+ *   isUnlocked() === false     for a guest, always
+ *
+ * That is load-bearing rather than incidental. `store.ts:writeNow` refuses to
+ * persist while `isUnlocked()` is false, so a guest's work stays in memory and
+ * no plaintext reaches `localStorage` — which is exactly the shared-browser
+ * leak the vault was built to close. Making guest "unlocked with no account"
+ * would have re-opened it in one line.
+ *
+ * The cost is real and is stated on screen rather than discovered: close the
+ * tab and the work is gone. `GuestBanner` says so on every route and carries
+ * the way out, which is seeding a real account from the in-memory state.
+ *
+ * It shares the vault's emitter so `Datum`, `LockNow`, the banner and the gate
+ * all learn about it through the one `useSyncExternalStore` subscription that
+ * already exists. A second store would be a second thing to get out of step.
+ */
+let guest = false;
+
+export function isGuest(): boolean {
+  return guest;
+}
+
+/** Unlocked *or* guest — "the app is usable", which is a different question
+    from "there is a key". Chrome that is meaningless without content asks
+    this; anything that touches the key must still ask `isUnlocked`. */
+export function isOpen(): boolean {
+  return session !== null || guest;
+}
+
+/** Begin looking around. Refuses while a real account is open, because
+    downgrading a signed-in session to an unsaved one is never what anybody
+    meant to click. */
+export function startGuest(): void {
+  if (session) return;
+  guest = true;
+  emit();
+}
+
+/** End the guest session. Called when a guest creates an account, and by
+    `lock()` so one control ends whichever kind of session is running. */
+export function endGuest(): void {
+  if (!guest) return;
+  guest = false;
+  emit();
+}
+
 export function currentAccount(): { id: string; label: string } | null {
   return session ? { id: session.accountId, label: session.label } : null;
 }
@@ -693,9 +755,16 @@ export function currentVaultKey(): string | null {
   return session ? VAULT_PREFIX + session.accountId : null;
 }
 
-/** Drop the key. The data stays encrypted on disk; nothing can read it now. */
+/**
+ * Drop the key. The data stays encrypted on disk; nothing can read it now.
+ *
+ * Ends a guest session too. "Lock now" is the one control in the shell that
+ * means "I am done, get my work off this screen", and a guest who pressed it
+ * and stayed exactly where they were would reasonably conclude it was broken.
+ */
 export function lock(): void {
   session = null;
+  guest = false;
   forgetKeys();
   emit();
 }

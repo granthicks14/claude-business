@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Icon } from "@/components/icons";
@@ -248,9 +250,9 @@ function Profile() {
         <p className="text-sm text-muted leading-relaxed">
           All of this stays on this device, encrypted under your passphrase. There&apos;s no server copy — which is also why clearing
           your browser data would lose it. Export a backup from{" "}
-          <a href="/settings" className="underline underline-offset-2 decoration-accent/60 hover:decoration-accent">
+          <Link href="/settings" className="underline underline-offset-2 decoration-accent/60 hover:decoration-accent">
             Settings → Your data
-          </a>{" "}
+          </Link>{" "}
           if that matters to you.
         </p>
       </div>

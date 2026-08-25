@@ -30,7 +30,18 @@ export interface NavItem {
   badge?: number;
 }
 
+/**
+ * The six sections, as a stable key.
+ *
+ * `href` cannot serve as the identity: the business-scoped sections carry
+ * `?b=<id>` on theirs, so it changes when the founder switches business and is
+ * a different string for every account. This is what the section palette keys
+ * on, and what the tests assert against.
+ */
+export type SectionId = "home" | "you" | "brainstorm" | "business" | "quality" | "make";
+
 export interface NavSection {
+  id: SectionId;
   href: string;
   label: string;
   icon: IconName;
@@ -88,6 +99,7 @@ export function navSections(state: AppState): NavSection[] {
 
   return [
     {
+      id: "home",
       href: "/",
       label: "Home",
       icon: "home",
@@ -95,6 +107,7 @@ export function navSections(state: AppState): NavSection[] {
       items: [{ href: "/start", label: "Start here" }],
     },
     {
+      id: "you",
       href: "/profile",
       label: "You",
       icon: "target",
@@ -117,6 +130,7 @@ export function navSections(state: AppState): NavSection[] {
       also: ["/onboarding", "/cost"],
     },
     {
+      id: "brainstorm",
       href: "/lab",
       label: "Brainstorm",
       icon: "spark",
@@ -138,6 +152,7 @@ export function navSections(state: AppState): NavSection[] {
       also: ["/ideas", "/best", "/discover"],
     },
     {
+      id: "business",
       href: b("/business"),
       label: "My business",
       icon: "building",
@@ -154,6 +169,7 @@ export function navSections(state: AppState): NavSection[] {
         : [],
     },
     {
+      id: "quality",
       href: b("/quality"),
       label: "Does it hold up?",
       icon: "scales",
@@ -170,6 +186,7 @@ export function navSections(state: AppState): NavSection[] {
         : [],
     },
     {
+      id: "make",
       href: b("/tasks"),
       label: "Make it",
       icon: "bolt",

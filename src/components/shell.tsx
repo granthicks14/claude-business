@@ -12,7 +12,7 @@ import { ToastProvider } from "./ui";
 import { AccountGate, signOut } from "./account-gate";
 import { withBusiness } from "@/lib/business-param";
 import { actions, activeBusiness, useAppState } from "@/lib/store";
-import { isUnlocked, subscribeVault } from "@/lib/vault";
+import { isGuest, isOpen, subscribeVault } from "@/lib/vault";
 import { profileCompleteness } from "@/lib/profile-fields";
 import type { AppState, SelectedBusiness } from "@/lib/types";
 import { sectionFor, useNav, type NavSection } from "@/lib/nav";
@@ -44,6 +44,21 @@ import { sectionFor, useNav, type NavSection } from "@/lib/nav";
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const sections = useNav();
+  /*
+   * Which section's colour the whole frame is wearing.
+   *
+   * Read from the same `sectionFor` the masthead uses to decide which nav item
+   * gets the wedge, so the colour and the marked link cannot disagree — that
+   * is the entire reason `NavSection` gained an `id` rather than the palette
+   * keying on a pathname prefix of its own.
+   *
+   * Stamped on a wrapper element rather than on `<html>` in an effect. An
+   * effect would repaint the hue one frame after every navigation, which on a
+   * fast client transition is a visible flash of the previous section's
+   * colour; rendering it means the colour arrives with the page.
+   */
+  const sectionId = sectionFor(sections, pathname ?? "/")?.id;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -70,7 +85,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
           Skip to content
         </a>
 
-        <div className="min-h-dvh flex flex-col">
+        {/*
+          `data-section` carries the section's hue to every descendant.
+
+          It sits on the column rather than on a wrapper of its own, and the
+          bottom bar moved inside the column to be under it — a bar still
+          wearing the previous section's colour while the page had changed would
+          be worse than no colour at all. The bar is `fixed`, so it is out of
+          flow and the flex column is unaffected by having it as a child.
+
+          Nothing here sets `transform`, `filter` or `backdrop-filter`, which
+          matters: any of those would make this element a containing block for
+          the fixed bar and quietly change where the bar sits.
+
+          The attribute is absent on Home, and every consumer reads
+          `var(--section, <neutral>)`, so Home is uncoloured for free.
+        */}
+        <div data-section={sectionId} className="min-h-dvh flex flex-col">
           <Masthead menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((v) => !v)} />
           <Datum />
 
@@ -88,9 +119,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </main>
 
           <Footer />
-        </div>
 
-        <BottomBar onMore={() => setMenuOpen(true)} />
+          <BottomBar onMore={() => setMenuOpen(true)} />
+        </div>
       </AccountGate>
     </ToastProvider>
   );
@@ -136,7 +167,7 @@ function Masthead({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu:
                   <span className="font-mono text-caption tabular-nums text-faint">{section.badge}</span>
                 )}
                 {open && (
-                  <Wedge size={11} className="absolute left-1/2 -translate-x-1/2 bottom-0 text-ink" />
+                  <Wedge size={11} className="absolute left-1/2 -translate-x-1/2 bottom-0 text-section" />
                 )}
               </Link>
             );
@@ -144,7 +175,7 @@ function Masthead({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu:
         </nav>
 
         <div className="flex items-center gap-1 ml-auto lg:ml-0 shrink-0">
-          <ModeToggle />
+          <ModeToggle className="hidden sm:inline-flex mr-1" />
           <ThemeToggle />
           <LockNow />
           <button
@@ -181,7 +212,7 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
                 onClick={onClose}
                 className={`flex items-center gap-2 min-h-11 text-body-lg ${open ? "font-medium" : "text-muted"}`}
               >
-                {open && <Wedge size={10} className="text-ink" />}
+                {open && <Wedge size={10} className="text-section" />}
                 {section.label}
               </Link>
               {open && section.items.length > 0 && (
@@ -202,6 +233,17 @@ function MobileMenu({ onClose }: { onClose: () => void }) {
             </div>
           );
         })}
+
+        {/*
+          The detail switch lives here on a phone. It is not in the masthead
+          below `sm` because the masthead row does not fit at 320px, and a menu
+          is where a setting belongs anyway — it has room for the label that
+          says what the control is for, which the masthead does not.
+        */}
+        <div className="rule mt-3 pt-3 flex items-center justify-between gap-3">
+          <span className="text-caption text-muted">How much detail</span>
+          <ModeToggle className="inline-flex sm:hidden" />
+        </div>
       </nav>
     </div>
   );
@@ -226,10 +268,10 @@ function Datum() {
   const pathname = usePathname() ?? "/";
   const current = sectionFor(sections, pathname);
   const business = useAppState(activeBusiness);
-  const unlocked = useUnlocked();
+  const open = useAppOpen();
 
   const inWorkspace = !!current && current.items.length > 0 && current.href !== "/";
-  if (!unlocked || !inWorkspace) return null;
+  if (!open || !inWorkspace) return null;
 
   const revenue = business?.revenue.reduce((sum, r) => sum + r.amount, 0) ?? 0;
 
@@ -328,7 +370,7 @@ function BottomBar({ onMore }: { onMore: () => void }) {
                 className={`relative flex flex-col items-center justify-center gap-1 min-h-14 text-caption transition-colors
                   ${active ? "text-text font-medium" : "text-muted"}`}
               >
-                {active && <Wedge size={9} className="absolute top-0 text-ink rotate-180" />}
+                {active && <Wedge size={9} className="absolute top-0 text-section rotate-180" />}
                 <IconComponent className="size-5" />
                 {item.label}
               </Link>
@@ -350,30 +392,91 @@ function BottomBar({ onMore }: { onMore: () => void }) {
   );
 }
 
-function useUnlocked(): boolean {
+/**
+ * Is there an app on screen — for an account holder or for a guest?
+ *
+ * This asked `isUnlocked()`, which was the same question until guest mode
+ * existed. It is not any more: a guest has no key, so `isUnlocked()` is false
+ * for them by design, and the two things this hook gates — the datum line and
+ * the lock button — would both have vanished for exactly the visitor being
+ * shown the whole product. A guest with no "where am I" line and no way out is
+ * a worse experience than the one this frame was built to fix.
+ *
+ * Anything that touches stored data must still ask `isUnlocked` directly. This
+ * is only about whether chrome has anything to describe.
+ */
+function useAppOpen(): boolean {
   return useSyncExternalStore(
     subscribeVault,
-    () => isUnlocked(),
+    () => isOpen(),
     () => false,
   );
 }
 
-function ModeToggle() {
+function useGuest(): boolean {
+  return useSyncExternalStore(
+    subscribeVault,
+    () => isGuest(),
+    () => false,
+  );
+}
+
+/**
+ * HOW MUCH DETAIL IS ON SCREEN — as a switch you can read.
+ *
+ * This was one word in the masthead that alternated between "Simple" and
+ * "Detail". A single word is ambiguous in the worst possible way for a
+ * two-state control: there is no way to tell whether it names the state you
+ * are in or the state you would move to, and the two readings are exact
+ * opposites. Both halves are shown now, and the active one is a slab of ink —
+ * the same "this is the live one" gesture the primary button uses.
+ *
+ * It is hidden below `sm` and appears in the mobile menu instead. That is not
+ * a taste call: at 320px the masthead row measured 27px wider than the
+ * viewport, which pushed the menu button off the right-hand edge entirely on
+ * every route in the product. This control was the widest optional thing in
+ * that row.
+ */
+function ModeToggle({ className = "" }: { className?: string }) {
   const mode = useAppState((s) => s.settings.experienceMode);
-  const advanced = mode === "advanced";
+
   return (
-    <button
-      onClick={() => actions.setExperienceMode(advanced ? "beginner" : "advanced")}
-      aria-pressed={advanced}
-      title={
-        advanced
-          ? "Showing the full detail. Switch to plain explanations."
-          : "Showing plain explanations. Switch to the full detail."
-      }
-      className="h-9 px-2.5 grid place-items-center rounded-lg text-xs font-mono uppercase tracking-wide text-muted hover:bg-surface-2 hover:text-text transition-colors"
+    <div
+      role="group"
+      aria-label="How much detail to show"
+      /*
+       * The caller supplies the `display` utility, deliberately.
+       *
+       * With `inline-flex` baked in here, a caller passing `hidden` got both
+       * in the class list — and which one wins is decided by their order in
+       * Tailwind's generated stylesheet, not by their order in the attribute.
+       * `inline-flex` won, so the control stayed visible at 320px and the
+       * masthead overflow it was meant to fix got worse, not better: 27px
+       * became 98px.
+       */
+      className={`items-center rounded-md border border-border overflow-hidden ${className}`}
     >
-      {advanced ? "Detail" : "Simple"}
-    </button>
+      {(
+        [
+          ["beginner", "Simple", "Plain explanations. The working is collapsed behind a summary."],
+          ["advanced", "Detail", "Every score breakdown, estimate and piece of working, inline."],
+        ] as const
+      ).map(([id, label, title]) => {
+        const active = mode === id;
+        return (
+          <button
+            key={id}
+            onClick={() => actions.setExperienceMode(id)}
+            aria-pressed={active}
+            title={title}
+            className={`h-8 px-2.5 text-caption font-mono uppercase tracking-wide transition-colors
+              ${active ? "bg-ink text-bg font-medium" : "text-muted hover:bg-surface-2 hover:text-text"}`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -389,14 +492,25 @@ function ModeToggle() {
  * Hidden while locked, because a lock button on a sign-in screen is noise.
  */
 function LockNow() {
-  const unlocked = useUnlocked();
-  if (!unlocked) return null;
+  const open = useAppOpen();
+  const guest = useGuest();
+  if (!open) return null;
 
   return (
     <button
       onClick={() => signOut()}
-      title="Lock now — the passphrase will be needed again"
-      aria-label="Lock now"
+      /*
+       * A guest has no passphrase, so "the passphrase will be needed again"
+       * would be a false description of the only exit on screen — and the
+       * thing they actually need warning about is the opposite of a lock: the
+       * work goes, and there is nothing to come back to.
+       */
+      title={
+        guest
+          ? "Stop looking around — this session and everything in it is discarded"
+          : "Lock now — the passphrase will be needed again"
+      }
+      aria-label={guest ? "End this session" : "Lock now"}
       className="size-9 grid place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
     >
       <svg viewBox="0 0 24 24" className="size-[17px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

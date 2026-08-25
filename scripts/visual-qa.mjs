@@ -484,8 +484,23 @@ async function occludedAcrossScroll(page) {
       for (const el of document.querySelectorAll("main button, main a, main textarea, main input, main select")) {
         const r = el.getBoundingClientRect();
         if (r.width === 0 || r.height === 0 || !stuck(el)) continue;
-        const underBar = barTop !== null && r.top < barTop && r.bottom > barTop;
-        const underHeader = headerBottom !== null && r.top < headerBottom && r.bottom > headerBottom;
+        /*
+         * ANY PART AT OR PAST THE EDGE, NOT JUST A CONTROL STRADDLING IT.
+         *
+         * This read `r.top < barTop && r.bottom > barTop` — a control
+         * *crossing* the bar's top edge. A control sitting entirely underneath
+         * the bar has a `top` below `barTop` too, so the first clause was
+         * false and it passed. The rule was therefore blind to total
+         * occlusion, which is strictly worse than the partial occlusion it did
+         * catch, and that is how the sweep reported 51/51 while the coach
+         * composer was known to be trapped at 320x568.
+         *
+         * `r.bottom > barTop` alone is the honest test: any pixel of the
+         * control at or below where the bar starts is a pixel the user cannot
+         * reach. Same argument inverted for the header.
+         */
+        const underBar = barTop !== null && r.bottom > barTop;
+        const underHeader = headerBottom !== null && r.top < headerBottom;
         if (underBar || underHeader) {
           const label = (el.textContent || el.placeholder || el.tagName).trim().slice(0, 28);
           out.push(`${el.tagName.toLowerCase()} "${label}"`);

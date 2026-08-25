@@ -297,6 +297,63 @@ results.forgetDevice = {
   tabKeyUntouched: (globalThis as any).sessionStorage.getItem("abb:tabkey") !== null,
 };
 
+
+/* ------------------------------------------------------- guest sessions --- */
+
+/*
+ * A guest is the fourth state: usable, and deliberately NOT unlocked.
+ *
+ * \`isUnlocked()\` staying false is the whole security property — \`store.ts\`
+ * refuses to persist while it is false, so a guest's work never reaches
+ * localStorage and the shared-browser leak the vault exists to close stays
+ * closed. If somebody ever "fixes" guest mode by making it report unlocked,
+ * these are the tests that should stop them.
+ */
+{
+  vault.lock();
+  const before = storage.keys().slice().sort();
+  vault.startGuest();
+  const guestResults: Record<string, unknown> = {
+    isGuest: vault.isGuest(),
+    notUnlocked: vault.isUnlocked() === false,
+    isOpen: vault.isOpen(),
+    noAccount: vault.currentAccount() === null,
+    noVaultKey: vault.currentVaultKey() === null,
+  };
+
+  // \`saveState\` is the only path to disk, and it must refuse for a guest.
+  guestResults.saveRefused = (await vault.saveState({ secret: "guest work" })) === false;
+  guestResults.wroteNothing =
+    JSON.stringify(storage.keys().slice().sort()) === JSON.stringify(before);
+
+  vault.endGuest();
+  guestResults.endedCleanly = vault.isGuest() === false && vault.isOpen() === false;
+
+  // \`lock()\` ends a guest session too — one control, whichever kind is running.
+  vault.startGuest();
+  vault.lock();
+  guestResults.lockEndsGuest = vault.isGuest() === false;
+
+  // A guest session must not start over a real one; that would silently
+  // downgrade somebody's signed-in session to an unsaved one.
+  await vault.unlock(a.id!, PASS);
+  vault.startGuest();
+  guestResults.refusedWhileUnlocked = vault.isGuest() === false && vault.isUnlocked() === true;
+  vault.lock();
+
+  // The upgrade path: an account seeded from a guest's in-memory state.
+  const guestWork = { profile: { name: "Sam" }, ideas: [{ id: "i1" }], marker: "kept" };
+  vault.startGuest();
+  const made = await vault.createAccount("From guest", PASS + "-guest", guestWork);
+  vault.endGuest();
+  const back = await vault.unlock(made.id!, PASS + "-guest");
+  guestResults.seededAccountRoundTrips =
+    back.ok && JSON.stringify(back.state) === JSON.stringify(guestWork);
+  vault.lock();
+
+  results.guest = guestResults;
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -382,6 +439,20 @@ check("a remembered device has a stated expiry", r.forgetDevice.hadExpiry);
 check("forgetting removes the device key", r.forgetDevice.deviceKeyGone && r.forgetDevice.expiryNowNull);
 check("and leaves you signed in where you are", r.forgetDevice.stillUnlocked);
 check("the tab's own choice is not revoked with it", r.forgetDevice.tabKeyUntouched);
+
+
+console.log("\n--- a guest is usable and writes nothing ---");
+check("a guest session reports itself as a guest", r.guest.isGuest);
+check("a guest is NOT unlocked — this is the security property", r.guest.notUnlocked);
+check("but the app counts as open, so the chrome still renders", r.guest.isOpen);
+check("no account is named", r.guest.noAccount);
+check("no vault key is exposed for a guest", r.guest.noVaultKey);
+check("saving refuses instead of writing plaintext", r.guest.saveRefused);
+check("nothing at all reached storage", r.guest.wroteNothing);
+check("ending a guest session closes the app again", r.guest.endedCleanly);
+check("Lock now ends a guest session as well", r.guest.lockEndsGuest);
+check("a guest session cannot start over a signed-in one", r.guest.refusedWhileUnlocked);
+check("an account seeded from guest work round-trips intact", r.guest.seededAccountRoundTrips);
 
 console.log(failures === 0 ? "\nALL ACCOUNT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

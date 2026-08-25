@@ -43,6 +43,20 @@
  * vault has no key to write with — so work done there would be accepted by the
  * interface and then silently dropped. Anywhere a founder can create something
  * asks for an account first.
+ *
+ * THAT HAZARD IS NOW ANSWERED RATHER THAN AVOIDED, AND THIS LIST STILL STANDS.
+ *
+ * Guest mode (`startGuest` in `lib/vault.ts`) lets somebody use the whole app
+ * without an account, `/start` included. The silent-drop problem it was named
+ * for has not gone away — a guest has no key either, and `store.ts:writeNow`
+ * discards their writes exactly as described above. What changed is that it is
+ * no longer silent: `GuestBanner` states it on every route for the whole
+ * session and carries the button that turns the work into a real account.
+ *
+ * So this list is unchanged and means something slightly different now. It is
+ * the set of routes that render for a visitor who has made no choice at all.
+ * Everything else asks them to choose — an account, or looking around knowing
+ * what that costs — rather than assuming either.
  */
 const PUBLIC_PREFIXES = [
   "/", // the front page

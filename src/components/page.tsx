@@ -5,6 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { Icon } from "./icons";
 import { SampleBanner } from "./sample-banner";
+import { GuestBanner } from "./guest-banner";
+import { useGuest } from "./account-gate";
 import { useBreadcrumbs, useSectionLabel } from "@/lib/nav";
 import { AILoading, Button, Card, EmptyState, ErrorPanel, Eyebrow, LinkButton, SectionHeader, Skeleton } from "./ui";
 import { activeBusiness, useAppState, useStoreReady } from "@/lib/store";
@@ -29,6 +31,7 @@ import { useIntelligence, type AIError, type AIMeta } from "@/lib/useAI";
  */
 export function Ready({ children }: { children: ReactNode }) {
   const ready = useStoreReady();
+  const guest = useGuest();
   const [settled, setSettled] = useState(false);
   useEffect(() => setSettled(true), []);
 
@@ -44,12 +47,20 @@ export function Ready({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  // The sample banner lives here rather than on each page: the example stays
-  // active across navigation, and a label only on the page that loaded it would
-  // be gone by the time anyone screenshots anything.
+  /*
+   * The banner lives here rather than on each page: whichever notice applies
+   * stays applicable across navigation, and a label only on the page that
+   * loaded the example would be gone by the time anyone screenshots anything.
+   *
+   * A guest gets ONE banner, not two. They are always looking at the worked
+   * example, so both notices would otherwise fire on every route — and the
+   * guest one is strictly the more urgent of the pair, since "this business is
+   * invented" matters less than "none of this is being written down". It says
+   * both things in one block.
+   */
   return (
     <>
-      <SampleBanner />
+      {guest ? <GuestBanner /> : <SampleBanner />}
       {children}
     </>
   );
@@ -305,6 +316,13 @@ export function PageHero({
   return (
     <header className="mb-8 animate-in">
       <Breadcrumbs />
+
+      {/* The phone's copy of the drawing: above the title, smaller, in the flow
+          — a plate at the head of a chapter. Beside the heading it would be
+          160px of a 320px column, which is why the desktop arrangement was
+          simply switched off here rather than made responsive. */}
+      {art && <div className="md:hidden w-28 mb-4 text-section">{art}</div>}
+
       <div className="flex items-start justify-between gap-8">
         <div className="min-w-0 flex-1">
           {label && <Eyebrow className="mb-3">{label}</Eyebrow>}
@@ -315,12 +333,32 @@ export function PageHero({
           {action && <div className="mt-5 flex flex-wrap gap-2">{action}</div>}
         </div>
         {/*
-          Full strength, and bigger. At `text-muted/60` in a 128px box these
-          measured about 2:1 against the paper and read as a smudge rather than
-          as an illustration — a drawing nobody can see is worse than no
-          drawing, because it looks like something went wrong.
+          THE THIRD TIME THIS COMMENT HAS BEEN WRITTEN, AND THE FIRST TIME THE
+          CODE UNDER IT AGREED.
+
+          These were first drawn at `text-muted/60` in a 128px box — about 2:1
+          against the paper. That was called out and the box grew, but the
+          colour became `text-border-strong`, which is `oklch(81% 0.006 250)`
+          and measures around 1.7:1. So the comment claimed "full strength" over
+          a value fainter than the one it replaced, and it survived a visual
+          sweep that reports 51 passing checks, because that sweep measures the
+          contrast of *text* and nothing else.
+
+          `text-section` is the section's own hue, which is a real colour with a
+          measured floor above 6:1 in both themes, and `--ink` on Home where
+          there is no hue. `check:visual` now samples what SVGs actually paint,
+          so the next person to make this faint gets a failing check rather than
+          a comment to disbelieve.
+
+          `hidden md:block` also went. A phone got no illustration at all, which
+          is the majority of visits and the format where a page of nothing but
+          type is hardest to read. On a phone it sits above the description at a
+          smaller size instead of beside it, because 160px beside a heading in a
+          320px column is not an illustration either.
         */}
-        {art && <div className="hidden md:block shrink-0 w-40 lg:w-52 text-border-strong">{art}</div>}
+        {art && (
+          <div className="hidden md:block shrink-0 w-40 lg:w-52 text-section">{art}</div>
+        )}
       </div>
       <div className="rule mt-6" />
     </header>

@@ -233,6 +233,31 @@ function Coach() {
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  /**
+   * How tall the fixed composer currently is, so the transcript can end above
+   * it instead of behind it.
+   *
+   * Measured rather than assumed: the textarea grows from one row to
+   * `max-h-40` as a question gets longer, and the person typing a long
+   * question is precisely the one who needs to see it. A `ResizeObserver` is
+   * the cheap way to track that — no polling, no layout thrash on every
+   * keystroke.
+   *
+   * Zero until the first measurement, which is correct: the element is
+   * `lg:sticky` on a desktop first paint and needs no reservation there.
+   */
+  const [composerH, setComposerH] = useState(0);
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(([entry]) => {
+      setComposerH(entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   /*
    * Follow the conversation down — but only once there is one.
@@ -555,6 +580,21 @@ function Coach() {
         )}
 
           <div ref={endRef} />
+
+          {/*
+            The room the fixed composer is standing in.
+
+            Only below `lg`, where the composer is `fixed` and therefore out of
+            flow — above it the composer is sticky, still in flow, and reserving
+            space would leave a gap under the last answer. `main`'s own `pb-28`
+            covers the bottom bar and nothing more, which is why this is
+            measured separately rather than folded into it.
+          */}
+          <div
+            aria-hidden="true"
+            className="lg:hidden"
+            style={{ height: composerH }}
+          />
         </div>
 
         {/* The margin: what it has in front of it, and what is answering. */}
@@ -602,20 +642,42 @@ function Coach() {
         wrapper was 187px tall — it was carrying the disclaimer paragraph — and
         on a short phone that is more than the gap between the header and the
         bar, so the browser simply let it scroll. Moving the disclaimer out
-        leaves about 68px, sticky engages, and the offset then does what it
-        always claimed to.
+        left about 68px, sticky engaged, and the offset then did what it had
+        always claimed to — at 360, 375, 390, 414 and 430.
 
-        Verified clear at 360, 375, 390, 414 and 430 wide, at every scroll
-        position. At 320x568 it still overlaps the bar by 25px at the top of a
-        conversation — sticky behaves differently again at that height, and
-        three further attempts did not move it. That is a 2016 iPhone SE, it is
-        the one size still affected out of six measured, and it is recorded
-        here rather than quietly called fixed.
+        AND STILL NOT AT 320x568, WHICH IS WHY THE MECHANISM CHANGED.
+
+        Sticky is scoped to its containing block, and how much room it has to
+        stick in is a function of the viewport height, the header, the bar and
+        how much of the transcript is on screen. On the shortest phone this
+        supports, that budget went negative again and the box scrolled away
+        under the bar. Chasing it with a third offset would have been the
+        fourth measured no-op.
+
+        `position: fixed` does not have the failure mode at all: it is placed
+        against the viewport and does not care how tall its container is or
+        whether there is anything to scroll. So below `lg` the composer is
+        fixed above the bottom bar, and at `lg` and up — where there is no
+        bottom bar and the composer sits in a two-column grid — it stays
+        sticky, which is the right behaviour there and was never the problem.
+
+        Being fixed takes it out of flow, so the transcript would end
+        underneath it. `--composer-h` below is measured from the element itself
+        rather than hard-coded, because the textarea grows to `max-h-40` as
+        somebody types a long question and a fixed number would be wrong for
+        exactly the person who most needs to see what they wrote.
       */}
       <div
-        className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] lg:bottom-0 bg-bg/90 backdrop-blur-sm pt-3 pb-3 mt-4 no-print"
+        ref={composerRef}
+        className="fixed lg:sticky inset-x-0 lg:inset-x-auto z-20
+                   bottom-[calc(3.5rem+env(safe-area-inset-bottom))] lg:bottom-0
+                   border-t border-border lg:border-t-0
+                   bg-bg/95 lg:bg-bg/90 backdrop-blur-md lg:mt-4 no-print"
       >
-        <div className="flex gap-2 items-end">
+        <div
+          className="mx-auto w-full flex gap-2 items-end px-5 sm:px-8 lg:px-0 py-3"
+          style={{ maxWidth: "var(--canvas)" }}
+        >
           <Textarea
             ref={inputRef}
             value={input}

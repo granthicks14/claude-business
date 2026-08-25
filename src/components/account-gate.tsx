@@ -6,14 +6,19 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { Icon } from "./icons";
 import { Badge, Button, Card, Field, Hi, Input, SectionHeader } from "./ui";
 import { needsAccount } from "@/lib/routes";
-import { clearInMemoryState, emptyState, hydrateFrom, markReadyEmpty } from "@/lib/store";
+import { actions, clearInMemoryState, emptyState, hydrateFrom, markReadyEmpty, snapshot } from "@/lib/store";
+import { SAMPLE_BUSINESS_ID, sampleBusiness } from "@/lib/sample";
 import {
   MIN_PASSPHRASE,
   createAccount,
   currentAccount,
   discardLegacyState,
+  endGuest,
+  isGuest,
+  isOpen,
   isUnlocked,
   legacyState,
+  startGuest,
   listAccounts,
   passphraseProblem,
   resumeSession,
@@ -48,8 +53,34 @@ function useVault() {
   );
 }
 
+/**
+ * Is the app usable — by an account holder or by somebody looking around?
+ *
+ * A separate hook from `useVault` rather than a widening of it, because the
+ * two questions have different answers and the difference matters: `useVault`
+ * is "is there a key", which is what anything touching stored data must ask.
+ * This is "is there something on screen", which is what the gate asks.
+ */
+export function useAppOpen() {
+  return useSyncExternalStore(
+    subscribeVault,
+    () => isOpen(),
+    () => false,
+  );
+}
+
+/** Is this a guest session — usable, but nothing is being saved. */
+export function useGuest() {
+  return useSyncExternalStore(
+    subscribeVault,
+    () => isGuest(),
+    () => false,
+  );
+}
+
 export function AccountGate({ children }: { children: React.ReactNode }) {
   const unlocked = useVault();
+  const guest = useGuest();
   const pathname = usePathname() ?? "/";
   const [ready, setReady] = useState(false);
 
@@ -79,6 +110,16 @@ export function AccountGate({ children }: { children: React.ReactNode }) {
    * reputation to spend. See `lib/routes.ts`.
    */
   if (unlocked) return <>{children}</>;
+  /*
+   * A guest gets the whole app, on the same terms as an account holder except
+   * that nothing is written down. There is no key, so `store.ts` drops every
+   * write; the state they build lives in this tab's memory and dies with it.
+   *
+   * `GuestBanner` — mounted by `Ready` in `components/page.tsx`, so it rides
+   * every route — says that continuously rather than once in a dialog, and
+   * carries the button that turns the session into a real account.
+   */
+  if (guest) return <>{children}</>;
   if (!needsAccount(pathname)) return <>{children}</>;
 
   /*
@@ -228,6 +269,29 @@ function SignIn() {
 
   const refresh = () => setAccounts(listAccounts());
 
+  /**
+   * Start looking around, with something to look at.
+   *
+   * The order matters and each step is doing a different job:
+   *
+   *  1. `markReadyEmpty()` settles the store as hydrated. `Ready` in
+   *     `components/page.tsx` waits on that flag, so without it every page a
+   *     guest opens would sit on a skeleton forever.
+   *  2. `loadSample` puts the worked example in. An empty app is a poor demo —
+   *     most workspace routes would say "pick a business first", which is the
+   *     opposite of showing somebody what the product does. It routes through
+   *     `update()`, which schedules a write that `writeNow` then drops because
+   *     `isUnlocked()` is false. That is the intended path, not a workaround:
+   *     the sample lands in memory and nothing touches storage.
+   *  3. `startGuest()` last, so the gate only opens once there is something
+   *     behind it.
+   */
+  const beginGuest = () => {
+    markReadyEmpty();
+    actions.loadSample(sampleBusiness());
+    startGuest();
+  };
+
   return (
     <div className="min-h-dvh grid place-items-center px-4 py-10 bg-bg">
       <div className="w-full max-w-md">
@@ -279,6 +343,33 @@ function SignIn() {
             onBack={accounts.length > 0 ? () => setMode("pick") : undefined}
             onDone={refresh}
           />
+        )}
+
+        {/*
+          THE WAY IN THAT ASKS FOR NOTHING.
+
+          Before this, the only route into the product was inventing a
+          passphrase — one that cannot be reset, because there is no server to
+          reset it from — for an app you had not seen a single screen of. That
+          is a large commitment to make on no information, and it is being asked
+          for at the exact moment a visitor knows least about whether they want
+          the thing.
+
+          Not offered on `unlock`: somebody looking at their own account name
+          has already decided, and "browse without an account" there is an
+          invitation to abandon their own work.
+        */}
+        {mode !== "unlock" && (
+          <div className="rule mt-6 pt-5 text-center">
+            <Button variant="ghost" onClick={beginGuest}>
+              Look around first, without an account
+            </Button>
+            <p className="text-caption text-faint leading-relaxed mt-1.5">
+              The whole app, with a worked example already in it. Nothing is
+              saved until you make an account — you can keep what you have done
+              when you do.
+            </p>
+          </div>
         )}
 
         <p className="text-xs text-faint leading-relaxed mt-6 text-center">
@@ -426,16 +517,26 @@ function UnlockAccount({
 
 /* ---------------------------------------------------------------- create --- */
 
-function CreateAccount({
+export function CreateAccount({
   legacy,
   hasOthers,
   onBack,
   onDone,
+  seed,
 }: {
   legacy: unknown;
   hasOthers: boolean;
   onBack?: () => void;
   onDone: () => void;
+  /**
+   * State to build the account around, instead of an empty one.
+   *
+   * This is how a guest keeps what they did: `createAccount` has always taken
+   * an arbitrary initial state — it is the same seam the pre-vault `legacy`
+   * claim below uses — so "keep my work" needs no new machinery in the vault
+   * at all, only a caller that passes the live snapshot instead of nothing.
+   */
+  seed?: { state: unknown; note: string } | null;
 }) {
   const [label, setLabel] = useState("");
   const [passphrase, setPassphrase] = useState("");
@@ -469,7 +570,11 @@ function CreateAccount({
      * and the plaintext is only removed once the encrypted copy has been read
      * back successfully, never on the strength of the write alone.
      */
-    const initial = legacy && claim ? legacy : emptyState();
+    /*
+     * A guest's work outranks both, because it is the thing on screen right
+     * now and the thing they pressed a button to keep.
+     */
+    const initial = seed ? seed.state : legacy && claim ? legacy : emptyState();
     /*
      * The same tab choice the unlock screen offers. It was missing here, which
      * meant the one route into the app that everybody takes exactly once — the
@@ -486,6 +591,14 @@ function CreateAccount({
 
     hydrateFrom(initial);
     if (legacy && claim) discardLegacyState();
+    /*
+     * The guest session ends only now, after the encrypted copy exists. Ending
+     * it any earlier — on the button press, say — would drop the gate back to
+     * the sign-in screen while the account was still being written, and a
+     * failure at that point would have thrown the work away to show an error
+     * about not being able to save it.
+     */
+    endGuest();
     onDone();
   };
 
@@ -495,6 +608,12 @@ function CreateAccount({
         title={hasOthers ? "Create another account" : "Create your account"}
         description="No email, no password reset emails, nothing sent anywhere. Just a name for this device and a passphrase that encrypts your work."
       />
+
+      {seed && (
+        <div className="rail rail-good py-1 mb-4">
+          <p className="text-caption text-muted leading-relaxed">{seed.note}</p>
+        </div>
+      )}
 
       <form onSubmit={submit} className="space-y-3">
         <Field label="Account name" hint="Shown on this device's sign-in screen. It doesn't have to be your real name.">

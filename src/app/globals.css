@@ -178,9 +178,15 @@
    */
   --shadow: 0 1px 2px oklch(17% 0.012 265 / 0.04);
   --shadow-lg: 0 8px 28px -12px oklch(17% 0.012 265 / 0.18);
+
+  /* Scrollbars, form controls and the canvas the browser paints outside the
+     page follow this rather than guessing from the background. */
+  color-scheme: light;
 }
 
 .dark {
+  color-scheme: dark;
+
   /*
    * Dark is ink stock, not an inverted grey and emphatically not #000. The
    * four grounds step evenly so elevation reads without a border on every box.
@@ -242,6 +248,115 @@
   --shadow-lg: 0 8px 28px -12px oklch(0% 0 0 / 0.55);
 }
 
+/* --------------------------------------------------------------------------
+   THE SECTION PALETTE — colour that says WHERE, never HOW.
+
+   The brand is achromatic for a reason that has not changed: status colour is
+   on almost every screen in this app, so a saturated brand hue would compete
+   with `good`, `warn` and `bad` for the same meaning. That argument is about
+   *status*, though, and it was quietly read as "no colour anywhere" — which is
+   why the product measured as bland.
+
+   So colour arrives on the one axis that cannot collide with status: which
+   section of the product you are standing in. A section hue is worn by chrome
+   — the eyebrow, the wedge, the datum, the rail, the illustration — and never
+   by a value or a badge. The two never meet on one element, and
+   `check:visual` asserts that they never do.
+
+   The hues are spaced across the arc status does not use. Status holds 152
+   (green), 78 (amber) and 25 (red); 185 through 330 is free.
+
+   Home has no hue. Home is the ground, and `--section` is simply unset there,
+   so every consumer's `var(--section, <neutral>)` fallback takes over. That is
+   the whole mechanism for "this section is not coloured" — no second rule.
+
+   ON THE LOW CHROMA AT 185 AND 221: cyan and teal have far less chroma
+   available in sRGB at a lightness dark enough to read as text on paper than
+   magenta does. The figures below are the in-gamut maximum, not a taste
+   decision, and pushing lightness up to recover chroma costs more contrast
+   than it gains saturation — measured at four lightnesses before settling.
+
+   Every value is inside the sRGB gamut and carries its measured contrast
+   against the page ground. Small text needs 4.5:1 and all ten clear it by a
+   wide margin, because an eyebrow is 11px and sits on `--surface-2` as often
+   as on the page.
+   -------------------------------------------------------------------------- */
+
+/* light */
+[data-section="you"] {
+  /* magenta — 7.28:1 on the page ground */
+  --section: oklch(47% 0.2 330);
+  --section-text: oklch(47% 0.2 330);
+  --section-soft: oklch(96.5% 0.024 330);
+  --section-border: oklch(84% 0.075 330);
+}
+[data-section="brainstorm"] {
+  /* violet — 7.16:1 on the page ground */
+  --section: oklch(47% 0.2 294);
+  --section-text: oklch(47% 0.2 294);
+  --section-soft: oklch(96.5% 0.017 294);
+  --section-border: oklch(84% 0.075 294);
+}
+[data-section="business"] {
+  /* azure — 6.63:1 on the page ground */
+  --section: oklch(47% 0.165 258);
+  --section-text: oklch(47% 0.165 258);
+  --section-soft: oklch(96.5% 0.016 258);
+  --section-border: oklch(84% 0.075 258);
+}
+[data-section="quality"] {
+  /* blue — 6.31:1 on the page ground */
+  --section: oklch(47% 0.081 221);
+  --section-text: oklch(47% 0.081 221);
+  --section-soft: oklch(96.5% 0.023 221);
+  --section-border: oklch(84% 0.075 221);
+}
+[data-section="make"] {
+  /* teal — 6.22:1 on the page ground */
+  --section: oklch(47% 0.078 185);
+  --section-text: oklch(47% 0.078 185);
+  --section-soft: oklch(96.5% 0.024 185);
+  --section-border: oklch(84% 0.075 185);
+}
+
+/* dark */
+.dark [data-section="you"] {
+  /* magenta — 8.82:1 on the page ground */
+  --section: oklch(78% 0.198 330);
+  --section-text: oklch(78% 0.198 330);
+  --section-soft: oklch(24.5% 0.042 330);
+  --section-border: oklch(42% 0.09 330);
+}
+.dark [data-section="brainstorm"] {
+  /* violet — 9.32:1 on the page ground */
+  --section: oklch(78% 0.117 294);
+  --section-text: oklch(78% 0.117 294);
+  --section-soft: oklch(24.5% 0.042 294);
+  --section-border: oklch(42% 0.09 294);
+}
+.dark [data-section="business"] {
+  /* azure — 9.62:1 on the page ground */
+  --section: oklch(78% 0.106 258);
+  --section-text: oklch(78% 0.106 258);
+  --section-soft: oklch(24.5% 0.042 258);
+  --section-border: oklch(42% 0.09 258);
+}
+.dark [data-section="quality"] {
+  /* blue — 9.98:1 on the page ground */
+  --section: oklch(78% 0.135 221);
+  --section-text: oklch(78% 0.135 221);
+  --section-soft: oklch(24.5% 0.042 221);
+  --section-border: oklch(42% 0.073 221);
+}
+.dark [data-section="make"] {
+  /* teal — 10.17:1 on the page ground */
+  --section: oklch(78% 0.129 185);
+  --section-text: oklch(78% 0.129 185);
+  --section-soft: oklch(24.5% 0.042 185);
+  --section-border: oklch(42% 0.07 185);
+}
+
+
 @theme inline {
   --color-bg: var(--bg);
   --color-bg-subtle: var(--bg-subtle);
@@ -278,6 +393,20 @@
   --color-mark: var(--mark);
   --color-mark-soft: var(--mark-soft);
   --color-mark-text: var(--mark-text);
+
+  /*
+   * The section hue, as Tailwind utilities — `text-section`, `border-section`,
+   * `bg-section-soft`.
+   *
+   * Each falls back to the neutral it replaces, so Home (which sets no hue)
+   * and anything rendered outside the shell get exactly what they got before.
+   * That fallback is what makes "this section has no colour" free rather than a
+   * second set of rules.
+   */
+  --color-section: var(--section, var(--ink));
+  --color-section-text: var(--section-text, var(--text-faint));
+  --color-section-soft: var(--section-soft, var(--surface-2));
+  --color-section-border: var(--section-border, var(--border-strong));
 
   --shadow-card: var(--shadow);
   --shadow-pop: var(--shadow-lg);
@@ -710,7 +839,12 @@
    * which is the distinction that keeps four tinted rectangles off a page.
    */
   .rail {
-    border-left: 2px solid var(--border-strong);
+    /* Takes the section hue where there is one. A rail is structure — it says
+       "this block belongs to the thing you are reading" — so it is exactly the
+       kind of element the section palette is for. The `-good`/`-warn`/`-bad`
+       modifiers below still win, because a rail carrying a *verdict* is
+       carrying status and status outranks location. */
+    border-left: 2px solid var(--section, var(--border-strong));
     padding-left: var(--space-4);
   }
 
@@ -732,7 +866,12 @@
     letter-spacing: var(--text-label--letter-spacing);
     text-transform: uppercase;
     font-weight: 500;
-    color: var(--text-faint);
+    /* The eyebrow is the single most repeated piece of chrome in the product —
+       it labels nearly every block on every page — which makes it the element
+       that carries the section hue furthest for one declaration. Falls back to
+       the neutral it used to be, so Home and anything outside the shell are
+       unchanged. */
+    color: var(--section-text, var(--text-faint));
   }
 
   /*

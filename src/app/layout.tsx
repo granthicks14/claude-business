@@ -29,21 +29,48 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  /*
+   * The colour a phone paints around the page, and it has to match `--bg`.
+   *
+   * These were `#f7f6f2` / `#1a1a18` — the warm-paper stock from before the
+   * ink-and-signal rebrand, kept by hand and therefore left behind when the
+   * tokens moved to a cool near-neutral ramp. Recomputed from the current
+   * `--bg` in both themes: `oklch(98.2% 0.002 250)` and
+   * `oklch(16.5% 0.006 265)`.
+   *
+   * Dark is listed first because dark is the default (see `themeScript`), and
+   * a client that ignores `media` takes the first entry.
+   */
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f6f2" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1a18" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0e11" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f9fa" },
   ],
 };
 
 /**
- * Applies the saved theme before first paint. Inline and synchronous on
- * purpose — a flash of the wrong theme is worse than a few bytes of script.
+ * DARK IS THE DEFAULT, AND THE SCRIPT'S JOB IS TO UNDO IT.
+ *
+ * This used to read the other way round: light was the served default and the
+ * script added `dark`. Two things were wrong with that once dark became the
+ * intended default. A visitor whose stored preference is dark got one painted
+ * frame of light if the parse was slow, which is the exact flash the inline
+ * script exists to prevent. And a visitor with JavaScript disabled got light
+ * permanently, with no way to say otherwise.
+ *
+ * So `dark` ships on `<html>` from the server and the script *removes* it for
+ * somebody who has chosen light. The default is then correct with no script at
+ * all, and the only people relying on the script are the ones who have already
+ * expressed a preference.
+ *
+ * The OS setting deliberately does not decide the default any more. It is a
+ * dark-first product; `prefers-color-scheme` would make it dark-first only for
+ * people whose machine already agreed.
  */
 const themeScript = `
 (function(){try{
-  var stored = localStorage.getItem('abb:theme');
-  var dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  if (dark) document.documentElement.classList.add('dark');
+  if (localStorage.getItem('abb:theme') === 'light') {
+    document.documentElement.classList.remove('dark');
+  }
 }catch(e){}})();
 `;
 
@@ -51,7 +78,11 @@ import { body, display, mono } from "@/lib/fonts";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${body.variable} ${display.variable} ${mono.variable}`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`dark ${body.variable} ${display.variable} ${mono.variable}`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

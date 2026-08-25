@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useState } from "react";
 
 import { DiscussWithCoach } from "@/components/discuss";
@@ -110,9 +112,9 @@ function Validation({ business }: { business: SelectedBusiness }) {
             Findings will be labelled <strong>AI inference</strong> or <strong>assumption</strong> — never
             &ldquo;verified&rdquo;, and no sources will be cited, because nothing was actually looked up. Adding a
             Tavily or Brave Search key enables real research.{" "}
-            <a href="/settings" className="text-accent-text underline underline-offset-2">
+            <Link href="/settings" className="text-accent-text underline underline-offset-2">
               How to add one
-            </a>
+            </Link>
             .
           </p>
         </div>
