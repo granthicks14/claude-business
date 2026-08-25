@@ -274,8 +274,19 @@ results.mvp = {
 };
 
 const softwareIdea = business({ idea: { ...idea, mode: "online", oneLiner: "A software platform and dashboard for tracking things" } });
+/*
+ * All three shapes are named explicitly.
+ *
+ * The service case used to be deliveryShape(b) -- whatever the generator
+ * happened to return for seed 11 -- while its two siblings spelled their
+ * one-liner out. Fixing the seed rotation in engine/ideas.ts moved that idea to
+ * a toolkit, which deliveryShape correctly reads as a digital product, and a
+ * test of the shape detector failed for reasons that had nothing to do with the
+ * shape detector.
+ */
+const serviceIdea = business({ idea: { ...idea, name: "Done-for-you help for small firms", oneLiner: "I do the work for each client by hand", offering: "Hands-on help, delivered per client", revenueModel: "Charged per job" } });
 results.shapes = {
-  service: deliveryShape(b),
+  service: deliveryShape(serviceIdea),
   software: deliveryShape(softwareIdea),
   marketplace: deliveryShape(business({ idea: { ...idea, oneLiner: "A marketplace to connect buyers with sellers" } })),
 };

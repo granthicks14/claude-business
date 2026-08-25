@@ -168,7 +168,7 @@ export function runEngineTask(task: string, req: EngineRequest): unknown {
 }
 
 export { generateIdeas, generatePivots, resolveContext };
-export { answer as coachAnswer, detectIntent } from "./coach";
+export { answer as coachAnswer } from "./coach";
 
 /**
  * Instant local analysis.

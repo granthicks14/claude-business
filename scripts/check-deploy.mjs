@@ -212,6 +212,30 @@ check("Secrets", "no server secret reachable from client code", () => {
   return "server-only modules are server-side only; no NEXT_PUBLIC_ variables";
 });
 
+check("Correctness", "no control characters in source", () => {
+  /*
+   * An invisible byte inside a regex is a defect that survives review.
+   *
+   * Three patterns in `lib/iq/classify.ts` shipped with literal backspace
+   * characters where `\b` word boundaries were meant — the result of editing
+   * the file through a tool that treated the backslash as an escape. Each
+   * pattern then required a control character no typed sentence contains, so
+   * the topic silently matched nothing. A regex that cannot match is not an
+   * error, it is just always false, which is why nothing caught it until the
+   * classifier was measured question by question.
+   *
+   * Tabs and newlines are ordinary; everything else in the C0 range is not.
+   */
+  const bad = [];
+  for (const file of sourceFiles()) {
+    const src = fs.readFileSync(file, "utf8");
+    const hits = src.match(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g);
+    if (hits) bad.push(`${path.relative(ROOT, file)} (${hits.length})`);
+  }
+  assert(bad.length === 0, `control characters in: ${bad.join(", ")}`);
+  return "no stray control characters in any source file";
+});
+
 /* ----------------------------------------------------------------- security */
 
 check("Security", "response headers set a restrictive policy", () => {

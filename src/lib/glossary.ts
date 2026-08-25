@@ -295,6 +295,73 @@ export const TERMS: Term[] = [
     whyItMatters: "Referrals cost nothing and arrive already trusting you. Ask for them explicitly — most people simply never do.",
     category: "growth",
   }),
+  /*
+   * FIVE TERMS THE APP COMPUTED AND COULD NOT DEFINE.
+   *
+   * `intel/economics.ts` returns `contributionPerSale`, `ltv`, `paybackSales`
+   * and `ltvToCac`, and the money page renders all four. None of them had a
+   * glossary entry, so "explain unit economics like I'm new" reached nothing
+   * and the coach fell back to "I answer best on specific business questions"
+   * — about arithmetic it had already done for that exact business.
+   *
+   * Churn is here for the same reason from the other direction: `retention`
+   * existed, but nobody types "retention" when a customer leaves.
+   */
+  T({
+    id: "unit-economics",
+    term: "Unit economics",
+    aka: ["per-unit economics", "economics per sale", "per sale maths", "per sale math"],
+    short: "What one sale earns you and what it costs you, ignoring everything else about the business.",
+    example:
+      "You charge $100 to detail a car. Materials are $20 and getting that customer cost $15. Your unit economics are $65 kept per sale — and that number decides whether doing more of them helps or hurts.",
+    whyItMatters:
+      "A business with bad unit economics gets worse as it grows. Every sale loses money, so more sales lose more money. It is the one thing worth checking before spending anything on marketing.",
+    category: "money",
+  }),
+  T({
+    id: "contribution",
+    term: "Contribution per sale",
+    aka: ["contribution margin", "kept per sale", "what I keep"],
+    short: "The money left from one sale after the costs that only exist because of that sale.",
+    example:
+      "$100 in, $20 of materials, $8 of card fees. You contributed $72 towards your fixed costs — the rent and software you pay whether or not anyone buys.",
+    whyItMatters:
+      "This is the figure that has to be positive before volume is your friend. Below zero, every new customer costs you money.",
+    category: "money",
+  }),
+  T({
+    id: "ltv",
+    term: "Lifetime value",
+    aka: ["ltv", "clv", "customer lifetime value", "what a customer is worth"],
+    short: "Everything one customer pays you in total, across every purchase they ever make.",
+    example:
+      "A dog groomer charging $45 who sees the same dog every six weeks earns about $390 a year from that one customer — not $45.",
+    whyItMatters:
+      "It decides how much you can afford to spend winning a customer. It is also the number most tools invent: it needs to know how often people come back, and in month one nobody does. This app returns nothing rather than guessing.",
+    category: "money",
+  }),
+  T({
+    id: "payback",
+    term: "Payback",
+    aka: ["payback period", "earn it back", "how long to recoup"],
+    short: "How many sales it takes to earn back what it cost you to win that customer.",
+    example:
+      "It cost $30 in ads to get someone who keeps $15 for you per visit. Two visits and you are square; the third is the first one that makes you money.",
+    whyItMatters:
+      "Short payback means you can reinvest quickly. Long payback means you need cash to survive the gap, which is where businesses with good margins still run out of money.",
+    category: "money",
+  }),
+  T({
+    id: "churn",
+    term: "Churn",
+    aka: ["customers leaving", "dropping off", "cancelling", "canceling", "lapsed"],
+    short: "The share of your customers who stop buying in a given period.",
+    example:
+      "Twenty subscribers at the start of the month, three cancel. That is 15% monthly churn — at that rate the average customer stays under seven months.",
+    whyItMatters:
+      "Churn quietly caps how big the business can get. Above a certain rate you are refilling a leaking bucket, and winning new customers never catches up.",
+    category: "customers",
+  }),
   T({
     id: "moat",
     term: "Moat",

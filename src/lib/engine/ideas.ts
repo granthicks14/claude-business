@@ -747,7 +747,22 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
    * different names. That looked like variety in a test and was worth nothing
    * to a founder reading the list.
    */
-  const offset = seed % Math.max(1, Math.min(candidates.length, 7));
+  /*
+   * THE MODULUS WAS AT MOST 7, AND THE CALLERS STEPPED BY 7.
+   *
+   * `lib/ideas.ts` fires the angle batches in parallel and passes
+   * `seed: Math.floor(Math.random() * 1000) + index * 7`. With the divisor
+   * capped at 7, `index * 7 % 7` is 0 for every index — so every batch in a
+   * single generation started at the same candidate, and two angles could
+   * return the same businesses. Measured: `seed: 0` and `seed: 7` produced
+   * byte-identical batches.
+   *
+   * Rotating over the whole candidate list fixes it and costs nothing. The
+   * cap was doing no useful work: the paragraph above explains that variety on
+   * regeneration comes from `avoid`, not from the seed, and that argument does
+   * not require the rotation to be small — only that it not be relied on.
+   */
+  const offset = candidates.length > 0 ? Math.abs(seed) % candidates.length : 0;
   const ordered = [...candidates.slice(offset), ...candidates.slice(0, offset)];
 
   for (const candidate of ordered) {

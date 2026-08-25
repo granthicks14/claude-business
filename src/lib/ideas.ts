@@ -239,7 +239,11 @@ export function useIdeaGeneration() {
           industryId: options.industryId,
           constraints: options.constraints,
           avoid: [...seen],
-          seed: Math.floor(Math.random() * 1000) + index * 7,
+          /*
+           * A prime step, so parallel batches cannot land on the same
+           * rotation. `index * 7` did exactly that against a modulus of 7.
+           */
+          seed: Math.floor(Math.random() * 100000) + index * 3571,
           feedback,
         });
 
@@ -295,7 +299,11 @@ export function useIdeaGeneration() {
           industryId: options.industryId,
           constraints: options.constraints,
           avoid: [...seen],
-          seed: Math.floor(Math.random() * 1000) + index * 7,
+          /*
+           * A prime step, so parallel batches cannot land on the same
+           * rotation. `index * 7` did exactly that against a modulus of 7.
+           */
+          seed: Math.floor(Math.random() * 100000) + index * 3571,
           feedback,
         });
         const recovered: BusinessIdea[] = [];

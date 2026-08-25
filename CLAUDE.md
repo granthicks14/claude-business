@@ -28,16 +28,17 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:accounts  # 45 account, guest-session and vault-registry tests
-npm run test:scoring   # 52 scoring, title, diversity, memory and refusal tests
+npm run test:accounts  # 52 account, guest-session and vault-registry tests
+npm run test:scoring   # 57 scoring, title, diversity, seed and refusal tests
 npm run test:intel     # 78 decision-layer calibration tests
-npm run test:research  # 74 customer/market/MVP calibration tests
-npm run test:product   # 80 quality/consistency/variant/intake/sample/mode tests
-npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
+npm run test:research  # 85 customer/market/MVP calibration tests
+npm run test:product   # 100 quality/consistency/variant/intake/sample/mode tests
+npm run test:analyze   # 65 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
-npm run test:describe  # natural-language founder profile tests
-npm run test:intent    # 46 intent-router tests: what it reads, and what it refuses
-npm test               # all nine
+npm run test:describe  # 56 natural-language founder profile tests
+npm run test:intent    # 59 intent-router tests: what it reads, and what it refuses
+npm run test:iq        # 37 pipeline tests: the audit that started the work
+npm test               # all ten
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
 npm run check:visual   # measures the look-and-feel invariants in a browser
@@ -81,6 +82,10 @@ src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
 src/lib/opportunity.ts  "Best opportunity near me" — no profile required.
+src/lib/iq/             The question pipeline. Understand a sentence, retrieve
+                        what the repo knows, decide which reasoners answer it,
+                        compose graded sections. Pure — no React, no network.
+src/lib/analysis.ts     businessAnalysis(), pure. `explain.ts` is the hook over it.
 src/lib/intel/          The decision layer. Evidence grading, assumptions,
                         red team, verdicts, sensitivity. All deterministic.
 src/lib/customers/      Ideal customer, interview plan, interview analysis.
@@ -520,6 +525,28 @@ shape the order but not the size.
 matches. It used to return two industries, which is why a founder who listed no
 skills received eight ideas that were all admin support and callouts.
 
+### One seed, and the offset that was a no-op
+
+`generateIdeas` rotates its candidate list by the seed so two batches from one
+profile do not open on the same idea. It rotated by
+`seed % Math.max(1, Math.min(candidates.length, 7))` — at most 7 — while both
+call sites in `lib/ideas.ts` passed `seed: random + index * 7`. Since
+`index * 7 % 7 === 0` for every index, **the per-angle offset did nothing**, and
+parallel angle batches could return the same ideas. Confirmed: `seed: 0` and
+`seed: 7` produced identical batches. It rotates over the whole list now and the
+callers step by a prime.
+
+Fixing it moved the generated batch, which broke six assertions across three
+suites — none of them regressions, all of them **fixture coupling**. The tests
+were asserting on properties of whichever idea the old rotation happened to
+return: that a specific set of skills was "relevant", that the fixture's delivery
+shape was a service, that its five variants rescored differently, that a cold
+version of it read bearish. Each was repaired at the level the assertion was
+actually about — the fixture pinned, the one-liner named explicitly, or the claim
+measured across twelve generated ideas instead of one — and the reasoning is
+written next to each. `test:scoring` gained five cases asserting that two angle
+batches in one generation do not collide.
+
 ### The app remembers what you turned down
 
 Diversity caps stop one batch being the same business five times. They do
@@ -596,6 +623,68 @@ entries name the source to check instead of guessing.
 
 A pricing unit is not always a job: priced by area, one job is thousands of
 units. `unitsPerJob` exists because forgetting it produced "5,000 jobs a month".
+
+### The question pipeline
+
+`iq/` is the path from a typed sentence to the reasoners that answer it. It
+exists because the audit found the opposite of what was assumed: this app does
+not lack intelligence, it lacked a way in.
+
+**Measured, twenty real founder questions against the worked example.** Seven of
+twenty hit `engine/coach.ts`'s `default:` and received the same 714 characters —
+*"I answer best on specific business questions"*. Among them: "What am I getting
+wrong?" (`intel/decision.redTeam` ranks threats by likelihood × impact), "How big
+is this market?" (`research/market.sizeMarket` sizes it bottom-up), "Explain unit
+economics like I'm new" (the glossary defines it, `intel/economics` computes it)
+and "Compare this to just getting a job" (`intel/shape.opportunityCost`). Every
+one of those answers was written, tested and unreachable. Separately, three
+different pricing questions returned a **byte-identical** 904-character reply,
+because the intent *was* the answer and there was no variation within one.
+
+Five modules, one per stage:
+
+- `classify.ts` — **UNDERSTAND.** Ranked and multi-label over 31 topics, so "how
+  do I price this when nobody is buying" returns both rather than discarding
+  half the question. Weights are three tiers and no more: 4 decides it alone, 2
+  leans, 1 is consistent-with. Confidence is evidence *and* separation, the same
+  rule `analyze/detect.ts` uses.
+- `retrieve.ts` — **RETRIEVE**, the layer that did not exist. An index over 18
+  industries, 22 models, the niches and 38 glossary terms. Not a vector store:
+  that needs a model file or a paid API, and token overlap has a property an
+  embedding does not — you can see exactly why something matched.
+- `plan.ts` — **REASON.** A table of *aspects*: topic → one reasoner, its weight,
+  and the facts it needs before it may speak. 54 aspects across all 31 topics.
+- `compose.ts` — **RESPOND.** One writer per aspect, each calling the reasoner
+  its entry names, each section carrying its `Epistemics` grade.
+- `index.ts` — the pipeline, and the one entry point.
+
+**A precondition reads the business; a cue reads the question.** Preconditions
+alone were not enough, and this is the subtle half: with only preconditions a
+plan is a function of the topic and the recorded facts, so "How much should I
+charge?" and "Should I raise my prices now that I have three customers?" select
+the identical set — the byte-identical answer reproduced one layer up. Aspects
+declare `cue` and `notWhen` against the classifier's own recorded signals, so
+somebody asking whether to *raise* a price is not told where to start. The three
+pricing questions now produce three different section sets, which is the
+regression the whole exercise is measured against.
+
+**A gap is a section too.** When a precondition fails the aspect still appears,
+graded `unknown`, saying what is missing and what would close it. Dropping it
+silently makes the answer look complete while omitting the part the founder
+needed; filling it with something plausible is the failure the app exists not to
+commit. Asserted: a business with nothing recorded never yields an
+`evidence`-graded claim.
+
+**The fallback names capabilities instead of apologising.** The old one told
+anybody it did not understand to *"pick one and start"* — the no-business-picked
+answer, delivered to people who had a business and had asked something specific.
+It now lists what the engine can genuinely do *for this founder right now*,
+chosen against what they have recorded, and offers the retriever's closest hits.
+
+`engine/coach.ts` is a caller. Its `answer()` signature is unchanged so `/coach`
+did not move, and its own `detectIntent` is gone: keeping a second classifier
+beside `iq/classify.ts` would guarantee they drifted, invisibly, because both
+would keep returning something.
 
 ### The decision layer
 

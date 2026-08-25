@@ -48,7 +48,27 @@ function profile(over: Partial<FounderProfile> = {}): FounderProfile {
 
 // One fixed idea, generated from a neutral profile, scored against many people.
 const base = profile();
-const ideas = generateIdeas(base, { angle: "balanced", count: 6, seed: 7 });
+/*
+ * Seed 0, and it is pinned deliberately.
+ *
+ * These tests are about 'computeFit' — whether more budget scores higher,
+ * whether a relevant skill beats an irrelevant one — and every one of them
+ * needs a fixture that actually exercises the property. "video editing" is only
+ * a *relevant* skill against a video business, and "local" only beats "online"
+ * against an idea with somewhere to be.
+ *
+ * That made them silently coupled to which ideas the generator happened to
+ * return. Fixing the seed-rotation bug in 'engine/ideas.ts' changed the batch
+ * and three of them failed — not because scoring had changed, but because the
+ * new first idea was an admin business with an all-online batch behind it, so
+ * "relevant skill" and "prefers local" had nothing to bite on.
+ *
+ * Seed 0 lands on rotation offset 0, which is where the old 'seed: 7' landed
+ * under the old modulus, so this is the batch these assertions were written
+ * against. Pinning it makes the scoring suite test scoring; the rotation itself
+ * is now tested separately at the end of this file.
+ */
+const ideas = generateIdeas(base, { angle: "balanced", count: 6, seed: 0 });
 const results: Record<string, unknown> = {};
 
 const scoreOf = (p: FounderProfile, i = 0) => computeFit(ideas[i], p).score;
@@ -380,6 +400,32 @@ results.memory = {
     === JSON.stringify(firstBatch.map((i) => i.name)),
 };
 
+
+/* ------------------------------------------------------ the seed offset --- */
+
+/*
+ * PARALLEL ANGLE BATCHES MUST NOT LAND ON THE SAME ROTATION.
+ *
+ * generateIdeas rotated the candidate list by "seed % min(candidates, 7)", and
+ * lib/ideas.ts fires its angle batches with "random + index * 7". Since
+ * index * 7 % 7 is 0 for every index, every batch in one generation started at
+ * the same candidate — so two angles could return the same businesses, and the
+ * seed option documented as keeping repeat generations distinct did nothing.
+ *
+ * Measured before the fix: seed 0 and seed 7 produced byte-identical batches.
+ */
+{
+  const names = (seed: number) => generateIdeas(base, { count: 6, seed }).map((i) => i.name).join("|");
+  const zero = names(0);
+  results.seeds = {
+    sevenDiffers: names(7) !== zero,
+    fourteenDiffers: names(14) !== zero,
+    realStepDiffers: names(3571) !== zero,
+    threeAnglesAllDistinct: new Set([names(11), names(3582), names(7153)]).size === 3,
+    stillReturnsAFullBatch: generateIdeas(base, { count: 6, seed: 42 }).length === 6,
+  };
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -515,6 +561,12 @@ check("opposite dials produce different shortlists", r.memory.dialsProduceDiffer
 check("asking for local gets more local", r.memory.localIsMoreLocal, r.memory.localShares.join(" -> "));
 check("dials never shrink the batch", r.memory.dialsKeepBatchFull);
 check("no feedback behaves exactly as before", r.memory.emptyFeedbackIsANoOp);
+
+check("seed 7 no longer matches seed 0", r.seeds.sevenDiffers);
+check("nor does seed 14", r.seeds.fourteenDiffers);
+check("the step the callers actually use produces a different batch", r.seeds.realStepDiffers);
+check("three parallel angle batches are all distinct", r.seeds.threeAnglesAllDistinct);
+check("and a seeded batch is still full", r.seeds.stillReturnsAFullBatch);
 
 console.log(`\n${failures === 0 ? "ALL SCORING TESTS PASSED" : `${failures} FAILURES`}`);
 process.exit(failures ? 1 : 0);

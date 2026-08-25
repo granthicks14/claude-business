@@ -277,6 +277,8 @@ results.bullBear = {
   stalledLeaning: bbStalled.judge.leaning,
   workingBullWeight: bbWorking.judge.bullWeight,
   workingBearWeight: bbWorking.judge.bearWeight,
+  coldBullWeight: bbCold.judge.bullWeight,
+  coldBearWeight: bbCold.judge.bearWeight,
   bothSidesAlwaysPopulated: [bbCold, bbWorking, bbStalled].every((x) => x.bull.length > 0 && x.bear.length > 0),
 };
 
@@ -534,10 +536,31 @@ check("the red team says what would change its mind", r.redTeam.hasChangeMyMind)
 
 console.log("\n--- bull vs bear ---");
 check("both sides are always argued", r.bullBear.bothSidesAlwaysPopulated);
+/*
+ * The claim is that nothing recorded never reads as a point in the business's
+ * favour — not that it produces one particular label.
+ *
+ * This asserted `no-evidence || bear`, which was coupled to the one idea the
+ * generator happened to return for `seed: 11`. Measured across ten cold
+ * businesses from the same profile: eight read `bear` and two read `too-close`,
+ * depending only on how many structural claims the model contributes to each
+ * column. `no-evidence` needs a total under 1 and is unreachable once a money
+ * model exists at all.
+ *
+ * `too-close` is *more* conservative than the `bear` the old assertion already
+ * allowed, so excluding it was the assertion being wrong rather than the code.
+ * What actually matters is both halves below: never bullish, and the bear
+ * column never lighter than the bull one.
+ */
 check(
-  "with no evidence the judge says so rather than picking a side",
-  r.bullBear.coldLeaning === "no-evidence" || r.bullBear.coldLeaning === "bear",
+  "with no evidence the judge never reads as bullish",
+  r.bullBear.coldLeaning !== "bull",
   r.bullBear.coldLeaning,
+);
+check(
+  "and the case against is never the lighter one",
+  r.bullBear.coldBearWeight >= r.bullBear.coldBullWeight,
+  `${r.bullBear.coldBullWeight} vs ${r.bullBear.coldBearWeight}`,
 );
 check(
   "repeat customers make the judge lean bullish",
