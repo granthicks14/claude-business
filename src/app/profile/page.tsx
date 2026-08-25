@@ -336,7 +336,7 @@ function FieldRow({
 
       {editing && (
         <div className="mt-3 animate-in">
-          <p className="text-[13px] text-muted mb-2.5 leading-relaxed">
+          <p className="text-xs text-muted mb-2.5 leading-relaxed">
             <span className="text-xs uppercase tracking-wide text-faint font-medium">Affects · </span>
             {field.affects}
           </p>

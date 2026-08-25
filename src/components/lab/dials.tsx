@@ -59,7 +59,7 @@ export function Dials() {
               title={dial.effect}
               /* min-h-9 because these are the primary control on this panel and
                  a 28px chip is not a comfortable target on a phone. */
-              className={`min-h-9 px-3 rounded-pill border text-[13px] transition-colors
+              className={`min-h-9 px-3 rounded-pill border text-xs transition-colors
                 ${
                   active
                     ? "border-accent-border bg-accent-soft text-accent-text font-medium"

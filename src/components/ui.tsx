@@ -46,9 +46,9 @@ const VARIANTS: Record<Variant, string> = {
 };
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-[13px] rounded-md gap-1.5",
+  sm: "h-8 px-3 text-xs rounded-md gap-1.5",
   md: "h-10 px-4 text-sm rounded-md gap-2",
-  lg: "h-12 px-7 text-[15px] rounded-md gap-2",
+  lg: "h-12 px-7 text-sm rounded-md gap-2",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -563,7 +563,7 @@ export function Badge({
   };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border font-mono text-[11px] tracking-wide font-medium leading-5 ${tones[tone]} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm border font-mono text-xs tracking-wide font-medium leading-5 ${tones[tone]} ${className}`}
     >
       {children}
     </span>
@@ -786,7 +786,7 @@ export function TagInput({
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 bg-accent-soft text-accent-text border border-accent-border rounded-md pl-2 pr-1 py-0.5 text-[13px]"
+            className="inline-flex items-center gap-1 bg-accent-soft text-accent-text border border-accent-border rounded-md pl-2 pr-1 py-0.5 text-xs"
           >
             {tag}
             <button
@@ -1044,8 +1044,8 @@ export function Meter({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3 mb-1">
-        <span className="text-[13px] font-medium truncate">{label}</span>
-        <span className="text-[13px] text-muted shrink-0">
+        <span className="text-xs font-medium truncate">{label}</span>
+        <span className="text-xs text-muted shrink-0">
           <CountUp value={value} />
         </span>
       </div>

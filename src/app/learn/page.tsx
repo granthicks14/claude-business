@@ -86,7 +86,7 @@ function Learn() {
                 )}
               </div>
 
-              <p className="text-[15px] leading-relaxed">{t.short}</p>
+              <p className="text-sm leading-relaxed">{t.short}</p>
 
               <p className="text-sm mt-3 pt-3 border-t border-border leading-relaxed">
                 <span className="text-xs uppercase tracking-wide text-faint font-medium">For example · </span>

@@ -44,7 +44,7 @@ export function DiscussWithCoach({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-2 min-h-9 text-[13px] font-medium text-accent-text hover:underline underline-offset-2"
+      className="inline-flex items-center gap-2 min-h-9 text-xs font-medium text-accent-text hover:underline underline-offset-2"
     >
       <Icon.chat className="size-4" />
       {label}

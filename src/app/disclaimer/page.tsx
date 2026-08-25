@@ -19,8 +19,8 @@ export default function DisclaimerPage() {
     >
       {OUTPUT_DISCLAIMERS.map((d) => (
         <div key={d.title} className="rounded-xl border border-border bg-surface p-4">
-          <p className="font-medium text-[15px]">{d.title}</p>
-          <p className="text-[15px] text-muted mt-1.5 leading-relaxed">{d.body}</p>
+          <p className="font-medium text-sm">{d.title}</p>
+          <p className="text-sm text-muted mt-1.5 leading-relaxed">{d.body}</p>
         </div>
       ))}
 

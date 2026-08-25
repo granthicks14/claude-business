@@ -104,10 +104,10 @@ function Finder() {
 
       {/* Input */}
       <Card className="p-5">
-        <label htmlFor="place" className="block font-medium text-[15px]">
+        <label htmlFor="place" className="block font-medium text-sm">
           Tell us about your town or area
         </label>
-        <p className="text-[13px] text-muted leading-relaxed mt-1">
+        <p className="text-xs text-muted leading-relaxed mt-1">
           Anything you know. Who lives there, what businesses you see, what people complain about, whether it&apos;s
           growing. You don&apos;t need statistics — you need to describe the place the way you&apos;d describe it to a
           friend.
@@ -234,13 +234,13 @@ function Finder() {
                 ))}
               </ul>
             ) : (
-              <p className="text-[13px] text-muted">
+              <p className="text-xs text-muted">
                 Nothing specific — the ranking below is based on the business models alone.
               </p>
             )}
 
             <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-[13px] leading-relaxed">
+              <p className="text-xs leading-relaxed">
                 <Hi tone={result.reading.confidence === "high" ? "good" : "warn"}>
                   Confidence: {result.reading.confidence}
                 </Hi>{" "}
@@ -251,7 +251,7 @@ function Finder() {
                   <p className="text-xs uppercase tracking-wide text-faint font-medium mt-3">Still unknown</p>
                   <ul className="mt-1.5 space-y-1">
                     {result.reading.unknowns.map((u) => (
-                      <li key={u} className="text-[13px] text-muted flex items-center gap-2">
+                      <li key={u} className="text-xs text-muted flex items-center gap-2">
                         <span className="size-1.5 rounded-full bg-warn shrink-0" />
                         {u}
                       </li>
@@ -295,10 +295,10 @@ function Finder() {
                 {result.comparisons.map((c) => (
                   <li key={c.above}>
                     <Card className="p-3.5">
-                      <p className="text-[13px] leading-relaxed">
+                      <p className="text-xs leading-relaxed">
                         <strong>{c.above}</strong> over <strong>{c.below}</strong>
                       </p>
-                      <p className="text-[13px] text-muted leading-relaxed mt-1">{c.reason}</p>
+                      <p className="text-xs text-muted leading-relaxed mt-1">{c.reason}</p>
                     </Card>
                   </li>
                 ))}
@@ -320,7 +320,7 @@ function Finder() {
                   type="button"
                   onClick={() => setTarget(t)}
                   aria-pressed={target === t}
-                  className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
+                  className={`min-h-9 px-3.5 rounded-lg text-xs font-medium border transition-colors ${
                     target === t
                       ? "border-accent bg-accent-soft text-accent-text"
                       : "border-border bg-surface text-muted hover:bg-surface-2"
@@ -330,7 +330,7 @@ function Finder() {
                 </button>
               ))}
             </div>
-            <p className="text-[13px] leading-relaxed mt-3">
+            <p className="text-xs leading-relaxed mt-3">
               {customersNeeded(result.opportunities[0], target).note}
             </p>
             <p className="text-xs text-faint leading-relaxed mt-2.5">{MONEY_DISCLAIMER}</p>
@@ -338,7 +338,7 @@ function Finder() {
 
           <Card className="p-4 mt-5 flex items-start gap-2.5">
             <Icon.flask className="size-4 text-muted shrink-0 mt-0.5" />
-            <p className="text-[13px] text-muted leading-relaxed">{result.disclaimer}</p>
+            <p className="text-xs text-muted leading-relaxed">{result.disclaimer}</p>
           </Card>
         </>
       )}
@@ -348,7 +348,7 @@ function Finder() {
           <div className="w-32 mx-auto text-muted/70">
             <TalkArt className="w-full" />
           </div>
-          <p className="text-[13px] text-muted leading-relaxed mt-3 max-w-md mx-auto">
+          <p className="text-xs text-muted leading-relaxed mt-3 max-w-md mx-auto">
             The more you write about your area, the more specific the answer. Two sentences gets you general patterns;
             a paragraph gets you reasoning about your actual town.
           </p>
@@ -379,7 +379,7 @@ function Choice({
             type="button"
             onClick={() => onChange(v)}
             aria-pressed={value === v}
-            className={`min-h-9 px-3 rounded-lg text-[13px] border transition-colors ${
+            className={`min-h-9 px-3 rounded-lg text-xs border transition-colors ${
               value === v
                 ? "border-accent bg-accent-soft text-accent-text font-medium"
                 : "border-border bg-surface text-muted hover:bg-surface-2"
@@ -418,7 +418,7 @@ function OpportunityCard({
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
-            <span className="text-[11px] font-semibold text-faint tabular-nums">#{rank}</span>
+            <span className="text-xs font-semibold text-faint tabular-nums">#{rank}</span>
             <Badge tone={o.mode === "local" ? "info" : o.mode === "hybrid" ? "accent" : "neutral"}>
               {o.mode === "local" ? "Local" : o.mode === "online" ? "Online" : "Both"}
             </Badge>
@@ -430,7 +430,7 @@ function OpportunityCard({
         <ScoreRing score={o.total} size={56} sublabel="score" />
       </div>
 
-      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-[13px] mt-3 pt-3 border-t border-border">
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-xs mt-3 pt-3 border-t border-border">
         <Metric label="Who pays" value={o.customer} />
         <Metric label="To start" value={`${currency(o.startupLow)}–${currency(o.startupHigh)}`} emphasis />
         <Metric label="Typical price" value={`${currency(o.typicalPrice)}${o.repeat ? "/mo" : ""}`} />
@@ -455,7 +455,7 @@ function OpportunityCard({
             <h4 className="text-xs uppercase tracking-wide text-faint font-medium">Why here</h4>
             <ul className="mt-1.5 space-y-1">
               {o.whyHere.map((w) => (
-                <li key={w} className="text-[13px] leading-relaxed flex gap-2">
+                <li key={w} className="text-xs leading-relaxed flex gap-2">
                   <Icon.check className="size-3.5 text-good shrink-0 mt-0.5" />
                   {w}
                 </li>
@@ -467,7 +467,7 @@ function OpportunityCard({
             <h4 className="text-xs uppercase tracking-wide text-faint font-medium">If it goes well</h4>
             <ul className="mt-1.5 space-y-1.5">
               {scenarios.map((s) => (
-                <li key={s.label} className="text-[13px] flex flex-wrap gap-x-2">
+                <li key={s.label} className="text-xs flex flex-wrap gap-x-2">
                   <span className="font-medium w-20 shrink-0">{s.label}</span>
                   <span className="tabular-nums">
                     {s.customers} × {currency(o.typicalPrice)} = <Hi tone="mark">{currency(s.revenue)}</Hi>
@@ -478,7 +478,7 @@ function OpportunityCard({
               ))}
             </ul>
             <p className="text-xs text-faint leading-relaxed mt-2">{MONEY_DISCLAIMER}</p>
-            <p className="text-[13px] leading-relaxed mt-2">
+            <p className="text-xs leading-relaxed mt-2">
               For {currency(target)} a month: {customersNeeded(o, target).note}
             </p>
           </div>
@@ -487,7 +487,7 @@ function OpportunityCard({
             <h4 className="text-xs uppercase tracking-wide text-faint font-medium">How we scored it</h4>
             <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2 mt-1.5">
               {dims.map((d) => (
-                <li key={d} className="text-[13px] flex items-center justify-between gap-2">
+                <li key={d} className="text-xs flex items-center justify-between gap-2">
                   <span className="text-muted truncate">{DIMENSION_LABEL[d]}</span>
                   <span className="tabular-nums font-medium shrink-0">{o.scores[d]}</span>
                 </li>
@@ -504,7 +504,7 @@ function OpportunityCard({
             <h4 className="text-xs uppercase tracking-wide text-faint font-medium">What could sink it</h4>
             <ul className="mt-1.5 space-y-2">
               {o.risks.map((r) => (
-                <li key={r.risk} className="text-[13px] rounded-lg bg-surface-2 p-3">
+                <li key={r.risk} className="text-xs rounded-lg bg-surface-2 p-3">
                   <p className="leading-relaxed">{r.risk}</p>
                   <p className="text-muted leading-relaxed mt-1">
                     <span className="font-medium text-text">Reduce it:</span> {r.reduce}
@@ -516,14 +516,14 @@ function OpportunityCard({
 
           <div>
             <h4 className="text-xs uppercase tracking-wide text-faint font-medium">Test it for nothing first</h4>
-            <p className="text-[13px] leading-relaxed mt-1.5">{o.freeTest}</p>
+            <p className="text-xs leading-relaxed mt-1.5">{o.freeTest}</p>
           </div>
 
           <div>
             <h4 className="text-xs uppercase tracking-wide text-faint font-medium">Your first week</h4>
             <ol className="mt-1.5 space-y-1">
               {o.firstWeek.map((d) => (
-                <li key={d} className="text-[13px] leading-relaxed">
+                <li key={d} className="text-xs leading-relaxed">
                   {d}
                 </li>
               ))}
@@ -539,7 +539,7 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   return (
     <div>
       <h4 className="text-xs uppercase tracking-wide text-faint font-medium">{title}</h4>
-      <p className="text-[13px] leading-relaxed mt-1">{children}</p>
+      <p className="text-xs leading-relaxed mt-1">{children}</p>
     </div>
   );
 }
@@ -547,8 +547,8 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
 function Mini({ label, value, tone }: { label: string; value: string; tone: "good" | "warn" | "neutral" }) {
   return (
     <div className="rounded-lg bg-surface-2 p-2.5">
-      <p className="text-[11px] uppercase tracking-wide text-faint font-medium">{label}</p>
-      <p className={`text-[13px] mt-0.5 leading-relaxed ${tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : ""}`}>
+      <p className="text-xs uppercase tracking-wide text-faint font-medium">{label}</p>
+      <p className={`text-xs mt-0.5 leading-relaxed ${tone === "good" ? "text-good" : tone === "warn" ? "text-warn" : ""}`}>
         {value}
       </p>
     </div>
@@ -558,7 +558,7 @@ function Mini({ label, value, tone }: { label: string; value: string; tone: "goo
 function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
   return (
     <div className="min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-faint font-medium">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-faint font-medium">{label}</div>
       <div className={`font-medium mt-0.5 ${emphasis ? "text-accent-text tabular-nums" : ""}`}>{value}</div>
     </div>
   );

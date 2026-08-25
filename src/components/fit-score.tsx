@@ -52,7 +52,7 @@ function WhyThisNumber({ fit }: { fit: FitResult }) {
       <Eyebrow className="mb-3">Why this number</Eyebrow>
       <ul className="space-y-1.5">
         {up.map((f) => (
-          <li key={f.factor} className="flex gap-2.5 text-[13px] leading-relaxed">
+          <li key={f.factor} className="flex gap-2.5 text-xs leading-relaxed">
             <span className="text-good font-mono shrink-0" aria-hidden="true">+</span>
             <span>
               <span className="font-medium">{FACTOR_LABEL[f.factor]}</span>
@@ -61,7 +61,7 @@ function WhyThisNumber({ fit }: { fit: FitResult }) {
           </li>
         ))}
         {down.map((f) => (
-          <li key={f.factor} className="flex gap-2.5 text-[13px] leading-relaxed">
+          <li key={f.factor} className="flex gap-2.5 text-xs leading-relaxed">
             <span className="text-warn font-mono shrink-0" aria-hidden="true">−</span>
             <span>
               <span className="font-medium">{FACTOR_LABEL[f.factor]}</span>
@@ -107,7 +107,7 @@ export function FitScoreCard({
             </Badge>
           </div>
           <p className="text-sm leading-relaxed">{fit.explanation}</p>
-          <p className="text-[13px] text-muted mt-2 leading-relaxed">{fit.confidenceReason}</p>
+          <p className="text-xs text-muted mt-2 leading-relaxed">{fit.confidenceReason}</p>
         </div>
         <ScoreRing score={fit.score} size={76} />
       </div>
@@ -151,7 +151,7 @@ export function FitScoreCard({
           >
             <Meter label={FACTOR_LABEL[f.factor]} value={f.score} hint={f.reason} />
             {f.weight === 0 && (
-              <span className="block text-[11px] text-faint mt-1">Not counted — we don&apos;t know your age.</span>
+              <span className="block text-xs text-faint mt-1">Not counted — we don&apos;t know your age.</span>
             )}
           </button>
         ))}
@@ -204,10 +204,10 @@ function FactorDetail({
         <span className="text-xs uppercase tracking-wide text-faint font-medium">Why · </span>
         {f.reason}
       </p>
-      <p className="text-[13px] text-muted mt-2 leading-relaxed">{FACTOR_HELP[factor]}</p>
+      <p className="text-xs text-muted mt-2 leading-relaxed">{FACTOR_HELP[factor]}</p>
 
       {fields.length > 0 && (
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+        <p className="text-xs text-muted mt-2 leading-relaxed">
           <span className="text-xs uppercase tracking-wide text-faint font-medium">Driven by · </span>
           {fields.map((id) => fieldById(id)?.label ?? id).join(", ")} in your profile.
         </p>
@@ -228,7 +228,7 @@ function FactorDetail({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium">{a.label}</span>
-                  <span className="block text-[12px] text-muted mt-0.5">{a.estimate}</span>
+                  <span className="block text-xs text-muted mt-0.5">{a.estimate}</span>
                 </span>
               </Link>
             ))}
@@ -268,7 +268,7 @@ export function ImprovementsCard({ fit }: { fit: FitResult }) {
                 <span className="font-semibold tabular-nums text-good shrink-0">+{i.delta}</span>
                 <span className="text-sm font-medium flex-1 min-w-0">{i.change}</span>
                 <span className="text-xs text-accent-text shrink-0">Change this →</span>
-                <span className="w-full text-[13px] text-muted leading-relaxed">{i.how}</span>
+                <span className="w-full text-xs text-muted leading-relaxed">{i.how}</span>
               </Link>
             </li>
           );
@@ -308,7 +308,7 @@ export function DecisionCard({ decision, evidence }: { decision: Decision; evide
             <h2 className="font-semibold text-lg">Should you actually do this?</h2>
             <Badge tone={VERDICT_TONE[decision.verdict]}>{VERDICT_LABEL[decision.verdict]}</Badge>
           </div>
-          <p className="text-[15px] mt-1.5 leading-relaxed">{decision.headline}</p>
+          <p className="text-sm mt-1.5 leading-relaxed">{decision.headline}</p>
         </div>
       </div>
 
@@ -366,10 +366,10 @@ export function EvidenceCard({ evidence }: { evidence: EvidenceReport }) {
         {evidence.counts.map((c) => (
           <div key={c.id} className="rounded-lg bg-surface-2 px-3.5 py-3 min-w-0">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[11px] uppercase tracking-wide text-faint font-medium">{c.label}</span>
+              <span className="text-xs uppercase tracking-wide text-faint font-medium">{c.label}</span>
               <span className="font-semibold tabular-nums">{c.id === "revenue" ? `$${c.count}` : c.count}</span>
             </div>
-            <p className="text-[12px] text-muted mt-1 leading-relaxed">{c.note}</p>
+            <p className="text-xs text-muted mt-1 leading-relaxed">{c.note}</p>
           </div>
         ))}
       </div>

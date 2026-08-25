@@ -61,7 +61,7 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1.5">
             {rank !== undefined && (
-              <span className="text-[11px] font-semibold text-faint tabular-nums">#{rank}</span>
+              <span className="text-xs font-semibold text-faint tabular-nums">#{rank}</span>
             )}
             <Badge tone="accent">{summary.kind}</Badge>
             <Badge tone={idea.mode === "local" ? "info" : "neutral"}>
@@ -92,12 +92,12 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
       </div>
 
       {/* The two questions a beginner asks first, answered before the metrics. */}
-      <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2 text-[13px] pt-3 border-t border-border">
+      <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2 text-xs pt-3 border-t border-border">
         {summary.whoPays && <Metric label="Who pays" value={summary.whoPays} />}
         <Metric label="How you earn" value={summary.howYouEarn} emphasis />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-[13px] pt-3 border-t border-border">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 text-xs pt-3 border-t border-border">
         <Metric label="Start cost" value={currency(idea.startupCost)} />
         <Metric label="First $" value={`~${idea.speedToFirstRevenueDays}d`} />
         <Metric label="Difficulty" value={LEVEL_LABEL[idea.difficulty]} />
@@ -111,7 +111,7 @@ export function IdeaCard({ idea, rank, index }: { idea: BusinessIdea; rank?: num
       <div className="flex items-center gap-1 flex-wrap">
         <Link
           href={`/ideas/${idea.id}`}
-          className="text-[13px] font-medium text-accent-text hover:underline underline-offset-2 px-2 py-1.5"
+          className="text-xs font-medium text-accent-text hover:underline underline-offset-2 px-2 py-1.5"
         >
           See the reasoning
         </Link>
@@ -186,7 +186,7 @@ function Metric({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-faint font-medium" title={hint}>
+      <div className="text-xs uppercase tracking-wide text-faint font-medium" title={hint}>
         {label}
       </div>
       {/* Wraps rather than truncating: "parents of young athletes" is the

@@ -90,11 +90,11 @@ function Spend({ business }: { business: SelectedBusiness }) {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-medium text-[15px]">{tier.label}</h3>
+                    <h3 className="font-medium text-sm">{tier.label}</h3>
                     {tier.id === "recommended" && <Badge tone="accent">Recommended</Badge>}
                     {!tier.affordable && <Badge tone="warn">Above your budget</Badge>}
                   </div>
-                  <p className="text-[13px] text-muted leading-relaxed mt-1">{tier.headline}</p>
+                  <p className="text-xs text-muted leading-relaxed mt-1">{tier.headline}</p>
                 </div>
                 <p className="text-sm font-medium tabular-nums shrink-0">
                   around {currency(tier.approxCost)}
@@ -103,14 +103,14 @@ function Spend({ business }: { business: SelectedBusiness }) {
 
               <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">
                 {tier.includes.map((inc) => (
-                  <li key={inc} className="text-[13px] flex items-start gap-2">
+                  <li key={inc} className="text-xs flex items-start gap-2">
                     <Icon.check className="size-3.5 text-good shrink-0 mt-0.5" />
                     {inc}
                   </li>
                 ))}
               </ul>
 
-              <p className="text-[13px] text-muted leading-relaxed mt-3 pt-3 border-t border-border">
+              <p className="text-xs text-muted leading-relaxed mt-3 pt-3 border-t border-border">
                 <span className="font-medium text-text">The catch:</span> {tier.limit}
               </p>
             </Card>
@@ -118,7 +118,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
         ))}
       </ul>
       <Card className="p-4 mt-3">
-        <p className="text-[13px] leading-relaxed">{affordabilityNote(business, profile)}</p>
+        <p className="text-xs leading-relaxed">{affordabilityNote(business, profile)}</p>
         <p className="text-xs text-faint leading-relaxed mt-2">
           Your budget affects <em>when</em> you can start, not whether the business is any good. Those are scored
           separately for exactly this reason.
@@ -134,8 +134,8 @@ function Spend({ business }: { business: SelectedBusiness }) {
       <div className="space-y-4">
         {decisions.map((d) => (
           <Card key={d.id} className="p-4">
-            <h3 className="font-medium text-[15px]">{d.need}</h3>
-            <p className="text-[13px] text-muted leading-relaxed mt-1">{d.why}</p>
+            <h3 className="font-medium text-sm">{d.need}</h3>
+            <p className="text-xs text-muted leading-relaxed mt-1">{d.why}</p>
 
             <div className="mt-3 space-y-2.5">
               {d.options.map((o) => (
@@ -146,9 +146,9 @@ function Spend({ business }: { business: SelectedBusiness }) {
                     <span className="text-xs text-muted">· {COST_BAND_LABEL[o.band]}</span>
                     {!o.necessary && <span className="text-xs text-faint">· optional</span>}
                   </div>
-                  <p className="text-[13px] text-muted leading-relaxed mt-1.5">{o.what}</p>
+                  <p className="text-xs text-muted leading-relaxed mt-1.5">{o.what}</p>
 
-                  <dl className="mt-2.5 grid gap-2 sm:grid-cols-2 text-[13px]">
+                  <dl className="mt-2.5 grid gap-2 sm:grid-cols-2 text-xs">
                     <div>
                       <dt className="text-xs uppercase tracking-wide text-faint font-medium">What you get</dt>
                       <dd className="mt-0.5 leading-relaxed">{o.youGet}</dd>
@@ -197,7 +197,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
               type="button"
               onClick={() => setAmount(a)}
               aria-pressed={amount === a}
-              className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
+              className={`min-h-9 px-3.5 rounded-lg text-xs font-medium border transition-colors ${
                 amount === a
                   ? "border-accent bg-accent-soft text-accent-text"
                   : "border-border bg-surface text-muted hover:bg-surface-2"
@@ -210,7 +210,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
 
         {plan && (
           <>
-            <p className="text-[13px] leading-relaxed mt-4">
+            <p className="text-xs leading-relaxed mt-4">
               {hasEvidence ? plan.headline : <Hi tone="warn">{plan.headline}</Hi>}
             </p>
             <ol className="mt-3 space-y-2.5">
@@ -224,7 +224,7 @@ function Spend({ business }: { business: SelectedBusiness }) {
                       {item.what}
                       <span className="text-muted font-normal"> · {COST_BAND_LABEL[item.band].toLowerCase()}</span>
                     </p>
-                    <p className="text-[13px] text-muted leading-relaxed mt-0.5">{item.why}</p>
+                    <p className="text-xs text-muted leading-relaxed mt-0.5">{item.why}</p>
                   </div>
                 </li>
               ))}
@@ -245,14 +245,14 @@ function Spend({ business }: { business: SelectedBusiness }) {
             <Card className="p-3.5" delay={i * 60}>
               <p className="text-xs uppercase tracking-wide text-faint font-medium">{SPEND_STAGE_LABEL[step.stage]}</p>
               <p className="font-medium text-sm mt-1">{step.rule}</p>
-              <p className="text-[13px] text-muted leading-relaxed mt-1">{step.why}</p>
+              <p className="text-xs text-muted leading-relaxed mt-1">{step.why}</p>
             </Card>
           </li>
         ))}
       </ol>
 
       <Card className="p-4 mt-5">
-        <p className="text-[13px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           <span className="font-medium text-text">About the numbers.</span> {PRICE_DISCLAIMER}
         </p>
       </Card>

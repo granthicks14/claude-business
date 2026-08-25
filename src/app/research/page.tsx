@@ -376,7 +376,7 @@ function CompetitionRead({ business }: { business: SelectedBusiness }) {
         </Badge>
       </div>
 
-      <p className="text-[15px] leading-relaxed mt-3">{read.headline}</p>
+      <p className="text-sm leading-relaxed mt-3">{read.headline}</p>
       <p className="text-sm text-muted leading-relaxed mt-1">{read.because}</p>
 
       {read.refusal && (
@@ -510,7 +510,7 @@ function Competitors({ business }: { business: SelectedBusiness }) {
           title="Why would someone choose you?"
           description="The answer this page exists to produce. It stays empty until you've looked at what your customer would choose instead."
         />
-        <p className="text-[15px] leading-relaxed">{gaps.bestAnswer}</p>
+        <p className="text-sm leading-relaxed">{gaps.bestAnswer}</p>
         <div className="mt-4">
           <ClaimList claims={gaps.claims} />
         </div>

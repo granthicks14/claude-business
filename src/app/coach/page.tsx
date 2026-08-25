@@ -104,7 +104,7 @@ function FollowUps({ onPick, disabled }: { onPick: (q: string) => void; disabled
             type="button"
             disabled={disabled}
             onClick={() => onPick(q)}
-            className="min-h-9 px-3 rounded-lg border border-border bg-surface text-[13px] hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors disabled:opacity-50"
+            className="min-h-9 px-3 rounded-lg border border-border bg-surface text-xs hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors disabled:opacity-50"
           >
             {q}
           </button>
@@ -233,7 +233,18 @@ function Coach() {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
+  /*
+   * Follow the conversation down — but only once there is one.
+   *
+   * This ran on mount unconditionally, so opening the coach scrolled the page
+   * to the bottom of an empty thread. On a phone that put the page heading,
+   * the "discussing this business" strip and the worked-example banner above
+   * the fold and out of sight, and the first thing a founder saw was the
+   * middle of a paragraph sliding under the header. Arriving somewhere should
+   * show you the top of it.
+   */
   useEffect(() => {
+    if (messages.length === 0 && !streamText) return;
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, streamText]);
 
@@ -533,7 +544,18 @@ function Coach() {
         <div ref={endRef} />
       </div>
 
-      <div className="sticky bottom-0 bg-bg/90 backdrop-blur-sm pt-3 pb-2 mt-4 no-print">
+      {/*
+        The composer has to clear the fixed bottom bar on a phone.
+        `sticky bottom-0` put the textarea at y=701 and Send at y=757 on a
+        390x844 screen, with the bar starting at y=787 — so the send button was
+        underneath the navigation and the coach could not be used on a phone at
+        all. The bar is min-h-14 plus the iOS home indicator, so the composer
+        sticks above that instead, and only on the breakpoints where the bar
+        exists.
+      */}
+      <div
+        className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] lg:bottom-0 bg-bg/90 backdrop-blur-sm pt-3 pb-2 mt-4 no-print"
+      >
         <div className="flex gap-2 items-end">
           <Textarea
             ref={inputRef}
@@ -561,7 +583,7 @@ function Coach() {
             </Button>
           )}
         </div>
-        <p className="text-[11px] text-faint mt-1.5">
+        <p className="text-xs text-faint mt-1.5">
           Business guidance, not legal, tax or financial advice. Verify anything regulated with a professional.
         </p>
       </div>

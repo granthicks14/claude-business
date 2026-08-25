@@ -227,8 +227,8 @@ function TaskRow({ task, businessId }: { task: Task; businessId: string }) {
             <Badge tone={task.priority === "high" ? "bad" : task.priority === "medium" ? "warn" : "neutral"}>
               {task.priority}
             </Badge>
-            <span className="text-[11px] text-faint tabular-nums">~{task.estimatedMinutes} min</span>
-            {task.day !== undefined && <span className="text-[11px] text-faint">Day {task.day}</span>}
+            <span className="text-xs text-faint tabular-nums">~{task.estimatedMinutes} min</span>
+            {task.day !== undefined && <span className="text-xs text-faint">Day {task.day}</span>}
           </div>
         </button>
 
@@ -417,15 +417,15 @@ function FirstMoneyView({ business }: { business: SelectedBusiness }) {
                   {milestone.steps.map((step, j) => (
                     <li key={j} className="flex gap-3">
                       <div className="shrink-0 text-center">
-                        <div className="text-[10px] uppercase tracking-wide text-faint font-semibold">Day</div>
+                        <div className="text-label uppercase tracking-wide text-faint font-semibold">Day</div>
                         <div className="size-7 rounded-lg bg-accent-soft text-accent-text grid place-items-center text-sm font-semibold tabular-nums">
                           {step.day}
                         </div>
                       </div>
                       <div className="min-w-0 flex-1 pb-1">
                         <p className="text-sm font-medium">{step.title}</p>
-                        <p className="text-[13px] text-muted mt-0.5 leading-relaxed">{step.description}</p>
-                        <div className="flex flex-wrap gap-3 mt-1.5 text-[11px] text-faint">
+                        <p className="text-xs text-muted mt-0.5 leading-relaxed">{step.description}</p>
+                        <div className="flex flex-wrap gap-3 mt-1.5 text-xs text-faint">
                           <span className="tabular-nums">~{step.estimatedMinutes} min</span>
                           <span>→ {step.expectedOutcome}</span>
                         </div>

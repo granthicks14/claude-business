@@ -244,7 +244,7 @@ function Compare() {
                       </Link>
                       <button
                         onClick={() => actions.toggleCompare(idea.id)}
-                        className="text-[11px] text-faint hover:text-bad font-normal mt-0.5"
+                        className="text-xs text-faint hover:text-bad font-normal mt-0.5"
                       >
                         Remove
                       </button>
@@ -260,7 +260,7 @@ function Compare() {
               <tr key={row.label} className="border-b border-border last:border-0">
                 <th scope="row" className="text-left font-medium px-4 py-3 align-top sticky left-0 bg-surface z-10">
                   <span className="block">{row.label}</span>
-                  {row.hint && <span className="block text-[11px] text-faint font-normal mt-0.5 max-w-40">{row.hint}</span>}
+                  {row.hint && <span className="block text-xs text-faint font-normal mt-0.5 max-w-40">{row.hint}</span>}
                 </th>
                 {ideas.map((idea) => {
                   const v = row.value(idea);
@@ -390,7 +390,7 @@ function ComparisonTable({
             <tr key={row.label} className="border-b border-border last:border-0">
               <th scope="row" className="text-left font-medium px-4 py-3 align-top sticky left-0 bg-surface z-10">
                 <span className="block">{row.label}</span>
-                {row.hint && <span className="block text-[11px] text-faint font-normal mt-0.5 max-w-40">{row.hint}</span>}
+                {row.hint && <span className="block text-xs text-faint font-normal mt-0.5 max-w-40">{row.hint}</span>}
               </th>
               {ideas.map((idea) => {
                 const v = row.value(idea);

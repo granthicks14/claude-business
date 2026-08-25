@@ -206,7 +206,7 @@ function IdeaDetail() {
           <div className="flex items-center gap-3">
             {analysis && (
               <div className="text-right">
-                <div className="text-[11px] uppercase tracking-wide text-faint font-medium">Difficulty</div>
+                <div className="text-xs uppercase tracking-wide text-faint font-medium">Difficulty</div>
                 <div className="font-semibold">{DIFFICULTY_LABEL[analysis.difficulty]}</div>
               </div>
             )}
@@ -438,7 +438,7 @@ function IdeaDetail() {
           <ol className="space-y-2.5">
             {idea.firstSteps.map((step, i) => (
               <li key={i} className="flex gap-3 text-sm">
-                <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-[11px] font-semibold shrink-0 mt-px tabular-nums">
+                <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold shrink-0 mt-px tabular-nums">
                   {i + 1}
                 </span>
                 <span className="leading-relaxed">{step}</span>
@@ -597,7 +597,7 @@ function Figure({ label, value, note }: { label: string; value: string; note?: s
     <div className="min-w-0">
       <div className="text-xs uppercase tracking-wide text-faint font-medium">{label}</div>
       <div className="font-semibold tabular-nums mt-0.5">{value}</div>
-      {note && <p className="text-[11px] text-muted mt-0.5 leading-snug">{note}</p>}
+      {note && <p className="text-xs text-muted mt-0.5 leading-snug">{note}</p>}
     </div>
   );
 }
@@ -642,14 +642,14 @@ function BuildThisButton({ idea, onBuild }: { idea: BusinessIdea; onBuild: () =>
         </p>
         <ul className="mt-3 space-y-2">
           {worst.map((f) => (
-            <li key={f.factor} className="text-[13px] rounded-lg bg-surface-2 p-3">
+            <li key={f.factor} className="text-xs rounded-lg bg-surface-2 p-3">
               <span className="font-medium">{FACTOR_LABEL[f.factor]}</span>
               <span className="text-muted"> — {f.score}/100.</span>
               <span className="block text-muted leading-relaxed mt-0.5">{f.reason}</span>
             </li>
           ))}
         </ul>
-        <p className="text-[13px] text-muted leading-relaxed mt-3">
+        <p className="text-xs text-muted leading-relaxed mt-3">
           That score comes from a profile you filled in quickly, and you know things about your own situation it
           doesn&apos;t. If you have a reason to think this works, that reason is better evidence than the number.
         </p>

@@ -133,7 +133,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-xs uppercase tracking-wide text-faint font-medium mb-1">A potential customer</p>
-            <p className="text-[15px] leading-relaxed">{customerLine(turn)}</p>
+            <p className="text-sm leading-relaxed">{customerLine(turn)}</p>
           </div>
         </div>
 
@@ -191,7 +191,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
 
           <div className="rounded-xl border border-border bg-surface-2 p-4">
             <p className="text-xs uppercase tracking-wide text-faint font-medium mb-1.5">One way to say it</p>
-            <p className="text-[15px] leading-relaxed">&ldquo;{feedback.betterAnswer}&rdquo;</p>
+            <p className="text-sm leading-relaxed">&ldquo;{feedback.betterAnswer}&rdquo;</p>
           </div>
 
           <p className="text-sm text-muted mt-3 leading-relaxed">

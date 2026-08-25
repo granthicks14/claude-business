@@ -289,7 +289,7 @@ function Simulator({ business }: { business: SelectedBusiness }) {
               />
             </div>
 
-            <dl className="mt-4 pt-4 border-t border-border space-y-1.5 text-[13px]">
+            <dl className="mt-4 pt-4 border-t border-border space-y-1.5 text-xs">
               <Line label="Customers" value={String(Math.round(s.customers))} />
               <Line label="Gross profit" value={currency(s.grossProfit)} />
               <Line label={<><Explain id="margin">Gross margin</Explain></>} value={`${s.grossMarginPct}%`} />
@@ -529,7 +529,7 @@ function Entry({
     <li className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate">{label}</p>
-        <p className="text-[11px] text-faint">{new Date(date).toLocaleDateString()}</p>
+        <p className="text-xs text-faint">{new Date(date).toLocaleDateString()}</p>
       </div>
       <span className={`text-sm font-semibold tabular-nums ${tone === "good" ? "text-good" : "text-muted"}`}>
         {amount > 0 ? "+" : ""}

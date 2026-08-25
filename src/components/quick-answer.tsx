@@ -43,7 +43,7 @@ export function QuickAnswer({
       {/* Everything above the fold. Six answers, no scrolling required. */}
       <Card className="p-5 sm:p-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-accent-text mb-2">What this is</p>
-        <p className="text-[15px] sm:text-base leading-relaxed">{explainer.inSimpleTerms}</p>
+        <p className="text-sm sm:text-base leading-relaxed">{explainer.inSimpleTerms}</p>
 
         <dl className="grid gap-x-6 gap-y-3.5 sm:grid-cols-2 mt-5 pt-5 border-t border-border">
           <Row term="You do" value={s.what} />
@@ -69,7 +69,7 @@ export function QuickAnswer({
             <span className="font-semibold tabular-nums text-accent-text text-lg">{currency(keep)}</span>
             <span className="text-sm text-muted">you keep</span>
           </div>
-          <p className="text-[13px] text-muted mt-2 leading-relaxed">
+          <p className="text-xs text-muted mt-2 leading-relaxed">
             Ten customers would be {currency(keep * 10)} kept, before tax and before what you spend finding them.{" "}
             <span className="text-faint">Illustrative scenario, not a forecast.</span>
           </p>
@@ -83,8 +83,8 @@ export function QuickAnswer({
             </span>
             <div className="min-w-0">
               <h2 className="font-semibold">Your first step</h2>
-              <p className="text-[15px] mt-0.5 leading-relaxed">{s.firstStep}</p>
-              <p className="text-[13px] text-muted mt-1.5 leading-relaxed">
+              <p className="text-sm mt-0.5 leading-relaxed">{s.firstStep}</p>
+              <p className="text-xs text-muted mt-1.5 leading-relaxed">
                 Costs nothing, takes about an hour, and every later step needs it.
               </p>
             </div>
@@ -156,7 +156,7 @@ function ExampleTransaction({ analysis, idea }: { analysis: BusinessAnalysis; id
       <ol className="grid gap-1.5">
         {steps.map((st, i) => (
           <li key={i} className="flex flex-wrap items-baseline gap-x-2.5 rounded-lg bg-surface-2 px-3.5 py-2">
-            <span className="text-[11px] uppercase tracking-wide text-faint font-medium w-24 shrink-0">{st.label}</span>
+            <span className="text-xs uppercase tracking-wide text-faint font-medium w-24 shrink-0">{st.label}</span>
             <span className="text-sm min-w-0">{st.value}</span>
           </li>
         ))}
@@ -199,7 +199,7 @@ export function SeeItInAction({ idea, analysis }: { idea: BusinessIdea; analysis
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium">{s.label}</span>
-                <span className="block text-[12px] text-muted mt-0.5">{s.why}</span>
+                <span className="block text-xs text-muted mt-0.5">{s.why}</span>
               </span>
               <span className="text-xs text-faint shrink-0 mt-0.5">{s.source} ↗</span>
             </a>
@@ -263,7 +263,7 @@ export function ConfusedHelper({ analysis }: { analysis: BusinessAnalysis }) {
       </div>
 
       {answer ? (
-        <p className="text-[15px] leading-relaxed whitespace-pre-line">{answer.answer}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-line">{answer.answer}</p>
       ) : (
         <div className="grid gap-2">
           {answers.map((a) => (
@@ -301,7 +301,7 @@ export function QuickActions({ ideaId, onJump }: { ideaId: string; onJump: (tab:
           <Link
             key={i.label}
             href={i.href}
-            className="shrink-0 min-h-10 px-3.5 inline-flex items-center rounded-lg border border-border bg-surface text-[13px] font-medium hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors whitespace-nowrap"
+            className="shrink-0 min-h-10 px-3.5 inline-flex items-center rounded-lg border border-border bg-surface text-xs font-medium hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors whitespace-nowrap"
           >
             {i.label}
           </Link>
@@ -310,7 +310,7 @@ export function QuickActions({ ideaId, onJump }: { ideaId: string; onJump: (tab:
             key={i.label}
             type="button"
             onClick={i.onClick}
-            className="shrink-0 min-h-10 px-3.5 inline-flex items-center rounded-lg border border-border bg-surface text-[13px] font-medium hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors whitespace-nowrap"
+            className="shrink-0 min-h-10 px-3.5 inline-flex items-center rounded-lg border border-border bg-surface text-xs font-medium hover:border-accent-border hover:bg-accent-soft hover:text-accent-text transition-colors whitespace-nowrap"
           >
             {i.label}
           </button>

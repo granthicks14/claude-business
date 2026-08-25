@@ -53,7 +53,7 @@ function renderBlocks(text: string): ReactNode[] {
     if (fence) {
       if (code) {
         blocks.push(
-          <pre key={key++} className="bg-surface-2 border border-border rounded-lg p-3 overflow-x-auto text-[13px] font-mono">
+          <pre key={key++} className="bg-surface-2 border border-border rounded-lg p-3 overflow-x-auto text-xs font-mono">
             <code>{code.lines.join("\n")}</code>
           </pre>,
         );
@@ -113,7 +113,7 @@ function renderBlocks(text: string): ReactNode[] {
 
   if (code) {
     blocks.push(
-      <pre key={key++} className="bg-surface-2 border border-border rounded-lg p-3 overflow-x-auto text-[13px] font-mono">
+      <pre key={key++} className="bg-surface-2 border border-border rounded-lg p-3 overflow-x-auto text-xs font-mono">
         <code>{code.lines.join("\n")}</code>
       </pre>,
     );

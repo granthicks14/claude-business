@@ -61,11 +61,11 @@ function AtAGlance({
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <h2 className="text-xs uppercase tracking-wide text-faint font-medium">What you&apos;re building</h2>
-          <p className="text-[15px] mt-1 leading-relaxed">{business.idea.oneLiner}</p>
+          <p className="text-sm mt-1 leading-relaxed">{business.idea.oneLiner}</p>
         </div>
         <div>
           <h2 className="text-xs uppercase tracking-wide text-faint font-medium">What you&apos;re aiming for</h2>
-          <p className="text-[15px] mt-1 leading-relaxed">
+          <p className="text-sm mt-1 leading-relaxed">
             {target > 0 ? (
               <>
                 {currency(target)} a month. You&apos;re at {currency(monthRevenue)} this month
@@ -89,7 +89,7 @@ function AtAGlance({
             style={{ width: `${Math.max(4, pct)}%` }}
           />
         </div>
-        <p className="text-[13px] text-muted mt-2 leading-relaxed">
+        <p className="text-xs text-muted mt-2 leading-relaxed">
           {monthRevenue > 0 ? (
             <>
               {pct}% of this month&apos;s target. The first{" "}
@@ -492,8 +492,8 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
                     {item.evidence === "verified" ? "Verified" : item.evidence === "inference" ? "Inference" : "Assumption"}
                   </Badge>
                 </div>
-                <p className="text-[13px] text-muted mt-1.5 leading-relaxed">{item.description}</p>
-                <p className="text-[13px] mt-2 leading-relaxed">{item.whyRelevant}</p>
+                <p className="text-xs text-muted mt-1.5 leading-relaxed">{item.description}</p>
+                <p className="text-xs mt-2 leading-relaxed">{item.whyRelevant}</p>
                 {item.sources.length > 0 && (
                   <ul className="mt-2 space-y-0.5">
                     {item.sources.map((s, i) => (
@@ -502,7 +502,7 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
                           href={s.url}
                           target="_blank"
                           rel="noopener noreferrer nofollow"
-                          className="text-[11px] text-accent-text hover:underline break-all"
+                          className="text-xs text-accent-text hover:underline break-all"
                         >
                           {s.title}
                         </a>
@@ -621,9 +621,9 @@ function LaunchReadinessCard({ business }: { business: SelectedBusiness }) {
       <div className="flex flex-wrap items-center gap-5">
         <ScoreRing score={readiness.score} size={80} label={READINESS_LABEL[readiness.verdict]} glow />
         <div className="flex-1 min-w-[13rem]">
-          <p className="text-[13px] leading-relaxed">{readiness.headline}</p>
+          <p className="text-xs leading-relaxed">{readiness.headline}</p>
           {readiness.nextGap && (
-            <p className="text-[13px] text-muted leading-relaxed mt-2">
+            <p className="text-xs text-muted leading-relaxed mt-2">
               Biggest gap:{" "}
               <Link href={readiness.nextGap.href} className="text-accent-text hover:underline">
                 {readiness.nextGap.label.toLowerCase()}
@@ -667,7 +667,7 @@ function ShortcutCard({
               <h3 className="font-medium text-sm">{title}</h3>
               {done && <Badge tone="good">Ready</Badge>}
             </div>
-            <p className="text-[13px] text-muted mt-1 leading-relaxed">{description}</p>
+            <p className="text-xs text-muted mt-1 leading-relaxed">{description}</p>
           </div>
           <Icon.arrowRight className="size-4 text-faint group-hover:text-accent transition-colors shrink-0 mt-0.5" />
         </div>

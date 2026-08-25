@@ -53,7 +53,7 @@ export function CommandCentre() {
         )}
       </div>
 
-      <p className="text-[15px] mt-3 leading-relaxed font-medium">{decision.headline}</p>
+      <p className="text-sm mt-3 leading-relaxed font-medium">{decision.headline}</p>
 
       {change?.headline && (
         <p className="text-sm text-muted mt-2 leading-relaxed">

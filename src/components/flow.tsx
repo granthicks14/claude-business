@@ -26,12 +26,12 @@ export function BusinessFlow({ steps }: { steps: FlowStep[] }) {
           )}
           <span
             aria-hidden="true"
-            className="relative z-10 shrink-0 size-8 rounded-full border border-accent-border bg-accent-soft text-accent-text grid place-items-center text-[13px] font-semibold tabular-nums"
+            className="relative z-10 shrink-0 size-8 rounded-full border border-accent-border bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold tabular-nums"
           >
             {i + 1}
           </span>
           <div className="min-w-0 flex-1 pt-1">
-            <p className="font-semibold text-[15px] leading-snug">{step.label}</p>
+            <p className="font-semibold text-sm leading-snug">{step.label}</p>
             <p className="text-sm text-muted mt-1 leading-relaxed">{step.detail}</p>
           </div>
         </li>
@@ -88,7 +88,7 @@ export function MoneyFlow({
                 {currency(step.amount)}
               </span>
               <span className="font-medium text-sm">{step.label}</span>
-              <span className="w-full text-[13px] text-muted leading-relaxed">{step.note}</span>
+              <span className="w-full text-xs text-muted leading-relaxed">{step.note}</span>
             </div>
           );
         })}
@@ -111,16 +111,16 @@ export function MoneyFlow({
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2" aria-live="polite">
           {[1, 5, 10, 25].map((n) => (
             <div key={n} className="rounded-lg bg-surface-2 px-3 py-2.5 min-w-0">
-              <div className="text-[11px] uppercase tracking-wide text-faint font-medium">
+              <div className="text-xs uppercase tracking-wide text-faint font-medium">
                 {n} customer{n === 1 ? "" : "s"}
               </div>
               <div className="font-semibold tabular-nums mt-0.5 truncate">{currency(keep * n)}</div>
-              <div className="text-[11px] text-muted tabular-nums truncate">of {currency(price * n)} in</div>
+              <div className="text-xs text-muted tabular-nums truncate">of {currency(price * n)} in</div>
             </div>
           ))}
         </div>
 
-        <p className="text-[13px] text-muted mt-3 leading-relaxed">
+        <p className="text-xs text-muted mt-3 leading-relaxed">
           You keep <span className="font-semibold text-text tabular-nums">{currency(keep)}</span> of every{" "}
           <span className="tabular-nums">{currency(price)}</span>
           {price > 0 && <> — that&apos;s {Math.round((keep / price) * 100)}% of each sale</>}, before tax and before
@@ -147,13 +147,13 @@ export function WorkflowChain({ steps }: { steps: { step: string; tool: string }
         <li key={i} className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3.5 py-2.5">
           <span
             aria-hidden="true"
-            className="shrink-0 mt-0.5 size-5 rounded-full bg-surface-2 text-faint grid place-items-center text-[11px] font-semibold tabular-nums"
+            className="shrink-0 mt-0.5 size-5 rounded-full bg-surface-2 text-faint grid place-items-center text-xs font-semibold tabular-nums"
           >
             {i + 1}
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium leading-snug">{s.step}</p>
-            <p className="text-[13px] text-muted mt-0.5">{s.tool}</p>
+            <p className="text-xs text-muted mt-0.5">{s.tool}</p>
           </div>
         </li>
       ))}

@@ -100,7 +100,7 @@ function Quality({ business }: { business: SelectedBusiness }) {
         <div className="flex flex-wrap items-center gap-5">
           <ScoreRing score={quality.score} size={96} label="Business Quality" sublabel={QUALITY_BAND_LABEL[quality.band]} glow />
           <div className="flex-1 min-w-[15rem]">
-            <p className="text-[15px] leading-relaxed">{quality.summary}</p>
+            <p className="text-sm leading-relaxed">{quality.summary}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {/* Sentence case, not raw enum. Badges stopped being uppercased
                   by CSS, which left "high confidence" reading as a typo. */}

@@ -113,7 +113,7 @@ export function Explain({
         </p>
         <p className="text-sm text-muted mt-1 leading-relaxed">{definition}</p>
         {sample && (
-          <p className="text-[13px] mt-2 pt-2 border-t border-border leading-relaxed">
+          <p className="text-xs mt-2 pt-2 border-t border-border leading-relaxed">
             <span className="text-faint">For example: </span>
             {sample}
           </p>
@@ -147,7 +147,7 @@ export function Why({ children }: { children: ReactNode }) {
         aria-expanded={open}
         // min-h-8 keeps this a real tap target (WCAG 2.5.8 wants 24px; this is
         // 32) while the negative margins stop it stretching the line it sits in.
-        className="ml-1.5 -my-1 px-2 min-h-8 inline-flex items-center rounded-md border border-border text-[11px] font-medium text-muted hover:text-accent-text hover:border-accent-border transition-colors align-middle"
+        className="ml-1.5 -my-1 px-2 min-h-8 inline-flex items-center rounded-md border border-border text-xs font-medium text-muted hover:text-accent-text hover:border-accent-border transition-colors align-middle"
       >
         Why?
       </button>
@@ -224,7 +224,7 @@ export function InSimpleTerms({ children, detail }: { children: ReactNode; detai
   return (
     <div className="rounded-xl border border-accent-border bg-accent-soft/40 p-4 sm:p-5">
       <p className="text-xs font-semibold uppercase tracking-wide text-accent-text mb-2">In simple terms</p>
-      <div className="text-[15px] leading-relaxed">{children}</div>
+      <div className="text-sm leading-relaxed">{children}</div>
       {detail && <div className="mt-3 pt-3 border-t border-accent-border/60 text-sm leading-relaxed">{detail}</div>}
     </div>
   );

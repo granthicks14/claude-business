@@ -58,7 +58,7 @@ function LearnHow() {
 
       <Card className="p-5 border-accent-border bg-accent-soft/40">
         <p className="text-xs font-semibold uppercase tracking-wide text-accent-text mb-2">What you&apos;re learning</p>
-        <p className="text-[15px] leading-relaxed">{guide.whatYoureLearning}</p>
+        <p className="text-sm leading-relaxed">{guide.whatYoureLearning}</p>
       </Card>
 
       <Card className="p-5">
@@ -95,7 +95,7 @@ function LearnHow() {
         <ol className="space-y-2">
           {guide.practise.map((p, i) => (
             <li key={i} className="flex gap-3 text-sm">
-              <span className="shrink-0 size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-[11px] font-semibold tabular-nums">
+              <span className="shrink-0 size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold tabular-nums">
                 {i + 1}
               </span>
               <span className="leading-relaxed">{p}</span>

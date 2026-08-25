@@ -194,7 +194,7 @@ export function Shortlist() {
                   key={key}
                   onClick={() => setFilter(key)}
                   aria-pressed={filter === key}
-                  className={`px-3 py-1.5 rounded-full text-[13px] font-medium border whitespace-nowrap transition-colors min-h-9
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-colors min-h-9
                     ${
                       filter === key
                         ? "border-accent bg-accent-soft text-accent-text"

@@ -137,7 +137,7 @@ function Wizard({ business }: { business: SelectedBusiness }) {
             </Hi>{" "}
             of {totalFields} details filled in
           </p>
-          <p className="text-[13px] text-muted leading-relaxed mt-0.5">
+          <p className="text-xs text-muted leading-relaxed mt-0.5">
             {readiness.essentialsDone === readiness.essentialsTotal
               ? "You have everything essential. The rest is polish."
               : readiness.nextGap
@@ -167,12 +167,12 @@ function Wizard({ business }: { business: SelectedBusiness }) {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium text-[15px]">{step.title}</span>
+                    <span className="font-medium text-sm">{step.title}</span>
                     <Badge tone={count === 0 ? "neutral" : count === step.fields.length ? "good" : "warn"}>
                       {count}/{step.fields.length}
                     </Badge>
                   </span>
-                  <span className="block text-[13px] text-muted leading-relaxed mt-1">{step.why}</span>
+                  <span className="block text-xs text-muted leading-relaxed mt-1">{step.why}</span>
                 </span>
                 <Icon.chevron
                   className={`shrink-0 size-4 text-faint transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
@@ -206,8 +206,8 @@ function Wizard({ business }: { business: SelectedBusiness }) {
       </div>
 
       <Card className="p-5 mt-5">
-        <h2 className="font-medium text-[15px]">What this is for</h2>
-        <p className="text-[13px] text-muted leading-relaxed mt-1.5">
+        <h2 className="font-medium text-sm">What this is for</h2>
+        <p className="text-xs text-muted leading-relaxed mt-1.5">
           These details feed the prompt builder, your plan, your outreach messages and anything else the app writes for
           you. Nothing here is published anywhere. It&apos;s stored in this browser, and it only leaves this device if
           you copy it or export it yourself.
@@ -308,7 +308,7 @@ function StepFields({
   if (step === "contact") {
     return (
       <>
-        <p className="text-[13px] leading-relaxed rounded-lg bg-surface-2 p-3">
+        <p className="text-xs leading-relaxed rounded-lg bg-surface-2 p-3">
           <strong className="font-medium">Why this is asked:</strong> a website with no way to contact you doesn&apos;t
           make money. These details get written into pages and messages you produce. They are never sent anywhere by the
           app, and you can leave any of them blank — the prompt will just say{" "}

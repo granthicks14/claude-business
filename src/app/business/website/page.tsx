@@ -149,11 +149,11 @@ function Website({ business }: { business: SelectedBusiness }) {
         <div className="flex flex-wrap items-center gap-5">
           <ScoreRing score={readiness.score} size={76} label="Ready" glow />
           <div className="flex-1 min-w-[14rem]">
-            <p className="text-[15px] font-medium">{readiness.headline}</p>
+            <p className="text-sm font-medium">{readiness.headline}</p>
             {readiness.blocking.length > 0 && (
               <ul className="mt-2 space-y-1">
                 {readiness.blocking.slice(0, 3).map((b) => (
-                  <li key={b.id} className="text-[13px] flex items-start gap-2">
+                  <li key={b.id} className="text-xs flex items-start gap-2">
                     <span className="size-1.5 rounded-full bg-warn shrink-0 mt-1.5" />
                     <span>
                       <Link href={b.href} className="text-accent-text hover:underline">
@@ -192,9 +192,9 @@ function Website({ business }: { business: SelectedBusiness }) {
           <div className="flex items-start gap-2.5">
             <Icon.bolt className="size-4 text-warn shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <h2 className="font-medium text-[15px]">We found a conflict</h2>
+              <h2 className="font-medium text-sm">We found a conflict</h2>
               {conflicts.map((c) => (
-                <div key={c.field} className="mt-2 text-[13px] leading-relaxed">
+                <div key={c.field} className="mt-2 text-xs leading-relaxed">
                   <p>
                     <strong>{c.field}.</strong> Your business details say{" "}
                     <Hi tone="warn">{c.inProfile}</Hi>, your website would say <Hi tone="warn">{c.onWebsite}</Hi>.
@@ -225,7 +225,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             type="button"
             onClick={() => setTone(t)}
             aria-pressed={tone === t}
-            className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
+            className={`min-h-9 px-3.5 rounded-lg text-xs font-medium border transition-colors ${
               tone === t
                 ? "border-accent bg-accent-soft text-accent-text"
                 : "border-border bg-surface text-muted hover:bg-surface-2"
@@ -317,13 +317,13 @@ function Website({ business }: { business: SelectedBusiness }) {
           </Select>
           {siteType === suggested && <Badge tone="accent">Recommended</Badge>}
         </div>
-        <p className="text-[13px] text-muted leading-relaxed mt-3">{spec.why}</p>
+        <p className="text-xs text-muted leading-relaxed mt-3">{spec.why}</p>
         <p className="text-xs uppercase tracking-wide text-faint font-medium mt-3 pt-3 border-t border-border">
           {spec.pages.length} page{spec.pages.length === 1 ? "" : "s"}, and no more
         </p>
         <ul className="mt-2 space-y-1.5">
           {spec.pages.map((p) => (
-            <li key={p.name} className="text-[13px] flex gap-2">
+            <li key={p.name} className="text-xs flex gap-2">
               <span className="font-medium shrink-0 w-20">{p.name}</span>
               <span className="text-muted">{p.purpose}</span>
             </li>
@@ -352,8 +352,8 @@ function Website({ business }: { business: SelectedBusiness }) {
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-medium">{s.section}</p>
-                <p className="text-[13px] text-muted leading-relaxed mt-0.5">{s.purpose}</p>
-                <p className="text-[13px] leading-relaxed mt-1">{s.content}</p>
+                <p className="text-xs text-muted leading-relaxed mt-0.5">{s.purpose}</p>
+                <p className="text-xs leading-relaxed mt-1">{s.content}</p>
               </div>
             </li>
           ))}
@@ -364,7 +364,7 @@ function Website({ business }: { business: SelectedBusiness }) {
       <Card className="p-4">
         <ul className="space-y-2">
           {plan?.imageBrief.map((img) => (
-            <li key={img.where} className="text-[13px] flex gap-2">
+            <li key={img.where} className="text-xs flex gap-2">
               <span className="font-medium shrink-0 w-24">{img.where}</span>
               <span className="text-muted leading-relaxed">{img.what}</span>
             </li>
@@ -386,7 +386,7 @@ function Website({ business }: { business: SelectedBusiness }) {
                 <Card className="p-3.5" delay={i * 60}>
                   <p className="text-xs uppercase tracking-wide text-faint font-medium">{c.area}</p>
                   <p className="text-sm mt-1 leading-relaxed">{c.problem}</p>
-                  <p className="text-[13px] text-muted leading-relaxed mt-1.5">
+                  <p className="text-xs text-muted leading-relaxed mt-1.5">
                     <span className="font-medium text-text">Fix:</span> {c.fix}
                   </p>
                 </Card>
@@ -437,14 +437,14 @@ function Website({ business }: { business: SelectedBusiness }) {
           ))}
         </div>
         {warning && (
-          <p className="text-[13px] leading-relaxed mt-3 rounded-lg bg-warn-soft border border-warn/30 p-3">{warning}</p>
+          <p className="text-xs leading-relaxed mt-3 rounded-lg bg-warn-soft border border-warn/30 p-3">{warning}</p>
         )}
         {lastChanges.length > 0 && (
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-xs uppercase tracking-wide text-faint font-medium">What changed</p>
             <ul className="mt-1.5 space-y-1">
               {lastChanges.map((c) => (
-                <li key={c} className="text-[13px] flex items-center gap-2">
+                <li key={c} className="text-xs flex items-center gap-2">
                   <Icon.check className="size-3.5 text-good shrink-0" />
                   {c}
                 </li>
@@ -466,9 +466,9 @@ function Website({ business }: { business: SelectedBusiness }) {
       <Card className="p-4">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-[15px]">{HOSTINGER.name}</p>
-            <p className="text-[13px] text-muted leading-relaxed mt-1">{HOSTINGER.what}</p>
-            <p className="text-[13px] text-muted leading-relaxed mt-2">{HOSTINGER.needsFrom}</p>
+            <p className="font-medium text-sm">{HOSTINGER.name}</p>
+            <p className="text-xs text-muted leading-relaxed mt-1">{HOSTINGER.what}</p>
+            <p className="text-xs text-muted leading-relaxed mt-2">{HOSTINGER.needsFrom}</p>
           </div>
           <a
             href={HOSTINGER.url}
@@ -509,7 +509,7 @@ function Website({ business }: { business: SelectedBusiness }) {
                   type="button"
                   onClick={() => setMode(m)}
                   aria-pressed={mode === m}
-                  className={`min-h-9 px-3.5 rounded-lg text-[13px] font-medium border transition-colors ${
+                  className={`min-h-9 px-3.5 rounded-lg text-xs font-medium border transition-colors ${
                     mode === m
                       ? "border-accent bg-accent-soft text-accent-text"
                       : "border-border bg-surface text-muted hover:bg-surface-2"
@@ -560,7 +560,7 @@ function Website({ business }: { business: SelectedBusiness }) {
             {business.websiteLive ? "Website is live" : "I've built it — mark as live"}
           </Button>
           {business.websiteLive && (
-            <p className="text-[13px] text-muted">
+            <p className="text-xs text-muted">
               Counted in your{" "}
               <Link href={link("/business/launch")} className="text-accent-text hover:underline">
                 launch checklist
@@ -573,7 +573,7 @@ function Website({ business }: { business: SelectedBusiness }) {
 
       <Card className="p-4 mt-4 flex items-start gap-2.5">
         <Icon.bolt className="size-4 text-warn shrink-0 mt-0.5" />
-        <p className="text-[13px] leading-relaxed text-muted">{WEBSITE_TIMING}</p>
+        <p className="text-xs leading-relaxed text-muted">{WEBSITE_TIMING}</p>
       </Card>
 
       {versions.length > 0 && (
@@ -592,8 +592,8 @@ function Website({ business }: { business: SelectedBusiness }) {
                           · {v.mode === "quick" ? "short" : "detailed"} · {new Date(v.createdAt).toLocaleDateString()}
                         </span>
                       </p>
-                      {v.request && <p className="text-[13px] text-muted mt-0.5">You asked: “{v.request}”</p>}
-                      {v.changes.length > 0 && <p className="text-[13px] text-muted mt-1">Changed: {v.changes.join(", ")}</p>}
+                      {v.request && <p className="text-xs text-muted mt-0.5">You asked: “{v.request}”</p>}
+                      {v.changes.length > 0 && <p className="text-xs text-muted mt-1">Changed: {v.changes.join(", ")}</p>}
                     </div>
                     <CopyButton text={v.text} />
                   </div>
@@ -611,7 +611,7 @@ function CostBox({ label, text, good }: { label: string; text: string; good?: bo
   return (
     <div className={`rounded-lg p-3 ${good ? "bg-good-soft border border-good/30" : "bg-surface-2 border border-border-strong"}`}>
       <p className={`text-xs uppercase tracking-wide font-medium ${good ? "text-good" : "text-faint"}`}>{label}</p>
-      <p className="text-[13px] leading-relaxed mt-1">{text}</p>
+      <p className="text-xs leading-relaxed mt-1">{text}</p>
     </div>
   );
 }
@@ -667,19 +667,19 @@ function Preview({
           }`}
         >
           <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-border">
-            <span className="text-[11px] font-semibold truncate">{name}</span>
-            <span className="hidden sm:flex gap-2 text-[10px] text-faint">
+            <span className="text-xs font-semibold truncate">{name}</span>
+            <span className="hidden sm:flex gap-2 text-label text-faint">
               <span>Services</span>
               <span>About</span>
               <span>Contact</span>
             </span>
           </div>
           <div className="px-3 py-5 text-center">
-            <p className={`font-semibold leading-tight ${device === "mobile" ? "text-[13px]" : "text-base"}`}>
+            <p className={`font-semibold leading-tight ${device === "mobile" ? "text-xs" : "text-base"}`}>
               {headline || "Your headline goes here"}
             </p>
-            <p className="text-[11px] text-muted mt-1.5 leading-relaxed">{sub || "And the line underneath it"}</p>
-            <span className="inline-block mt-3 px-3 py-1.5 rounded-lg bg-accent text-white dark:text-[oklch(15%_0.02_265)] text-[11px] font-semibold">
+            <p className="text-xs text-muted mt-1.5 leading-relaxed">{sub || "And the line underneath it"}</p>
+            <span className="inline-block mt-3 px-3 py-1.5 rounded-lg bg-accent text-white dark:text-[oklch(15%_0.02_265)] text-xs font-semibold">
               {cta || "Your button"}
             </span>
           </div>
@@ -688,15 +688,15 @@ function Preview({
               {(services.length ? services.slice(0, 3) : [{ name: "Service one", price: "" }, { name: "Service two", price: "" }, { name: "Service three", price: "" }]).map(
                 (s, i) => (
                   <div key={i} className="rounded border border-border p-2">
-                    <p className="text-[10px] font-medium truncate">{s.name}</p>
-                    <p className="text-[10px] text-faint mt-0.5">{s.price || "price"}</p>
+                    <p className="text-label font-medium truncate">{s.name}</p>
+                    <p className="text-label text-faint mt-0.5">{s.price || "price"}</p>
                   </div>
                 ),
               )}
             </div>
           </div>
           <div className="border-t border-border px-3 py-2 text-center">
-            <span className="text-[10px] text-faint">{business.identity?.email?.trim() || "your contact details"}</span>
+            <span className="text-label text-faint">{business.identity?.email?.trim() || "your contact details"}</span>
           </div>
         </div>
       </div>
@@ -713,7 +713,7 @@ function Fact({ label, value, missing }: { label: string; value: string | null; 
   return (
     <div className="min-w-0">
       <dt className="text-xs uppercase tracking-wide text-faint font-medium">{label}</dt>
-      <dd className={`text-[13px] mt-0.5 leading-relaxed ${value ? "" : "text-warn"}`}>
+      <dd className={`text-xs mt-0.5 leading-relaxed ${value ? "" : "text-warn"}`}>
         {value ?? missing ?? "Not set"}
       </dd>
     </div>

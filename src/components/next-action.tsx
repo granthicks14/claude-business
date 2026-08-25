@@ -134,7 +134,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
 
       {mode === "easier" && action.easier && (
         <Panel title="A smaller version of the same thing" onBack={() => setMode("action")}>
-          <p className="text-[15px] leading-relaxed">{action.easier}</p>
+          <p className="text-sm leading-relaxed">{action.easier}</p>
           <p className="text-sm text-muted mt-3 leading-relaxed">
             Doing the small version today beats planning the big version all week. You can always do more once
             you&apos;ve started.
@@ -144,7 +144,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
 
       {mode === "alternative" && action.alternative && (
         <Panel title="A different way to get the same result" onBack={() => setMode("action")}>
-          <p className="text-[15px] leading-relaxed">{action.alternative}</p>
+          <p className="text-sm leading-relaxed">{action.alternative}</p>
           <p className="text-sm text-muted mt-3 leading-relaxed">
             Neither route is better in the abstract. The one you&apos;ll actually do is the better one.
           </p>
@@ -153,7 +153,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
 
       {mode === "stuck" && (
         <Panel title="Why you're stuck" onBack={() => setMode("action")}>
-          <p className="text-[15px] leading-relaxed">{stuck.whyStuck}</p>
+          <p className="text-sm leading-relaxed">{stuck.whyStuck}</p>
 
           <h4 className="font-semibold text-sm mt-4">What to do</h4>
           <p className="text-sm mt-1 leading-relaxed">{stuck.whatToDo}</p>
@@ -162,7 +162,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
           <ol className="mt-1.5 space-y-1.5">
             {stuck.how.map((h, i) => (
               <li key={i} className="text-sm flex gap-2.5 leading-relaxed">
-                <span className="shrink-0 size-5 rounded-md bg-surface-2 text-faint grid place-items-center text-[11px] font-semibold tabular-nums">
+                <span className="shrink-0 size-5 rounded-md bg-surface-2 text-faint grid place-items-center text-xs font-semibold tabular-nums">
                   {i + 1}
                 </span>
                 {h}
@@ -199,7 +199,7 @@ export function NextActionCard({ compact = false }: { compact?: boolean }) {
                 </span>
                 <div className="min-w-0">
                   <p className="font-medium text-sm">{a.title}</p>
-                  <p className="text-[13px] text-muted mt-0.5 leading-relaxed">{a.why}</p>
+                  <p className="text-xs text-muted mt-0.5 leading-relaxed">{a.why}</p>
                 </div>
               </li>
             ))}
@@ -219,7 +219,7 @@ function Chip({ children, onClick }: { children: React.ReactNode; onClick: () =>
     <button
       type="button"
       onClick={onClick}
-      className="min-h-9 px-3 rounded-sm border border-border bg-surface font-mono text-[11px] tracking-wide hover:border-accent hover:text-accent-text transition-colors"
+      className="min-h-9 px-3 rounded-sm border border-border bg-surface font-mono text-xs tracking-wide hover:border-accent hover:text-accent-text transition-colors"
     >
       {children}
     </button>
@@ -298,7 +298,7 @@ export function StageCard() {
         {STAGES.map((s, i) => (
           <li
             key={s}
-            className={`text-[11px] ${
+            className={`text-xs ${
               i === index ? "text-accent-text font-semibold" : i < index ? "text-muted" : "text-faint"
             }`}
           >

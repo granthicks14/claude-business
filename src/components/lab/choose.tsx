@@ -163,7 +163,7 @@ export function Choose() {
             <Card key={pick.key} className="p-4 flex flex-col">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-[15px]">{pick.title}</h3>
+                  <h3 className="font-semibold text-sm">{pick.title}</h3>
                   <p className="text-xs text-muted mt-0.5">{pick.blurb}</p>
                 </div>
                 {pick.idea && <ScoreRing score={pick.idea.opportunityScore} size={44} />}
@@ -177,15 +177,15 @@ export function Choose() {
                   >
                     {pick.idea.name}
                   </Link>
-                  <p className="text-[13px] text-muted mt-1 leading-relaxed flex-1">{pick.why}</p>
-                  <div className="flex items-center gap-3 mt-3 text-[11px] text-faint tabular-nums">
+                  <p className="text-xs text-muted mt-1 leading-relaxed flex-1">{pick.why}</p>
+                  <div className="flex items-center gap-3 mt-3 text-xs text-faint tabular-nums">
                     <span>{currency(pick.idea.startupCost)} to start</span>
                     <span>·</span>
                     <span>~{pick.idea.speedToFirstRevenueDays}d to first $</span>
                   </div>
                 </div>
               ) : (
-                <p className="text-[13px] text-faint mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-faint mt-3 pt-3 border-t border-border">
                   Nothing in your list fits this angle yet. Generate more ideas to fill it.
                 </p>
               )}

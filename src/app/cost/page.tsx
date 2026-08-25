@@ -200,7 +200,7 @@ function CostAudit() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{what}</p>
-                  <p className="text-[13px] text-muted leading-relaxed">{instead}</p>
+                  <p className="text-xs text-muted leading-relaxed">{instead}</p>
                 </div>
               </li>
             ))}
@@ -226,7 +226,7 @@ function CostAudit() {
             ].map(([host, note]) => (
               <li key={host} className="rounded-lg border border-border p-3">
                 <p className="text-sm font-medium">{host}</p>
-                <p className="text-[13px] text-muted mt-0.5">{note}</p>
+                <p className="text-xs text-muted mt-0.5">{note}</p>
               </li>
             ))}
           </ul>
@@ -250,7 +250,7 @@ function CostAudit() {
             "Preserve Free Core Mode — the app must always work end to end with no keys.",
           ].map((rule, i) => (
             <li key={i} className="flex gap-2.5">
-              <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-[11px] font-semibold shrink-0 tabular-nums">
+              <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold shrink-0 tabular-nums">
                 {i + 1}
               </span>
               <span className="leading-relaxed">{rule}</span>
@@ -294,7 +294,7 @@ function Table({ entries }: { entries: Entry[] }) {
             </td>
             <td className="px-4 py-3 text-muted max-w-80">
               <span className="block">{entry.alternative}</span>
-              <span className="block text-[13px] text-faint mt-1">{entry.status}</span>
+              <span className="block text-xs text-faint mt-1">{entry.status}</span>
             </td>
           </tr>
         ))}

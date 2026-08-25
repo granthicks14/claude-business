@@ -146,7 +146,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
                 <p className="text-xs font-semibold uppercase tracking-wide text-accent-text mb-2">
                   Does this look like a good opportunity?
                 </p>
-                <p className="text-[15px] leading-relaxed">{plainVerdict(report.validationScore)}</p>
+                <p className="text-sm leading-relaxed">{plainVerdict(report.validationScore)}</p>
                 <ul className="mt-3 space-y-1.5">
                   <PlainPoint
                     ok={report.validationScore >= 55}
@@ -265,7 +265,7 @@ function Validation({ business }: { business: SelectedBusiness }) {
                   <ul className="space-y-2">
                     {report.nextTests.map((t, i) => (
                       <li key={i} className="text-sm flex gap-2.5">
-                        <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-[11px] font-semibold shrink-0 tabular-nums">
+                        <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold shrink-0 tabular-nums">
                           {i + 1}
                         </span>
                         <span className="leading-relaxed">{t}</span>
@@ -441,7 +441,7 @@ function EvidenceCard({ title, items }: { title: string; items: Evidence[] }) {
                 href={item.source.url}
                 target="_blank"
                 rel="noopener noreferrer nofollow"
-                className="text-[11px] text-accent-text hover:underline ml-1 mt-1 inline-block break-all"
+                className="text-xs text-accent-text hover:underline ml-1 mt-1 inline-block break-all"
               >
                 {item.source.title}
               </a>

@@ -18,7 +18,7 @@ export function Footer() {
         <div className="flex flex-wrap gap-x-8 gap-y-6 justify-between">
           <div className="min-w-0 max-w-sm">
             <p className="font-semibold tracking-tight">Groundwork</p>
-            <p className="text-[13px] text-muted mt-1.5 leading-relaxed">
+            <p className="text-xs text-muted mt-1.5 leading-relaxed">
               The work you do before you build. Free to run, no server account, and everything you type stays in your own
               browser.
             </p>
@@ -45,7 +45,7 @@ export function Footer() {
               {CONTACT_EMAIL && (
                 <a
                   href={`mailto:${CONTACT_EMAIL}`}
-                  className="block text-[13px] text-muted hover:text-text transition-colors min-h-8 leading-8"
+                  className="block text-xs text-muted hover:text-text transition-colors min-h-8 leading-8"
                 >
                   Contact
                 </a>
@@ -54,7 +54,7 @@ export function Footer() {
           </nav>
         </div>
 
-        <p className="text-[13px] text-muted mt-8 leading-relaxed">
+        <p className="text-xs text-muted mt-8 leading-relaxed">
           Scores and figures here are estimates and scenarios, never predictions, and none of it is financial, legal or
           tax advice. <Link href="/disclaimer" className="text-accent-text hover:underline">What that means</Link>.
         </p>
@@ -66,7 +66,7 @@ export function Footer() {
 function FooterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="min-w-[8rem]">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-faint mb-1">{title}</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-faint mb-1">{title}</p>
       {children}
     </div>
   );
@@ -74,7 +74,7 @@ function FooterGroup({ title, children }: { title: string; children: React.React
 
 function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <Link href={href} className="block text-[13px] text-muted hover:text-text transition-colors min-h-8 leading-8">
+    <Link href={href} className="block text-xs text-muted hover:text-text transition-colors min-h-8 leading-8">
       {children}
     </Link>
   );

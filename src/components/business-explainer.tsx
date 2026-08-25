@@ -90,7 +90,7 @@ export function HowItWorks({ analysis }: { analysis: BusinessAnalysis }) {
 
       <Card className="p-5">
         <h2 className="font-semibold mb-1">Who pays you?</h2>
-        <p className="text-[15px] leading-relaxed">{explainer.whoPaysYou.customer}</p>
+        <p className="text-sm leading-relaxed">{explainer.whoPaysYou.customer}</p>
         <div className="grid gap-4 sm:grid-cols-2 mt-4">
           <div>
             <h3 className="text-xs uppercase tracking-wide text-faint font-medium mb-1.5">What they want</h3>
@@ -119,7 +119,7 @@ export function HowItWorks({ analysis }: { analysis: BusinessAnalysis }) {
 
       <Card className="p-5">
         <h2 className="font-semibold mb-2">Why would they actually pay?</h2>
-        <p className="text-[15px] leading-relaxed">{explainer.whyTheyPay}</p>
+        <p className="text-sm leading-relaxed">{explainer.whyTheyPay}</p>
       </Card>
 
       <Card className="p-5">
@@ -127,7 +127,7 @@ export function HowItWorks({ analysis }: { analysis: BusinessAnalysis }) {
         <ul className="space-y-2">
           {explainer.whatYouActuallyDo.map((d, i) => (
             <li key={i} className="flex gap-3 text-sm">
-              <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-[11px] font-semibold shrink-0 mt-px tabular-nums">
+              <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold shrink-0 mt-px tabular-nums">
                 {i + 1}
               </span>
               <span className="leading-relaxed">{d}</span>
@@ -182,7 +182,7 @@ export function CanIDoThis({ analysis }: { analysis: BusinessAnalysis }) {
           </span>
           <div className="min-w-0">
             <h2 className="font-semibold text-lg">Can you actually start this?</h2>
-            <p className="text-[15px] mt-1 leading-relaxed">{feasibility.headline}</p>
+            <p className="text-sm mt-1 leading-relaxed">{feasibility.headline}</p>
           </div>
         </div>
       </Card>
@@ -282,7 +282,7 @@ function RequirementGroup({
             <span className="shrink-0 mt-1 size-3.5 rounded border border-border" aria-hidden="true" />
             <span className="min-w-0">
               <span className="font-medium">{item.label}</span>
-              <span className="block text-muted text-[13px] mt-0.5 leading-relaxed">{item.why}</span>
+              <span className="block text-muted text-xs mt-0.5 leading-relaxed">{item.why}</span>
             </span>
           </li>
         ))}
@@ -326,7 +326,7 @@ export function ShowMeTheMoney({ analysis, idea }: { analysis: BusinessAnalysis;
               <span className="font-semibold tabular-nums w-20 shrink-0">{currency(line.amount)}</span>
               <span className="text-sm font-medium">{line.label}</span>
               {line.skippable && <Badge>Skip at first</Badge>}
-              <span className="w-full text-[13px] text-muted leading-relaxed">{line.note}</span>
+              <span className="w-full text-xs text-muted leading-relaxed">{line.note}</span>
             </div>
           ))}
           <div className="flex items-baseline gap-3 px-4 py-3 border-t border-border bg-surface-2">
@@ -407,7 +407,7 @@ export function WhatWouldIDo({ analysis }: { analysis: BusinessAnalysis }) {
         <ol className="space-y-2">
           {h.steps.map((s, i) => (
             <li key={i} className="flex gap-3 text-sm">
-              <span className="size-5 rounded-md bg-surface-2 text-faint grid place-items-center text-[11px] font-semibold shrink-0 mt-px tabular-nums">
+              <span className="size-5 rounded-md bg-surface-2 text-faint grid place-items-center text-xs font-semibold shrink-0 mt-px tabular-nums">
                 {i + 1}
               </span>
               <span className="leading-relaxed">{s}</span>
@@ -438,7 +438,7 @@ export function WhatWouldIDo({ analysis }: { analysis: BusinessAnalysis }) {
             <li key={d.day} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 rounded-lg bg-surface-2 px-3.5 py-2.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-faint w-20 shrink-0">{d.day}</span>
               <span className="text-sm font-medium">{d.focus}</span>
-              <span className="w-full text-[13px] text-muted leading-relaxed">{d.detail}</span>
+              <span className="w-full text-xs text-muted leading-relaxed">{d.detail}</span>
             </li>
           ))}
         </ul>
@@ -482,7 +482,7 @@ export function WhatWouldIDo({ analysis }: { analysis: BusinessAnalysis }) {
 function Figure({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-surface-2 px-3 py-2.5 min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-faint font-medium">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-faint font-medium">{label}</div>
       <div className="font-semibold tabular-nums mt-0.5 truncate">{value}</div>
     </div>
   );
@@ -580,7 +580,7 @@ export function OnlineToolkit({ analysis }: { analysis: BusinessAnalysis }) {
           <p className="text-sm mt-1.5 leading-relaxed">{toolkit.zeroCostTotal}</p>
           <ul className="mt-3 grid gap-1.5">
             {toolkit.zeroCostStack.map((z, i) => (
-              <li key={i} className="text-[13px] flex flex-wrap gap-x-2 leading-relaxed">
+              <li key={i} className="text-xs flex flex-wrap gap-x-2 leading-relaxed">
                 <span className="text-faint w-40 shrink-0">{z.job}</span>
                 <span className="font-medium">{z.tool}</span>
               </li>
@@ -608,14 +608,14 @@ export function OnlineToolkit({ analysis }: { analysis: BusinessAnalysis }) {
           {toolkit.jobs.map((job) => (
             <div key={job.category} className="rounded-xl border border-border p-4">
               <h3 className="font-semibold text-sm">{job.label}</h3>
-              <p className="text-[13px] text-muted mt-0.5 mb-3 leading-relaxed">{job.jobDescription}</p>
+              <p className="text-xs text-muted mt-0.5 mb-3 leading-relaxed">{job.jobDescription}</p>
 
               <ToolRow label="Recommended" choice={job.recommended} />
               {job.freeAlternative && <ToolRow label="Free alternative" choice={job.freeAlternative} />}
               {!beginner && job.alternative && <ToolRow label="Another option" choice={job.alternative} />}
 
               {job.manualOption && (
-                <p className="text-[13px] mt-3 pt-3 border-t border-border leading-relaxed">
+                <p className="text-xs mt-3 pt-3 border-t border-border leading-relaxed">
                   <span className="text-xs uppercase tracking-wide text-faint font-medium">Or do it by hand · </span>
                   {job.manualOption}
                 </p>
@@ -650,7 +650,7 @@ export function OnlineToolkit({ analysis }: { analysis: BusinessAnalysis }) {
               <span className="text-bad shrink-0" aria-hidden="true">✕</span>
               <span className="min-w-0">
                 <span className="font-medium">{d.thing}</span>
-                <span className="block text-muted text-[13px] mt-0.5 leading-relaxed">{d.why}</span>
+                <span className="block text-muted text-xs mt-0.5 leading-relaxed">{d.why}</span>
               </span>
             </li>
           ))}
@@ -689,7 +689,7 @@ export function OnlineToolkit({ analysis }: { analysis: BusinessAnalysis }) {
               <span className="min-w-0">
                 <span className="font-medium">{c.item}</span>
                 <span className="text-muted"> — {c.use}</span>
-                <span className="block text-muted text-[13px] mt-0.5 leading-relaxed">{c.why}</span>
+                <span className="block text-muted text-xs mt-0.5 leading-relaxed">{c.why}</span>
               </span>
             </li>
           ))}
@@ -706,7 +706,7 @@ function ToolRow({ label, choice }: { label: string; choice: { platform: import(
   return (
     <div className="mt-2.5 first:mt-0 rounded-lg bg-surface-2 p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] uppercase tracking-wide text-faint font-medium">{label}</span>
+        <span className="text-xs uppercase tracking-wide text-faint font-medium">{label}</span>
         {p.officialUrl ? (
           <a
             href={p.officialUrl}
@@ -723,26 +723,26 @@ function ToolRow({ label, choice }: { label: string; choice: { platform: import(
           {cost.dot} {cost.label}
         </Badge>
       </div>
-      <p className="text-[13px] text-muted mt-1 leading-relaxed">{p.what}</p>
-      <p className="text-[13px] mt-1.5 leading-relaxed">{choice.why}</p>
-      <p className="text-[13px] text-muted mt-1.5 leading-relaxed">
+      <p className="text-xs text-muted mt-1 leading-relaxed">{p.what}</p>
+      <p className="text-xs mt-1.5 leading-relaxed">{choice.why}</p>
+      <p className="text-xs text-muted mt-1.5 leading-relaxed">
         <span className="text-faint">Free tier: </span>
         {p.freeTierNote}
       </p>
       {p.whenToPay && (
-        <p className="text-[13px] text-muted mt-1 leading-relaxed">
+        <p className="text-xs text-muted mt-1 leading-relaxed">
           <span className="text-faint">When paying helps: </span>
           {p.whenToPay}
         </p>
       )}
       {choice.ageNote && (
-        <p className="text-[13px] mt-2 pt-2 border-t border-border leading-relaxed">
+        <p className="text-xs mt-2 pt-2 border-t border-border leading-relaxed">
           <span className="text-xs uppercase tracking-wide text-warn font-medium">Age note · </span>
           {choice.ageNote}
         </p>
       )}
       {p.locationConsideration && (
-        <p className="text-[13px] text-muted mt-1 leading-relaxed">
+        <p className="text-xs text-muted mt-1 leading-relaxed">
           <span className="text-faint">Where you are: </span>
           {p.locationConsideration}
         </p>

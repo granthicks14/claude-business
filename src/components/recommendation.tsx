@@ -49,7 +49,7 @@ export function RecommendationCard({
     <Card className="p-4" delay={delay}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="font-medium text-[15px]">{rec.question}</h3>
+          <h3 className="font-medium text-sm">{rec.question}</h3>
         </div>
         {isAccepted ? (
           <Badge tone="good">
@@ -72,7 +72,7 @@ export function RecommendationCard({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             aria-label={rec.question}
-            className="text-[13px]"
+            className="text-xs"
           />
           <div className="flex flex-wrap gap-2 mt-2">
             <Button
@@ -91,7 +91,7 @@ export function RecommendationCard({
           </div>
         </div>
       ) : (
-        <blockquote className="mt-2.5 rounded-lg bg-surface-2 p-3 text-[13px] leading-relaxed whitespace-pre-wrap">
+        <blockquote className="mt-2.5 rounded-lg bg-surface-2 p-3 text-xs leading-relaxed whitespace-pre-wrap">
           {accepted ?? rec.value}
         </blockquote>
       )}
@@ -137,7 +137,7 @@ export function RecommendationCard({
 
       {showWhy && (
         <div className="mt-3 pt-3 border-t border-border">
-          <p className="text-[13px] leading-relaxed">{rec.why}</p>
+          <p className="text-xs leading-relaxed">{rec.why}</p>
           <p className="text-xs text-faint leading-relaxed mt-2">
             Based on: {rec.basis}
             {rec.confidence === "low" &&
@@ -151,7 +151,7 @@ export function RecommendationCard({
           {rec.alternatives.map((alt) => (
             <li key={alt.label} className="rounded-lg border border-border p-3">
               <p className="text-xs uppercase tracking-wide text-faint font-medium">{alt.label}</p>
-              <p className="text-[13px] leading-relaxed mt-1 whitespace-pre-wrap">{alt.value}</p>
+              <p className="text-xs leading-relaxed mt-1 whitespace-pre-wrap">{alt.value}</p>
               <p className="text-xs text-muted leading-relaxed mt-1.5">{alt.note}</p>
               <div className="mt-2">
                 <Button size="sm" onClick={() => { onAccept(alt.value); setShowAlts(false); }}>

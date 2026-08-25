@@ -144,7 +144,7 @@ function Entries() {
                     <Badge tone={entry.type === "problem" ? "bad" : entry.type === "lesson" ? "good" : "neutral"}>
                       {TYPE_LABEL[entry.type]}
                     </Badge>
-                    <span className="text-[11px] text-faint">
+                    <span className="text-xs text-faint">
                       {new Date(entry.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                     </span>
                   </div>
@@ -671,7 +671,7 @@ function Decisions({ business }: { business: SelectedBusiness }) {
             <Card key={d.id} className="p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <span className="text-[11px] text-faint">{new Date(d.date).toLocaleDateString()}</span>
+                  <span className="text-xs text-faint">{new Date(d.date).toLocaleDateString()}</span>
                   <h3 className="font-medium text-sm mt-0.5">{d.decision}</h3>
                   <p className="text-sm text-muted mt-1.5 leading-relaxed">
                     <span className="text-xs uppercase tracking-wide text-faint font-medium">Because: </span>

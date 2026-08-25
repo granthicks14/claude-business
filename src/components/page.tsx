@@ -92,7 +92,7 @@ export function RequireProfile({ children }: { children: ReactNode }) {
     <>
       {!done && (
         <Card className="p-4 mb-4">
-          <p className="text-[13px] leading-relaxed">
+          <p className="text-xs leading-relaxed">
             You skipped the founder profile, so anything scored against{" "}
             <em>you</em> — skills, time, budget — is showing a neutral 50 rather than a real number.{" "}
             <Link href="/onboarding" className="text-accent-text hover:underline">

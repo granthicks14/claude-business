@@ -196,7 +196,7 @@ function ExperienceSetting() {
               <p className="text-sm text-muted mt-1">{m.tagline}</p>
               <ul className="mt-3 space-y-1.5">
                 {m.points.map((p) => (
-                  <li key={p} className="text-[13px] text-muted flex gap-2 leading-relaxed">
+                  <li key={p} className="text-xs text-muted flex gap-2 leading-relaxed">
                     <span className="text-accent shrink-0" aria-hidden="true">
                       →
                     </span>
@@ -246,7 +246,7 @@ function AISetup() {
               <Badge tone="good">Free</Badge>
               {intelligence === "engine" && <Badge tone="accent">Active</Badge>}
             </div>
-            <p className="text-[13px] text-muted mt-2 leading-relaxed">
+            <p className="text-xs text-muted mt-2 leading-relaxed">
               A structured recommendation system that runs in your browser. Instant, works offline, and costs nothing
               to you or the developer. It is not a language model — so it&apos;s precise on business questions and
               can&apos;t hold an open-ended conversation.
@@ -268,7 +268,7 @@ function AISetup() {
               <Badge tone="warn">Paid</Badge>
               {intelligence === "ai" && <Badge tone="accent">Active</Badge>}
             </div>
-            <p className="text-[13px] text-muted mt-2 leading-relaxed">
+            <p className="text-xs text-muted mt-2 leading-relaxed">
               Routes generation to a configured provider. More varied writing and open-ended conversation, but every
               request is billed by that provider, and it needs a network connection. Falls back to the engine
               automatically if it&apos;s unavailable.

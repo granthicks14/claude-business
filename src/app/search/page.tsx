@@ -94,7 +94,7 @@ function Search() {
                           <h3 className="font-medium text-sm group-hover:text-accent-text transition-colors">
                             {hit.title}
                           </h3>
-                          <p className="text-[13px] text-muted mt-1 leading-relaxed line-clamp-2">{hit.snippet}</p>
+                          <p className="text-xs text-muted mt-1 leading-relaxed line-clamp-2">{hit.snippet}</p>
                         </div>
                         {hit.context && <Badge className="shrink-0">{hit.context}</Badge>}
                       </div>

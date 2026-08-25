@@ -113,7 +113,7 @@ function ChannelPlan({ business }: { business: SelectedBusiness }) {
                 <ol className="space-y-2">
                   {channel.firstThreeMoves.map((move, j) => (
                     <li key={j} className="text-sm flex gap-2.5">
-                      <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-[11px] font-semibold shrink-0 tabular-nums">
+                      <span className="size-5 rounded-md bg-accent-soft text-accent-text grid place-items-center text-xs font-semibold shrink-0 tabular-nums">
                         {j + 1}
                       </span>
                       <span className="leading-relaxed">{move}</span>
@@ -329,10 +329,10 @@ function ContentEngine({ business }: { business: SelectedBusiness }) {
                   <p className="text-sm font-medium leading-snug">{item.hook}</p>
                   <CopyButton text={`${item.hook}\n\n${item.body}\n\n${item.cta}`} />
                 </div>
-                <p className="text-[13px] text-muted mt-1.5 leading-relaxed">{item.body}</p>
+                <p className="text-xs text-muted mt-1.5 leading-relaxed">{item.body}</p>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <Badge>{item.format}</Badge>
-                  <span className="text-[11px] text-accent-text">{item.cta}</span>
+                  <span className="text-xs text-accent-text">{item.cta}</span>
                 </div>
               </li>
             ))}

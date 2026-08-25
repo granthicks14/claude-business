@@ -451,7 +451,7 @@ function StressTest() {
                   {critique.strongerAlternatives.map((alt, i) => (
                     <li key={i}>
                       <p className="text-sm font-medium">{alt.idea}</p>
-                      <p className="text-[13px] text-muted mt-0.5 leading-relaxed">{alt.why}</p>
+                      <p className="text-xs text-muted mt-0.5 leading-relaxed">{alt.why}</p>
                     </li>
                   ))}
                 </ul>
@@ -540,7 +540,7 @@ function NicheFinder() {
                     <h4 className="font-medium text-sm">{niche.name}</h4>
                     <Badge tone={overall >= 70 ? "good" : overall >= 50 ? "warn" : "neutral"}>{overall}</Badge>
                   </div>
-                  <p className="text-[13px] text-muted mt-1 leading-relaxed">{niche.description}</p>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">{niche.description}</p>
                   <div className="mt-3 space-y-2">
                     <Meter label="Demand" value={niche.demand} />
                     <Meter label="Room to compete" value={niche.competition} />
@@ -614,7 +614,7 @@ function Results({
 function Summary({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-surface-2 px-3 py-2.5 min-w-0">
-      <div className="text-[11px] uppercase tracking-wide text-faint font-medium">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-faint font-medium">{label}</div>
       <div className="text-sm font-medium mt-0.5 truncate" title={value}>
         {value}
       </div>

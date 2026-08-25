@@ -491,12 +491,12 @@ function BrandSection({ business }: { business: SelectedBusiness }) {
                       <h4 className="font-semibold">{n.name}</h4>
                       <CopyButton text={n.name} />
                     </div>
-                    <p className="text-[13px] text-muted mt-1 leading-relaxed">{n.rationale}</p>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">{n.rationale}</p>
                     <div className="mt-3 space-y-1">
-                      <p className="text-[11px] text-faint">
+                      <p className="text-xs text-faint">
                         <span className="font-medium">Domain ideas:</span> {n.domainIdeas.join(", ")}
                       </p>
-                      <p className="text-[11px] text-faint">
+                      <p className="text-xs text-faint">
                         <span className="font-medium">Handle ideas:</span> {n.handleIdeas.join(", ")}
                       </p>
                     </div>
@@ -547,8 +547,8 @@ function BrandSection({ business }: { business: SelectedBusiness }) {
                       title={c.hex}
                     />
                     <p className="text-xs font-medium mt-1.5">{c.name}</p>
-                    <p className="text-[11px] text-faint font-mono">{c.hex}</p>
-                    <p className="text-[11px] text-muted max-w-20">{c.role}</p>
+                    <p className="text-xs text-faint font-mono">{c.hex}</p>
+                    <p className="text-xs text-muted max-w-20">{c.role}</p>
                   </div>
                 ))}
               </div>
@@ -782,7 +782,7 @@ function ServiceBuilder({ business }: { business: SelectedBusiness }) {
                   <p className="text-xs text-muted mt-1">{p.idealFor}</p>
                   <ul className="mt-3 space-y-1.5">
                     {p.deliverables.map((d, j) => (
-                      <li key={j} className="text-[13px] flex gap-1.5">
+                      <li key={j} className="text-xs flex gap-1.5">
                         <span className="text-good shrink-0">✓</span>
                         <span className="leading-relaxed">{d}</span>
                       </li>
@@ -864,7 +864,7 @@ function ProductBuilder({ business }: { business: SelectedBusiness }) {
                   </Badge>
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{f.name}</p>
-                    <p className="text-[13px] text-muted leading-relaxed">{f.description}</p>
+                    <p className="text-xs text-muted leading-relaxed">{f.description}</p>
                   </div>
                 </div>
               ))}

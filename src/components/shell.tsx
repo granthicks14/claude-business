@@ -111,7 +111,7 @@ function BottomBar({ onMore }: { onMore: () => void }) {
               <Link
                 href={item.scoped ? withBusiness(item.href, business?.id ?? null) : item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center justify-center gap-1 min-h-14 text-[11px] transition-colors
+                className={`flex flex-col items-center justify-center gap-1 min-h-14 text-xs transition-colors
                   ${active ? "text-accent-text font-medium" : "text-muted"}`}
               >
                 <IconComponent className="size-5" />
@@ -124,7 +124,7 @@ function BottomBar({ onMore }: { onMore: () => void }) {
           <button
             onClick={onMore}
             aria-label="More sections"
-            className="w-full flex flex-col items-center justify-center gap-1 min-h-14 text-[11px] text-muted"
+            className="w-full flex flex-col items-center justify-center gap-1 min-h-14 text-xs text-muted"
           >
             <Icon.menu className="size-5" />
             More
@@ -151,7 +151,7 @@ function Wordmark() {
           <path d="M8 18.5v1.2M12 18.5v2.2M16 18.5v1.2" opacity=".65" />
         </svg>
       </span>
-      <span className="font-display font-semibold text-[17px] tracking-tight truncate group-hover:text-accent-text transition-colors">
+      <span className="font-display font-semibold text-lg tracking-tight truncate group-hover:text-accent-text transition-colors">
         Groundwork
       </span>
     </Link>
@@ -191,13 +191,16 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           transition-transform duration-200 ease-out
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        <div className="hidden lg:flex items-center justify-between gap-2 px-4 h-16 shrink-0">
+        {/*
+          The brand gets the row to itself.
+          Three icon buttons used to share this 248px row with the wordmark,
+          which left the name about 48px and `truncate` did the rest: the
+          product rendered as "G.." in the top-left corner of every desktop
+          screen. Measured at 24px wide against a 74px natural width. Utilities
+          are not worth the brand, so they moved to the footer below.
+        */}
+        <div className="hidden lg:flex items-center px-4 h-16 shrink-0">
           <Wordmark />
-          <div className="flex items-center gap-1">
-            <ModeToggle />
-            <ThemeToggle />
-            <LockNow />
-          </div>
         </div>
 
         <div className="lg:hidden flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
@@ -230,7 +233,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                     <IconComponent />
                     <span className="flex-1 truncate">{section.label}</span>
                     {section.badge !== undefined && (
-                      <span className="font-mono text-[11px] tabular-nums text-faint">{section.badge}</span>
+                      <span className="font-mono text-xs tabular-nums text-faint">{section.badge}</span>
                     )}
                   </Link>
 
@@ -242,9 +245,9 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                    */}
                   {open && (
                     <div className="mt-1 mb-2 ml-3.5 pl-3 border-l border-border">
-                      <p className="text-[11px] text-faint leading-relaxed pb-1.5 pr-1">{section.blurb}</p>
+                      <p className="text-xs text-faint leading-relaxed pb-1.5 pr-1">{section.blurb}</p>
                       {section.items.length === 0 ? (
-                        <p className="text-[11px] text-faint leading-relaxed pb-1 pr-1">
+                        <p className="text-xs text-faint leading-relaxed pb-1 pr-1">
                           Nothing here until you pick a business to work on.
                         </p>
                       ) : (
@@ -257,12 +260,12 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                                 <Link
                                   href={item.href}
                                   aria-current={active ? "page" : undefined}
-                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-[13px] transition-colors min-h-9
+                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-xs transition-colors min-h-9
                                     ${active ? "text-accent-text font-medium" : "text-muted hover:text-text hover:bg-surface-2"}`}
                                 >
                                   <span className="flex-1 truncate">{item.label}</span>
                                   {item.badge !== undefined && (
-                                    <span className="font-mono text-[11px] tabular-nums text-faint">{item.badge}</span>
+                                    <span className="font-mono text-xs tabular-nums text-faint">{item.badge}</span>
                                   )}
                                 </Link>
                               </li>
@@ -284,6 +287,14 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           */}
           <div className="rule mt-4 pt-1" />
           <JourneySpine />
+        </div>
+
+        {/* Display and lock controls: always reachable, never competing with
+            the brand or with navigation. */}
+        <div className="hidden lg:flex items-center gap-1 px-3 py-2 border-t border-border shrink-0">
+          <ModeToggle />
+          <ThemeToggle />
+          <LockNow />
         </div>
 
       </nav>
@@ -322,17 +333,17 @@ function WhereYouAre() {
           <Eyebrow className="text-faint">Current business</Eyebrow>
           <Link
             href={withBusiness("/business", business.id)}
-            className="block text-[13px] font-medium leading-snug mt-1 hover:text-accent-text transition-colors"
+            className="block text-xs font-medium leading-snug mt-1 hover:text-accent-text transition-colors"
           >
             {business.idea.name}
           </Link>
-          <p className="text-[11px] text-faint mt-1">
+          <p className="text-xs text-faint mt-1">
             {stageLabel(business, revenue)}
           </p>
           {next && (
             <Link
               href={next.href}
-              className="flex items-center min-h-8 text-[12px] leading-snug text-muted mt-1 hover:text-accent-text transition-colors"
+              className="flex items-center min-h-8 text-xs leading-snug text-muted mt-1 hover:text-accent-text transition-colors"
             >
               {next.label} →
             </Link>
@@ -344,7 +355,7 @@ function WhereYouAre() {
         <div className="px-1">
           <div className="flex items-baseline justify-between gap-2">
             <Eyebrow className="text-faint">Your profile</Eyebrow>
-            <span className="font-mono text-[11px] tabular-nums text-muted">{completeness.percent}%</span>
+            <span className="font-mono text-xs tabular-nums text-muted">{completeness.percent}%</span>
           </div>
           {/* A hairline, not a bar in a box. Same treatment as the journey
               spine below it, so the sidebar reads as one thing. */}
@@ -354,7 +365,7 @@ function WhereYouAre() {
           {completeness.next && (
             <Link
               href={`/profile#${completeness.next.id}`}
-              className="flex items-center min-h-8 text-[12px] leading-snug text-muted mt-1 hover:text-accent-text transition-colors"
+              className="flex items-center min-h-8 text-xs leading-snug text-muted mt-1 hover:text-accent-text transition-colors"
             >
               Add {completeness.next.label.toLowerCase()} →
             </Link>
@@ -536,7 +547,7 @@ function JourneySpine() {
     <div className="px-1 pb-4 pt-3">
       <div className="flex items-baseline justify-between mb-3">
         <span className="eyebrow">Your journey</span>
-        <span className="font-mono text-[11px] tabular-nums text-muted">
+        <span className="font-mono text-xs tabular-nums text-muted">
           {journey.done}/{journey.total}
         </span>
       </div>
@@ -558,7 +569,7 @@ function JourneySpine() {
                 >
                   {phase.name}
                 </span>
-                <span className="font-mono text-[10px] tabular-nums text-faint">
+                <span className="font-mono text-label tabular-nums text-faint">
                   {doneCount}/{phase.steps.length}
                 </span>
               </div>
@@ -568,7 +579,7 @@ function JourneySpine() {
                    holds to, and it is the one link in the spine anybody taps. */
                 <Link
                   href={journey.nextHref}
-                  className="flex items-center min-h-8 text-[12px] leading-snug text-muted mt-0.5 hover:text-accent-text transition-colors"
+                  className="flex items-center min-h-8 text-xs leading-snug text-muted mt-0.5 hover:text-accent-text transition-colors"
                 >
                   {journey.next} →
                 </Link>
@@ -602,7 +613,7 @@ function ModeToggle() {
           ? "Showing the full detail. Switch to plain explanations."
           : "Showing plain explanations. Switch to the full detail."
       }
-      className="h-9 px-2.5 grid place-items-center rounded-lg text-[11px] font-mono uppercase tracking-wide text-muted hover:bg-surface-2 hover:text-text transition-colors"
+      className="h-9 px-2.5 grid place-items-center rounded-lg text-xs font-mono uppercase tracking-wide text-muted hover:bg-surface-2 hover:text-text transition-colors"
     >
       {advanced ? "Detail" : "Simple"}
     </button>

@@ -150,7 +150,7 @@ export function WhatIf() {
                         {currency(r.startupCost)} to start · ~{r.speedToFirstRevenueDays}d to first $
                       </span>
                     </div>
-                    <p className="text-[13px] text-muted mt-1 leading-relaxed">{r.oneLiner}</p>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">{r.oneLiner}</p>
                   </li>
                 ))}
               </ul>

@@ -60,15 +60,15 @@ function Launch({ business }: { business: SelectedBusiness }) {
                 {readiness.essentialsDone}/{readiness.essentialsTotal} essentials
               </Badge>
             </div>
-            <p className="text-[13px] text-muted leading-relaxed mt-1.5">{readiness.headline}</p>
+            <p className="text-xs text-muted leading-relaxed mt-1.5">{readiness.headline}</p>
           </div>
         </div>
 
         {readiness.nextGap && (
           <div className="mt-4 pt-4 border-t border-border">
             <p className="text-xs uppercase tracking-wide text-faint font-medium">Do this next</p>
-            <p className="text-[15px] font-medium mt-1">{readiness.nextGap.label}</p>
-            <p className="text-[13px] text-muted leading-relaxed mt-1">{readiness.nextGap.why}</p>
+            <p className="text-sm font-medium mt-1">{readiness.nextGap.label}</p>
+            <p className="text-xs text-muted leading-relaxed mt-1">{readiness.nextGap.why}</p>
             <div className="mt-2.5">
               <LinkButton href={readiness.nextGap.href} size="sm" variant="primary">
                 Go and do it
@@ -80,13 +80,13 @@ function Launch({ business }: { business: SelectedBusiness }) {
 
       {/* The distinction is the whole point of having two scores. */}
       <Card className="p-4 mt-4">
-        <h2 className="font-medium text-[15px]">Two different questions</h2>
+        <h2 className="font-medium text-sm">Two different questions</h2>
         <div className="grid gap-3 sm:grid-cols-2 mt-3">
           <div className="rounded-lg bg-surface-2 p-3">
             <p className="text-xs uppercase tracking-wide text-faint font-medium">
               Business fit — <Hi tone="mark">{fit.score}</Hi>
             </p>
-            <p className="text-[13px] leading-relaxed mt-1">
+            <p className="text-xs leading-relaxed mt-1">
               Does this business suit <em>you</em> — your budget, hours, skills and situation. Changing your{" "}
               <Link href="/profile" className="text-accent-text hover:underline">
                 profile
@@ -98,7 +98,7 @@ function Launch({ business }: { business: SelectedBusiness }) {
             <p className="text-xs uppercase tracking-wide text-faint font-medium">
               Launch readiness — <Hi tone="mark">{readiness.score}</Hi>
             </p>
-            <p className="text-[13px] leading-relaxed mt-1">
+            <p className="text-xs leading-relaxed mt-1">
               Is the <em>business</em> prepared. Only doing the work moves this. A high fit score with a low readiness
               score means a good idea you haven&apos;t built yet.
             </p>
@@ -136,7 +136,7 @@ function Launch({ business }: { business: SelectedBusiness }) {
       </ul>
 
       <Card className="p-4 mt-5">
-        <p className="text-[13px] text-muted leading-relaxed">
+        <p className="text-xs text-muted leading-relaxed">
           <strong className="font-medium text-text">A full checklist isn&apos;t permission.</strong> It means you&apos;ve
           prepared what can be prepared. Whether people buy is answered by talking to them, which is what{" "}
           <Link href={link("/validation")} className="text-accent-text hover:underline">
@@ -171,12 +171,12 @@ function ChecklistRow({
           <p className={`text-sm font-medium ${item.done ? "text-muted line-through decoration-border" : ""}`}>
             {item.label}
           </p>
-          <p className="text-[13px] text-muted leading-relaxed mt-1">{item.why}</p>
+          <p className="text-xs text-muted leading-relaxed mt-1">{item.why}</p>
         </div>
         {!item.done && (
           <Link
             href={item.href}
-            className="shrink-0 text-[13px] text-accent-text hover:underline min-h-11 flex items-center gap-1"
+            className="shrink-0 text-xs text-accent-text hover:underline min-h-11 flex items-center gap-1"
           >
             Do it <span aria-hidden>→</span>
           </Link>

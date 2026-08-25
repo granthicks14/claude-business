@@ -3,125 +3,151 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* --------------------------------------------------------------------------
-   Design tokens.
-   One accent, a neutral ramp, and semantic colours for the scoring UI. Light
-   is the default; `.dark` on <html> swaps the ramp. Everything below is
-   expressed as a token so a theme change never means hunting through markup.
-   -------------------------------------------------------------------------- */
-/* --------------------------------------------------------------------------
-   THE DRAFTING TABLE
+   INK & SIGNAL
 
-   The product is the work you do before you build. So the interface is a
-   drafting table rather than a dashboard: ink on paper, ruled lines, figures
-   set in a technical face, and structure carried by typography and rules
-   instead of by four hundred rounded rectangles.
+   The product tells first-time founders the truth about business ideas,
+   including "no". So the interface has the register of a serious publication
+   rather than a dashboard: ink on paper, ruled lines, a real type scale, and
+   structure carried by hierarchy instead of by four hundred rounded rectangles.
 
-   Two brand colours and no more. SPRUCE is the product itself — the subject
-   of a sentence, the thing you click, the business you are building. CLAY is
-   what is still open — an opportunity, an exploration, the one figure on a
-   page that matters most. Everything else is status, and status is never a
-   brand colour.
+   The brand is INK — achromatic, and that is a constraint rather than a taste.
+   Status colour appears on almost every screen here, so a brand hue would
+   collide with good, warn or bad; violet is the default every AI product
+   ships. Going achromatic frees the whole spectrum for meaning and leaves the
+   page with exactly one saturated colour on it.
+
+   That colour is SIGNAL — a single azure marking one thing at a time: the
+   figure that matters, the control you are meant to press, where you are. It
+   is available because `--info` was retired as a status, so blue can never be
+   read here as a state.
+
+   Everything below is a token, so a theme change is never a hunt through
+   markup, and every colour carries the contrast it measured.
    -------------------------------------------------------------------------- */
 :root {
   /*
-   * Paper, not screen. The ramp sits at hue 85 at very low chroma so the page
-   * reads as stock rather than as the cool blue-grey (hue 265) that ships as
-   * the default in most component libraries and reads instantly as "template".
+   * PAPER.
    *
-   * `--bg` is deliberately *not* white and `--surface` deliberately *is*: the
-   * page is the paper and a surface is something laid on top of it. That one
-   * step is what lets a section be legible without a border around it, which
-   * is the whole reason this app no longer needs a card for everything.
+   * The ramp sits at hue 250 at trace chroma — near-neutral with a breath of
+   * cool in it, so ink reads as ink and the one saturated hue on the page has
+   * somewhere quiet to sit. It replaced a warm hue-85 stock: warm paper is
+   * lovely under a warm accent and muddy under a cool one, and the brand is
+   * now ink and azure.
+   *
+   * `--bg` is deliberately *not* white and `--surface` deliberately *is*. That
+   * one step is what lets a section be legible without a border around it,
+   * which is the whole reason this app does not need a card for everything.
    */
-  --bg: oklch(97.6% 0.006 88);
-  --bg-subtle: oklch(96% 0.008 86);
-  --surface: oklch(99.6% 0.002 88);
-  --surface-2: oklch(97.2% 0.007 86);
-  --border: oklch(89% 0.008 84);
-  --border-strong: oklch(80% 0.012 84);
-  --text: oklch(19% 0.014 80);
-  --text-muted: oklch(46% 0.013 80);
-  /*
-   * Darkened from 60% because the paper got darker in this pass and the mono
-   * eyebrow — which is real, small, load-bearing text rather than decoration —
-   * landed at 3.68:1 against it. Measured, not guessed: the QA harness reads
-   * the painted pixels back off a canvas.
-   */
-  --text-faint: oklch(52% 0.012 82);
+  --bg: oklch(98.2% 0.002 250);
+  --bg-subtle: oklch(96.8% 0.003 250);
+  --surface: oklch(100% 0 0);
+  --surface-2: oklch(96.4% 0.003 250);
+  --border: oklch(90.5% 0.004 250);
+  --border-strong: oklch(81% 0.006 250);
 
   /*
-   * SPRUCE — the primary brand colour.
+   * INK — the brand.
    *
-   * It has been violet (hue 275, the AI default) and then a blueprint teal.
-   * Teal was better and still landed in the same cool-tech neighbourhood every
-   * developer tool occupies. Spruce is darker and greener: it reads as
-   * considered and financial rather than as software, it holds its own against
-   * warm paper, and at this chroma it never glows.
+   * Not a hue. The identity is ink on paper with one signal colour, and the
+   * reason is a constraint rather than a taste: this app puts status colour on
+   * almost every screen, so a brand hue must not collide with good, warn, bad
+   * or info. That rules out green, amber, red and blue — and violet is the
+   * default every AI product ships. Going achromatic for the brand frees the
+   * whole spectrum for meaning, and a black primary button on warm-neutral
+   * paper reads as considered rather than as a template.
+   *
+   * Measured: 18.17:1 on the page, 19.16:1 on a surface. Paper on ink is
+   * 18.67:1, so a filled ink button is legible by a wide margin.
    */
-  --accent: oklch(40% 0.062 176);
-  --accent-hover: oklch(33% 0.060 176);
-  --accent-soft: oklch(96.6% 0.013 172);
-  --accent-border: oklch(82% 0.042 174);
-  --accent-text: oklch(36% 0.062 176);
+  --ink: oklch(17% 0.012 265);
+  --ink-hover: oklch(26% 0.014 265);
+  --ink-soft: oklch(96.4% 0.003 250);
+  --ink-border: oklch(83% 0.006 250);
+
+  --text: oklch(17% 0.012 265);
+  --text-muted: oklch(45% 0.010 265);
+  /*
+   * 53%, not 55%. `--faint` carries the eyebrow labels, and on `--surface-2`
+   * — the lightest ground it ever sits on — 55% measured 4.35:1 against a
+   * 4.5:1 minimum. Tuned against the worst ground, not the page.
+   */
+  --text-faint: oklch(53% 0.009 265);
 
   /*
-   * CLAY — the secondary brand colour, and the highlighter.
+   * SIGNAL — the one hue, and the only saturated non-status colour on a page.
    *
-   * Warm, earthy and unmistakably not a status colour. It marks what is still
-   * open: an opportunity, a direction worth exploring, the single most
-   * important figure on a page. Held at hue 40 so it cannot be confused with
-   * `--warn` at 82, which is the mistake that turns a palette into a rainbow.
+   * It marks exactly one thing at a time: the figure that matters, the control
+   * you are meant to use, where you currently are. It became available by
+   * retiring `--info` as a status — "informational" was never a state the
+   * product needed, and neutral type says it better — which means blue here
+   * can never be confused with a state.
+   *
+   * `--signal` fills; `--signal-text` is the darker cut for type on a soft
+   * ground, because the fill colour set as small text is a shade too light.
    */
-  --mark: oklch(55% 0.132 40);
-  --mark-soft: oklch(96.4% 0.022 44);
-  /* Darker than `--mark` because this one is only ever read as text, and it
-     sits on `--mark-soft` rather than on the page. */
-  --mark-text: oklch(43% 0.125 38);
+  --signal: oklch(52% 0.196 258);
+  --signal-hover: oklch(45% 0.186 258);
+  --signal-soft: oklch(96.2% 0.020 258);
+  --signal-border: oklch(84% 0.070 258);
+  --signal-text: oklch(45% 0.176 258);
 
   /*
-   * Status. Never a brand colour, never decorative.
+   * Status. Never a brand colour, never decorative, and now unambiguous —
+   * nothing else on the page carries this much chroma.
    *
-   * The `-soft` tints are deliberately close to the paper. There are 127 of
-   * them in the app and 48 are full callout panels, so at the saturation they
-   * used to carry, a page could easily show four blocks of four different
-   * colours and read as a carnival. Held this close to the background they
-   * behave as tinted stock: enough to group a block, never enough to compete
-   * with the text on it. The border and the coloured text do the signalling.
-   */
-  --good: oklch(52% 0.115 152);
-  --good-soft: oklch(96.6% 0.020 152);
-  /*
-   * 53%, not the 64% this used to be, and the difference is readability rather
-   * than taste. Amber is naturally the lightest hue on the wheel, so a warn
-   * that "looks right" next to the others is a good deal lighter than them —
-   * this one sat at 64% while `--good` was 52% and `--bad` 53%, and it measured
-   * 3.10:1 against `--warn-soft`, well under the 4.5:1 minimum. Every "Not set"
-   * and "Paid" badge in the app was failing it.
+   * The `-soft` tints are held close to the paper on purpose. At any real
+   * saturation a page shows four blocks of four colours and reads as a
+   * carnival; this close they behave as tinted stock. The border and the
+   * coloured text do the signalling.
    *
-   * Found by `check:visual`, which measures the painted pixels; hue and chroma
-   * are unchanged, so the palette rationale above still holds.
+   * All three sit within a point of each other in lightness. Amber wants to be
+   * lighter than its siblings and cannot safely be: at 64% it measured 3.10:1
+   * on its own tint and every "Not set" badge in the app failed with it.
    */
-  --warn: oklch(53% 0.125 82);
-  --warn-soft: oklch(96.8% 0.026 84);
-  --bad: oklch(53% 0.175 25);
-  --bad-soft: oklch(96.8% 0.020 25);
-  --info: oklch(48% 0.075 245);
-  --info-soft: oklch(96.6% 0.016 245);
+  --good: oklch(50% 0.125 152);
+  --good-soft: oklch(96.4% 0.020 152);
+  --warn: oklch(52% 0.128 78);
+  --warn-soft: oklch(96.6% 0.024 82);
+  --bad: oklch(52% 0.180 25);
+  --bad-soft: oklch(96.6% 0.020 25);
 
   /*
-   * Shadow is for things that genuinely float — a dialog, a popover, a menu.
-   * A section of a page does not float, so almost nothing here casts one. The
-   * tint is the ink colour rather than neutral grey, which keeps a shadow from
-   * greying out warm paper.
+   * Kept as aliases of the new system rather than deleted.
+   *
+   * `--accent`, `--mark` and `--info` are named in several hundred call sites
+   * and in the Tailwind theme below. Repointing them here renames the brand in
+   * one place instead of in a sweep that would certainly miss something, and
+   * anything still asking for "accent" now correctly gets ink.
    */
-  --shadow-sm: 0 1px 2px oklch(19% 0.014 80 / 0.06);
-  --shadow: 0 2px 4px oklch(19% 0.014 80 / 0.06), 0 10px 28px -12px oklch(19% 0.014 80 / 0.14);
-  --shadow-lg: 0 4px 8px oklch(19% 0.014 80 / 0.07), 0 28px 56px -20px oklch(19% 0.014 80 / 0.22);
+  --accent: var(--ink);
+  --accent-hover: var(--ink-hover);
+  --accent-soft: var(--ink-soft);
+  --accent-border: var(--ink-border);
+  --accent-text: var(--ink);
+  --mark: var(--signal);
+  --mark-soft: var(--signal-soft);
+  --mark-text: var(--signal-text);
+  --info: var(--signal);
+  --info-soft: var(--signal-soft);
 
   /*
-   * Spacing. A 4px base with named steps, so a gap is chosen from a scale
-   * rather than typed. `--space-section` is the one that does the most work:
-   * the rhythm between sections is what makes a page read as composed.
+   * THE MEASURE.
+   *
+   * Both of these were referenced in `@layer base` and never defined, so
+   * `max-width: var(--measure)` resolved to nothing and the browser dropped
+   * the declaration. The rule the project documented as "the measure, applied
+   * once" had never applied at all — which is most of why paragraphs ran to
+   * the full width of a 1440px screen.
+   *
+   * Set in `ch` so they track the font size rather than fighting it. 68ch at a
+   * 16px body is roughly 640px and lands between 65 and 75 characters a line.
+   */
+  --measure: 68ch;
+  --measure-heading: 22ch;
+
+  /*
+   * Spacing. One scale, powers of the same 4px unit, so vertical rhythm is a
+   * decision made once rather than a number typed per component.
    */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -130,79 +156,79 @@
   --space-5: 1.5rem;
   --space-6: 2rem;
   --space-7: 3rem;
-  --space-8: 4.5rem;
-  --space-section: clamp(2.5rem, 6vw, 4.5rem);
+  --space-8: 4rem;
+  /* The gap between top-level sections of a page. Larger than anything inside
+     one, which is what makes a page read as sections rather than as a list. */
+  --space-section: clamp(2.5rem, 5vw, 4.5rem);
 
   /*
-   * The measure — how many characters fit on one line of prose.
-   *
-   * A content audit across 37 routes found 33 of them setting body text
-   * between 96 and 160 characters per line, because the workspace column is
-   * wide and nothing was stopping a paragraph from filling it. Anything past
-   * about 80 costs the reader the return sweep: the eye loses the next line,
-   * and long analysis reads as heavy when it is merely wide.
-   *
-   * 68ch for prose, 45ch for headings. Applied as a cap in the base layer, so
-   * it can only ever narrow a paragraph and never widen one — a paragraph in a
-   * 300px column is untouched. Tables, grids and diagrams are exempt: they are
-   * structured data and genuinely want the width.
+   * Elevation is a hairline and a step in ground colour, not a drop shadow.
+   * Two shadows survive, both for things that genuinely float above the page.
    */
-  --measure: 68ch;
-  --measure-heading: 45ch;
-
-  /* Motion. Short, and the same easing everywhere. */
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --dur-fast: 0.14s;
-  --dur: 0.24s;
-  --dur-slow: 0.4s;
+  --shadow: 0 1px 2px oklch(17% 0.012 265 / 0.04);
+  --shadow-lg: 0 8px 28px -12px oklch(17% 0.012 265 / 0.18);
 }
 
 .dark {
   /*
-   * Dark is a warm ink, not an inverted grey and emphatically not #000. The
-   * surfaces step in even increments so elevation reads without borders.
+   * Dark is ink stock, not an inverted grey and emphatically not #000. The
+   * four grounds step evenly so elevation reads without a border on every box.
    */
-  --bg: oklch(15.5% 0.009 80);
-  --bg-subtle: oklch(18.5% 0.010 80);
-  --surface: oklch(20.5% 0.011 80);
-  --surface-2: oklch(24.5% 0.012 80);
-  --border: oklch(29% 0.012 80);
-  --border-strong: oklch(38% 0.014 80);
-  --text: oklch(96% 0.005 84);
-  --text-muted: oklch(74% 0.010 82);
+  --bg: oklch(16.5% 0.006 265);
+  --bg-subtle: oklch(18.5% 0.007 265);
+  --surface: oklch(20% 0.008 265);
+  --surface-2: oklch(24% 0.009 265);
+  --border: oklch(29.5% 0.010 265);
+  --border-strong: oklch(38% 0.012 265);
+
   /*
-   * 64%, up from 60%. `--faint` carries the eyebrow labels — "People you've
-   * contacted", "Money received" — and on `--surface-2`, the lightest of the
-   * four dark grounds, 60% measured 4.13:1 against a 4.5:1 minimum. It read as
-   * faint in the intended sense on the page background and as unreadable
-   * inside a panel, which is the failure mode of a token tuned against one
-   * ground and used on four. 64% clears every one of them.
+   * Ink inverts: on a dark ground the brand becomes the paper. A primary
+   * button is a pale slab, which is the same gesture — the highest-contrast
+   * thing on the page is the thing you are meant to press.
    */
-  --text-faint: oklch(64% 0.010 82);
+  --ink: oklch(96% 0.004 265);
+  --ink-hover: oklch(88% 0.006 265);
+  --ink-soft: oklch(24% 0.009 265);
+  --ink-border: oklch(36% 0.012 265);
 
-  /* Spruce has to come forward on ink, so it lightens and keeps its hue. */
-  --accent: oklch(74% 0.082 172);
-  --accent-hover: oklch(81% 0.078 172);
-  --accent-soft: oklch(23% 0.020 174);
-  --accent-border: oklch(38% 0.046 174);
-  --accent-text: oklch(83% 0.076 172);
+  --text: oklch(96% 0.004 265);
+  --text-muted: oklch(74% 0.010 265);
+  /*
+   * 64%. Tuned against `--surface-2`, the lightest of the four dark grounds
+   * and the one the eyebrow labels actually sit on — 60% measured 4.13:1
+   * there, which is the failure mode of a token checked against the page and
+   * used inside a panel.
+   */
+  --text-faint: oklch(64% 0.010 265);
 
-  --mark: oklch(74% 0.115 45);
-  --mark-soft: oklch(23.5% 0.028 42);
-  --mark-text: oklch(84% 0.098 46);
+  /* Signal lightens to come forward on ink and keeps its hue exactly. */
+  --signal: oklch(74% 0.155 255);
+  --signal-hover: oklch(82% 0.130 255);
+  --signal-soft: oklch(24% 0.045 258);
+  --signal-border: oklch(40% 0.090 258);
+  --signal-text: oklch(80% 0.130 255);
 
-  --good: oklch(74% 0.135 152);
+  --good: oklch(76% 0.140 152);
   --good-soft: oklch(23% 0.030 152);
   --warn: oklch(80% 0.125 84);
   --warn-soft: oklch(23.5% 0.032 84);
-  --bad: oklch(70% 0.155 25);
+  --bad: oklch(70% 0.165 25);
   --bad-soft: oklch(23.5% 0.036 25);
-  --info: oklch(74% 0.085 245);
-  --info-soft: oklch(23% 0.026 245);
 
-  --shadow-sm: 0 1px 2px oklch(0% 0 0 / 0.3);
-  --shadow: 0 1px 3px oklch(0% 0 0 / 0.4), 0 8px 24px -8px oklch(0% 0 0 / 0.5);
-  --shadow-lg: 0 2px 6px oklch(0% 0 0 / 0.4), 0 24px 48px -16px oklch(0% 0 0 / 0.6);
+  /* The same aliases as light, so nothing has to know the brand was renamed. */
+  --accent: var(--ink);
+  --accent-hover: var(--ink-hover);
+  --accent-soft: var(--ink-soft);
+  --accent-border: var(--ink-border);
+  --accent-text: var(--text);
+  --mark: var(--signal);
+  --mark-soft: var(--signal-soft);
+  --mark-text: var(--signal-text);
+  --info: var(--signal);
+  --info-soft: var(--signal-soft);
+
+  --shadow: 0 1px 2px oklch(0% 0 0 / 0.3);
+  --shadow-lg: 0 8px 28px -12px oklch(0% 0 0 / 0.55);
 }
 
 @theme inline {
@@ -215,6 +241,16 @@
   --color-text: var(--text);
   --color-muted: var(--text-muted);
   --color-faint: var(--text-faint);
+  --color-ink: var(--ink);
+  --color-ink-hover: var(--ink-hover);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-border: var(--ink-border);
+  --color-signal: var(--signal);
+  --color-signal-hover: var(--signal-hover);
+  --color-signal-soft: var(--signal-soft);
+  --color-signal-border: var(--signal-border);
+  --color-signal-text: var(--signal-text);
+  /* The former names, aliased. See the note in :root. */
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
@@ -250,39 +286,93 @@
   --font-mono: var(--font-mono-face), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
   /*
-   * A type scale, so sizes stop being chosen one at a time. Ratios are close
-   * to a minor third at the top and tighten toward the body, which keeps
-   * headings dramatic without making paragraphs shout.
+   * THE TYPE SCALE, AND WHY IT IS DEFINED TWICE.
+   *
+   * A good semantic scale already existed here and almost nothing used it. The
+   * app was measured across sixteen routes: 1,409 of 1,580 text runs — 89% —
+   * sat between 11px and 14px, body copy was set at 13px, and between 18px and
+   * 44px there was essentially nothing. That is the entire hierarchy problem.
+   * Nothing could be emphasised because everything was the same size, and
+   * headings jumped two octaves with no middle register.
+   *
+   * The cause was a shadow scale: 674 `text-sm`, 373 `text-xs`, 187
+   * `text-[13px]` and 61 `text-[11px]` across seventy files, none of which
+   * touched the tokens below.
+   *
+   * So Tailwind's own scale is redefined onto chosen values — the same move
+   * the radii use, and for the same reason. A thousand existing call sites
+   * land somewhere deliberate without being edited one at a time, and there is
+   * no un-scaled size left to reach for.
    */
-  --text-display: clamp(2.75rem, 6.4vw, 4.5rem);
+  /*
+   * These two land higher than they look like they should, and the reason is
+   * measurement rather than preference. After a first pass that put `text-xs`
+   * at 13 and `text-sm` at 15, the app still had 933 text runs at 13px — and
+   * sampling them showed `text-xs` carrying explanatory prose, not captions:
+   * 29 runs over sixty characters on five pages, plus 148 more inheriting it.
+   *
+   * A utility named "extra small" had become the body size. So the pair moves
+   * up one step: 14 is the floor for anything anyone actually reads, 16 is the
+   * workhorse, and `text-caption` at 13 stays available for the genuinely
+   * incidental — which is now a deliberate choice rather than the default.
+   */
+  --text-xs: 0.875rem;    /* 14 */
+  --text-xs--line-height: 1.55;
+  --text-sm: 1rem;        /* 16 — the workhorse */
+  --text-sm--line-height: 1.62;
+  --text-base: 1rem;      /* 16 — body. */
+  --text-base--line-height: 1.65;
+  --text-lg: 1.125rem;    /* 18 */
+  --text-lg--line-height: 1.55;
+  --text-xl: 1.25rem;     /* 20 */
+  --text-xl--line-height: 1.4;
+  --text-2xl: 1.5rem;     /* 24 */
+  --text-2xl--line-height: 1.3;
+  --text-3xl: 1.875rem;   /* 30 */
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 2.25rem;    /* 36 */
+  --text-4xl--line-height: 1.14;
+  --text-5xl: 2.75rem;    /* 44 */
+  --text-5xl--line-height: 1.06;
+
+  /*
+   * The semantic scale. Ratios open up at the top and tighten toward the body,
+   * which keeps headings dramatic without making paragraphs shout. Every step
+   * is populated — the missing middle register between 18 and 44 is what made
+   * the old pages read flat.
+   */
+  --text-display: clamp(2.25rem, 5.6vw, 4.5rem);
   --text-display--line-height: 0.98;
-  --text-display--letter-spacing: -0.032em;
-  --text-h1: clamp(2rem, 3.6vw, 2.75rem);
+  --text-display--letter-spacing: -0.034em;
+  --text-h1: clamp(1.875rem, 3.4vw, 2.75rem);
   --text-h1--line-height: 1.06;
   --text-h1--letter-spacing: -0.026em;
-  --text-h2: clamp(1.375rem, 2vw, 1.75rem);
-  --text-h2--line-height: 1.16;
+  --text-h2: clamp(1.5rem, 2.2vw, 1.875rem);
+  --text-h2--line-height: 1.18;
   --text-h2--letter-spacing: -0.02em;
-  --text-h3: 1.125rem;
+  --text-h3: 1.25rem;
   --text-h3--line-height: 1.35;
   --text-h3--letter-spacing: -0.012em;
-  --text-body-lg: 1.0625rem;
-  --text-body-lg--line-height: 1.62;
-  --text-small: 0.8125rem;
-  --text-small--line-height: 1.5;
-  --text-caption: 0.75rem;
-  --text-caption--line-height: 1.45;
+  --text-body-lg: 1.125rem;
+  --text-body-lg--line-height: 1.6;
+  --text-body: 1rem;
+  --text-body--line-height: 1.65;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.55;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.5;
   /* The mono eyebrow. Wide tracking is what makes it read as an instrument
-     label rather than as small body text. */
+     label rather than as small body text — and it is the one size allowed
+     below 13px, because it is tracked caps rather than prose. */
   --text-label: 0.6875rem;
   --text-label--line-height: 1.2;
-  --text-label--letter-spacing: 0.12em;
+  --text-label--letter-spacing: 0.13em;
   /* Figures. Set large, tight and tabular — a metric is meant to be compared
      with the metric under it, not read as a word. */
   --text-metric: clamp(2rem, 3.2vw, 2.75rem);
   --text-metric--line-height: 1;
   --text-metric--letter-spacing: -0.03em;
-  --text-metric-lg: clamp(3rem, 6vw, 4.25rem);
+  --text-metric-lg: clamp(2.75rem, 5.6vw, 4.25rem);
   --text-metric-lg--line-height: 0.92;
   --text-metric-lg--letter-spacing: -0.038em;
 
@@ -327,6 +417,14 @@
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
+    /*
+     * 16px, explicitly. Unstyled text used to inherit the browser default and
+     * everything else was set with a utility, which is how the app ended up
+     * with 89% of its text between 11 and 14 pixels. The floor is now a
+     * readable body size and utilities move away from it deliberately.
+     */
+    font-size: var(--text-body);
+    line-height: 1.65;
     font-synthesis-weight: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -336,13 +434,14 @@
 
   h1, h2, h3, h4 {
     font-family: var(--font-display);
-    font-weight: 600;
     /*
-     * Fraunces is a variable font: SOFT rounds the terminals slightly and
-     * WONK allows its more characterful alternates. Both are dialled well
-     * back — enough to be recognisably itself, not enough to be a costume.
+     * Regular, not semibold. Instrument Serif ships one weight, and asking for
+     * 600 with `font-synthesis-weight: none` set on the body simply gets 400
+     * back — so the declaration was a lie that happened to render correctly.
+     * Its contrast comes from the drawing, not from the weight, which is the
+     * point of using a display face rather than bolding a UI face.
      */
-    font-variation-settings: "SOFT" 12, "WONK" 1;
+    font-weight: 400;
     letter-spacing: -0.021em;
     text-wrap: balance;
   }

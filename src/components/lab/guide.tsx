@@ -134,7 +134,7 @@ export function Guide({ onDone }: { onDone: () => void }) {
     <Card className="p-5">
       <div className="flex items-baseline justify-between gap-4 mb-4">
         <Eyebrow>Before we start</Eyebrow>
-        <span className="font-mono text-[11px] tabular-nums text-faint">
+        <span className="font-mono text-xs tabular-nums text-faint">
           {index + 1}/{questions.length}
         </span>
       </div>
