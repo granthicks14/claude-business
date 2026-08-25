@@ -335,7 +335,9 @@ function WhereYouAre() {
           <Eyebrow className="text-faint">Current business</Eyebrow>
           <Link
             href={withBusiness("/business", business.id)}
-            className="block text-xs font-medium leading-snug mt-1 hover:text-accent-text transition-colors"
+            /* min-h-9: it is a real navigation target, and at its natural 19px
+               it was the one control in the nav below the 32px floor. */
+            className="block text-xs font-medium leading-snug mt-1 py-1.5 min-h-9 hover:text-accent-text transition-colors"
           >
             {business.idea.name}
           </Link>
