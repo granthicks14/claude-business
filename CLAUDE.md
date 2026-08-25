@@ -41,6 +41,7 @@ npm run test:iq        # 37 pipeline tests: the audit that started the work
 npm test               # all ten
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
+npm run check:persist  # 27 browser checks: does the work survive every path
 npm run check:visual   # measures the look-and-feel invariants in a browser
 ```
 
@@ -1065,6 +1066,109 @@ right-hand edge on every route.
 `test:product` holds a floor on how many places collapse detail and how widely
 they are spread, since the failure being guarded against is not "the component
 broke" but "the component stopped being used".
+
+### A score is capped by what is behind it
+
+`businessQuality` scores thirteen dimensions. Twelve are structural — they read
+the shape of the idea — and one reads evidence, so the weighted mean has a floor
+near 46 that no re-weighting moves. Measured across twelve generated ideas with
+**nothing recorded against them**: scores of 46–54, and three of the twelve came
+back **"Promising"**. A confident middling verdict on a business nobody has
+looked at is the exact output the rest of the app refuses to produce.
+
+`EVIDENCE_CAP` holds the score at the top of "Early" on low confidence and the
+top of "Promising" on medium. `band` stays a pure function of `score`, so there
+is one mechanism rather than two and the label cannot disagree with the number
+printed beside it. `uncappedScore` and `capped` ride along in the same shape
+`FitScore` uses for its realism cap, and `/quality` states the ceiling on the
+score rather than only in the paragraph underneath.
+
+The cost is real and is the point: two businesses at different evidence levels
+are no longer comparable on the displayed figure. `uncappedScore` is there for
+the case where the structural comparison is the one wanted.
+
+### A stored flag disagreed with the thing it described
+
+`profile.completedOnboarding` answered "has this person told us about
+themselves", and it could not. `/describe`, the ask bar and `sampleProfile()`
+set it; **`/profile` — the page the whole product links to for exactly this —
+did not.** `/onboarding` used to and was retired into `/profile` in an earlier
+pass, and the setter went with it. Nothing failed loudly, because nothing does
+when a boolean stays false.
+
+Three people were shown a first-time-visitor marketing page as a result: one who
+had filled in every field, permanently; one who had just created an account, so
+the "open the worked example" offer — which exists precisely for somebody with
+no business — was unreachable by the only people it is for; and a guest, who had
+the example loaded and active, since `loadSample` correctly no longer writes
+`state.profile`.
+
+Two fixes, because the page was asking two questions and had one answer.
+"Is this a first-time visitor?" belongs to the vault, and `app/page.tsx` asks
+`useAppOpen()`. "Is the profile good enough to score against?" belongs to the
+profile, and `hasUsableProfile()` derives it from the fields. A derived answer
+cannot drift from what it describes. The field stays and is still written —
+`isSampleFounder` compares the sample profile field by field — and is documented
+as vestigial in `types.ts`.
+
+### A write is not a save until it has been read back
+
+`discardLegacyState()` carried a comment saying it was "called only once the
+same data is confirmed readable inside a vault, because doing it any earlier
+would be deleting the sole copy of someone's work on the strength of an
+encryption round-trip nobody has verified". Nothing verified it.
+`createAccount` checked that `trySet` had not thrown and returned `ok`; the
+caller then deleted the pre-vault plaintext, and on the guest path ended a
+session whose work existed nowhere but that tab's memory.
+
+It decrypts its own blob and compares it before returning now, rolls the write
+back on mismatch, and says the work is still on screen. The failure modes worth
+catching were never "the write threw" — they are a quota-full browser that
+truncates and a key that does not round-trip, and only a decrypt catches those.
+`test:accounts` drives a storage that accepts writes and lies on read.
+
+### The progress list was a clock
+
+`AILoading` drew a checklist: steps above the current one got a green tick, the
+current one pulsed. `useAI.ts` advanced the index on a **900ms `setInterval`**
+with no connection to the request — so "Reading your profile ✓ / Mapping skills
+to customer problems ✓" appeared after 1.8 seconds whether or not either had
+happened, and a slow provider left the list sitting on its last item looking
+finished. On a failure it had already claimed four steps had succeeded.
+
+Nothing in the browser can know which step a provider is on; there is no
+progress channel and inventing one is the fake progress bar this product's own
+rules forbid. The list is what the task *involves*, stated once and not
+re-ordered, with one indeterminate marker saying the only thing actually known.
+Slow is now visibly slow rather than silently complete.
+
+### The workspace is phases, not a directory
+
+`/business` was seven hundred lines and one scroll carrying **five score
+figures**, with `opportunityScore` rendered twice about a hundred and thirty
+pixels apart under two different labels — two labels on one figure reads as two
+measurements. Under them sat nine equally-weighted links.
+
+The phases the navigation was reorganised around are now applied to the page
+where the work actually happens: Overview, Does it hold up?, Make it, Manage, as
+`?phase=` tabs read through `useSearchParams` behind a `Suspense` boundary. The
+next action leads and the drawings sit beneath it — a picture above the one
+sentence that matters is a picture competing with it. An unknown or absent
+phase opens the overview, so every saved link still lands somewhere.
+
+### Does the work survive?
+
+`check:persist` walks the sequence in Chromium rather than asserting functions:
+guest → describe a business → nothing on disk → keep it as an account → refresh
+→ navigate → Back → sign out → unlock → still there. Plus both home-page cases
+and the phase deep links. 27 checks.
+
+Two things it encodes that are easy to get wrong. **A full document load ends a
+guest session** — there is no key, so the state is a module variable; the first
+version of the script used `page.goto` and met the sign-in gate, which is the
+failure `guest-banner.tsx` opens its form in a dialog to avoid. And **the
+default remember setting is "ask every time"**, so a test that reloads after
+unlocking is measuring the default rather than persistence.
 
 ### Four scores, never merged
 

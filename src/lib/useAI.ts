@@ -66,7 +66,6 @@ export function useAITask<T>(task: string) {
    * happening and what is still to come.
    */
   const [stages, setStages] = useState<string[]>([]);
-  const [stageIndexState, setStageIndexState] = useState(0);
   const [error, setError] = useState<AIError | null>(null);
   const [meta, setMeta] = useState<AIMeta | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -91,18 +90,23 @@ export function useAITask<T>(task: string) {
       setLoading(true);
       setError(null);
 
+      /*
+       * THE STAGES DESCRIBE THE TASK. THEY DO NOT REPORT ON IT.
+       *
+       * This used to walk `stage` through `taskStages` on a 900ms interval and
+       * feed the index to a tick-list, so the UI ticked steps off as complete
+       * on a timer with no connection to the request. On anything slower than
+       * about four seconds it reached the last item and sat there looking
+       * finished; on a failure it had already claimed four steps had succeeded.
+       *
+       * Nothing here can know which step a provider is on — there is no
+       * progress channel, and inventing one is the fake progress bar this
+       * product's own rules forbid. So the list is shown as what the task
+       * involves and `stage` says only the thing that is actually true.
+       */
       const taskStages = stagesFor(task);
       setStages(taskStages);
-      setStage(taskStages[0]);
-      setStageIndexState(0);
-      let stageIndex = 0;
-      const timer = setInterval(() => {
-        stageIndex = Math.min(stageIndex + 1, taskStages.length - 1);
-        if (mounted.current) {
-          setStage(taskStages[stageIndex]);
-          setStageIndexState(stageIndex);
-        }
-      }, 900);
+      setStage("Working…");
 
       try {
         const mode = currentIntelligence();
@@ -198,7 +202,6 @@ export function useAITask<T>(task: string) {
         }
         return null;
       } finally {
-        clearInterval(timer);
         if (mounted.current) {
           setLoading(false);
           setStage("");
@@ -215,7 +218,12 @@ export function useAITask<T>(task: string) {
 
   const reset = useCallback(() => setError(null), []);
 
-  return { run, retry, reset, loading, stage, stages, stageIndex: stageIndexState, error, meta };
+  /*
+   * `stageIndex` is always 0 and is returned only so the call sites that pass
+   * it through to `AILoading` keep working. `AILoading` ignores it — see the
+   * note there about why nothing can honestly report which step is running.
+   */
+  return { run, retry, reset, loading, stage, stages, stageIndex: 0, error, meta };
 }
 
 /* -------------------------------------------------------------------------- */

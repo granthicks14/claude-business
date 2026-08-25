@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo, useState, Suspense } from "react";
 
 import { Icon } from "@/components/icons";
 import { GeneratedNote, PageHero, Ready, RequireBusiness } from "@/components/page";
@@ -118,19 +118,125 @@ function AtAGlance({
   );
 }
 
+/**
+ * THE PHASES OF ONE PIECE OF WORK, NOT A DIRECTORY OF EVERYTHING.
+ *
+ * WHAT THIS PAGE WAS
+ *
+ * Seven hundred lines and one scroll, carrying **five score figures** — and
+ * `opportunityScore` appeared twice, once in the `Vitals` strip and again as a
+ * `ScoreRing` about a hundred and thirty pixels below it, with two different
+ * labels. Under them sat a grid of nine equally-weighted links. A founder
+ * arriving to do one thing had to read the whole page to find out where it was,
+ * and a founder arriving to find out how they were doing got four numbers with
+ * no ordering between them.
+ *
+ * The phases were already the right idea — the navigation was reorganised
+ * around them in an earlier pass — they just were not applied to the one page
+ * where all of the work actually lives.
+ *
+ * WHY `?phase=` AND NOT COMPONENT STATE
+ *
+ * The same reason `/lab` uses `?tab=`: a tab held in `useState` cannot be
+ * linked to, cannot be reached by Back, and cannot be pointed at from the
+ * sidebar. It also survives the refresh, which matters here because this is
+ * where somebody spends their session.
+ *
+ * `useSearchParams` needs a Suspense boundary, and `/lab` documents at length
+ * what happens when you dodge it with a mount-only effect instead: the URL
+ * changes and the panel does not, silently, on every client-side navigation.
+ * That mistake is not repeated here.
+ */
+const PHASES = [
+  { id: "overview", label: "Overview", blurb: "What it is, and the one thing to do next." },
+  { id: "holds-up", label: "Does it hold up?", blurb: "The numbers, and where they are weakest." },
+  { id: "make", label: "Make it", blurb: "Everything you have to build or write." },
+  { id: "manage", label: "Manage", blurb: "Adjacent openings, and stopping well." },
+] as const;
+
+type PhaseId = (typeof PHASES)[number]["id"];
+
+function isPhase(value: string | null): value is PhaseId {
+  return PHASES.some((p) => p.id === value);
+}
+
 export default function BusinessPage() {
   return (
     <Ready>
-      <RequireBusiness>{(business) => <Dashboard business={business} />}</RequireBusiness>
+      <RequireBusiness>
+        {(business) => (
+          /*
+           * `null` rather than a skeleton, as in `/lab`: everything under here
+           * is already behind `Ready`, which does not render until the store
+           * has hydrated, so a second placeholder is a flash between two
+           * loading states rather than information.
+           */
+          <Suspense fallback={null}>
+            <Dashboard business={business} />
+          </Suspense>
+        )}
+      </RequireBusiness>
     </Ready>
+  );
+}
+
+function PhaseTabs({ current, onSelect }: { current: PhaseId; onSelect: (id: PhaseId) => void }) {
+  return (
+    <div className="rule-y my-6">
+      <div
+        role="tablist"
+        aria-label="Which part of this business"
+        className="flex gap-1 overflow-x-auto py-1 -mx-1 px-1"
+      >
+        {PHASES.map((p) => {
+          const active = p.id === current;
+          return (
+            <button
+              key={p.id}
+              role="tab"
+              aria-selected={active}
+              title={p.blurb}
+              onClick={() => onSelect(p.id)}
+              className={`shrink-0 min-h-9 px-3 rounded-md text-sm font-medium transition-colors ${
+                active ? "bg-ink text-bg" : "text-muted hover:text-fg hover:bg-surface-2"
+              }`}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
 function Dashboard({ business }: { business: SelectedBusiness }) {
   /* Every link out of this page names the business it is about. See nav-model.ts. */
   const link = (href: string) => withBusiness(href, business.id);
+
+  /*
+   * An unrecognised or absent phase opens the overview rather than erroring or
+   * rendering nothing, so every link anybody has ever saved to this page still
+   * lands somewhere sensible.
+   */
+  const rawPhase = useSearchParams()?.get("phase") ?? null;
+  const phase: PhaseId = isPhase(rawPhase) ? rawPhase : "overview";
   const state = useAppState((s) => s);
   const router = useRouter();
+
+  /*
+   * `replace`, not `push`: flicking between phases of one business is not a
+   * journey, and filling history with it would make Back mean "the tab I
+   * glanced at" rather than "the page I came from". Same reasoning as `/lab`.
+   */
+  const selectPhase = (id: PhaseId) => {
+    // Built through URLSearchParams so the business id and the phase cannot
+    // collide over which one owns the "?" — `withBusiness` may or may not have
+    // already added one, depending on whether a business is selected.
+    const url = new URL(withBusiness("/business", business.id), "http://x");
+    url.searchParams.set("phase", id);
+    router.replace(`${url.pathname}${url.search}`, { scroll: false });
+  };
   const toast = useToast();
   const health = useMemo(() => computeHealth(business), [business]);
   const profile = useAppState(effectiveProfile);
@@ -201,8 +307,36 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         is and how good it is — previously scattered down four thousand pixels
         of stacked panels, two of them not on this page at all.
       */}
-      <Vitals idea={business.idea} score={business.idea.opportunityScore} scoreLabel="Opportunity" />
+      <PhaseTabs current={phase} onSelect={selectPhase} />
 
+      {phase === "overview" && (
+        <>
+      <Vitals idea={business.idea} score={business.idea.opportunityScore} scoreLabel="Opportunity" />
+      {/* The one place the opportunity figure appears, so the link to its
+          reasoning belongs beside it rather than under a second copy. */}
+      <p className="text-caption text-muted mt-2 leading-relaxed">
+        {business.idea.scoreExplanation}{" "}
+        <Link href={`/ideas/${business.ideaId}`} className="text-section underline underline-offset-2 font-medium">
+          See the breakdown
+        </Link>
+      </p>
+
+      {/* Where the business actually is, what the app currently thinks, and the
+          two things it would rather the founder didn't scroll past. */}
+      <BusinessStateCard />
+
+      {/* The single most important thing on the page: one instruction, not a
+          list. Everything else is context for it. */}
+      <NextActionCard />
+
+      {/*
+        THE DRAWINGS SIT UNDER THE INSTRUCTION, NOT ABOVE IT.
+
+        They were first, which meant a founder opening their own business met
+        two illustrations and a survey cross-section before being told what to
+        do. Both are worth having and neither is an instruction; a picture above
+        the one sentence that matters is a picture competing with it.
+      */}
       {/*
         The survey. See `ground-profile.tsx` — every depth in it is read off
         this business, so two businesses never draw the same picture and a
@@ -216,14 +350,6 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         work the reader was doing for us.
       */}
       <ModelDiagram idea={business.idea} price={business.money?.price} />
-
-      {/* Where the business actually is, what the app currently thinks, and the
-          two things it would rather the founder didn't scroll past. */}
-      <BusinessStateCard />
-
-      {/* The single most important thing on the page: one instruction, not a
-          list. Everything else is context for it. */}
-      <NextActionCard />
 
       <StageCard />
 
@@ -292,7 +418,11 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           </div>
         </div>
       </Card>
+        </>
+      )}
 
+      {phase === "holds-up" && (
+        <>
       <AdvancedOnly summary="The numbers — revenue, customers, tasks and health">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
@@ -324,16 +454,20 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         </Card>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <Card className="p-5">
-          <h2 className="font-semibold text-sm mb-3">Opportunity score</h2>
-          <ScoreRing score={business.idea.opportunityScore} size={64} sublabel="How well it fits you" />
-          <p className="text-xs text-muted mt-3 leading-relaxed">{business.idea.scoreExplanation}</p>
-          <Link href={`/ideas/${business.ideaId}`} className="text-xs text-accent-text hover:underline mt-2 inline-block">
-            See the breakdown
-          </Link>
-        </Card>
+      {/*
+        TWO SCORES HERE, NOT THREE.
 
+        "Opportunity score" was the third, and it was the same number as the one
+        in the `Vitals` strip on the overview — rendered twice, about a hundred
+        and thirty pixels apart, once labelled "Opportunity" and once "How well
+        it fits you". Two labels on one figure reads as two measurements, and a
+        reader who notices they always move together has learnt that the page
+        does not know what it is showing them.
+
+        The breakdown link it carried was the part worth keeping, so it moved
+        onto the Vitals strip where the number actually is.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2">
         <Card className="p-5">
           <h2 className="font-semibold text-sm mb-3">Validation score</h2>
           {business.validation ? (
@@ -423,7 +557,11 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           </div>
         )}
       </Section>
+        </>
+      )}
 
+      {phase === "make" && (
+        <>
       <LaunchReadinessCard business={business} />
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -501,7 +639,11 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           done={!!business.sales}
         />
       </div>
+        </>
+      )}
 
+      {phase === "manage" && (
+        <>
       <Section
           title="Opportunity radar"
           description="Adjacent openings you're unusually well placed to act on, based on your profile and this business."
@@ -565,6 +707,8 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
           </Button>
         </div>
       </Section>
+        </>
+      )}
 
       <EstimateNote>
         Targets and projections here are illustrative. Verify licences, tax, insurance and permits for your area with a

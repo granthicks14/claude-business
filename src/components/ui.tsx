@@ -1362,12 +1362,16 @@ export function Dialog({
 export function AILoading({
   stage,
   stages,
-  stageIndex = 0,
   compact,
 }: {
   stage: string;
   /** The whole pipeline. Omit it and this degrades to the single-line form. */
   stages?: string[];
+  /**
+   * Ignored. Kept so the call sites that pass it still typecheck.
+   *
+   * It used to drive a tick-list, and see below for why it no longer can.
+   */
   stageIndex?: number;
   compact?: boolean;
 }) {
@@ -1388,44 +1392,47 @@ export function AILoading({
     );
   }
 
+  /*
+   * WHAT THIS LIST CLAIMS, AND WHAT IT USED TO CLAIM.
+   *
+   * It was a progress checklist: steps above the current one got a green tick,
+   * the current one pulsed, the rest were greyed. It looked like the app
+   * reporting on itself.
+   *
+   * It was a clock. `useAI.ts` advances the index on a 900ms `setInterval`,
+   * with no connection to what the request is doing — so "Reading your
+   * profile ✓ / Mapping skills to customer problems ✓" appeared after 1.8
+   * seconds whether or not either had happened, and if the provider was slow
+   * the list simply stopped on the last item and sat there looking finished.
+   *
+   * Every other surface in this product refuses to state something it has not
+   * checked; a fabricated progress bar on the app's most-watched screen is the
+   * same defect with an animation on it. The brief that prompted this pass says
+   * "avoid fake progress bars" in as many words.
+   *
+   * So the list is what the task INVOLVES, stated once and not re-ordered, with
+   * a single indeterminate marker saying only that it is running — which is the
+   * one thing actually known. Slower is now visibly slower rather than
+   * silently complete.
+   */
   return (
     <div className={compact ? "py-3" : "py-8"}>
-      {/*
-        Only the current step is announced. Marking the whole list live would
-        make a screen reader re-read five items every time one changed.
-      */}
-      <p className="sr-only" role="status" aria-live="polite">
-        {stage}
-      </p>
+      <div className="flex items-center gap-3 justify-center" role="status" aria-live="polite">
+        <span className="relative flex size-2.5 shrink-0">
+          <span className="absolute inset-0 rounded-full bg-accent" style={{ animation: "pulse-dot 1.4s ease-in-out infinite" }} />
+        </span>
+        <span className="text-sm font-medium">Working…</span>
+      </div>
 
-      <ol className="space-y-2.5 max-w-sm mx-auto">
-        {stages!.map((s, i) => {
-          const done = i < stageIndex;
-          const current = i === stageIndex;
-          return (
-            <li
-              key={s}
-              className={`flex items-start gap-2.5 text-sm transition-colors duration-300 ${
-                done ? "text-muted" : current ? "text-text font-medium" : "text-faint"
-              }`}
-            >
-              <span className="shrink-0 mt-0.5 size-4 grid place-items-center" aria-hidden="true">
-                {done ? (
-                  <svg viewBox="0 0 16 16" className="size-4 text-good" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="m3.5 8.5 3 3 6-7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                ) : current ? (
-                  <span className="relative flex size-2.5">
-                    <span className="absolute inset-0 rounded-full bg-accent" style={{ animation: "pulse-dot 1.4s ease-in-out infinite" }} />
-                  </span>
-                ) : (
-                  <span className="size-2 rounded-full border border-border-strong" />
-                )}
-              </span>
-              <span className="leading-snug">{s}</span>
-            </li>
-          );
-        })}
+      <p className="text-caption text-faint text-center mt-1.5">What this involves</p>
+
+      <ol className="space-y-2 max-w-sm mx-auto mt-4">
+        {stages!.map((s) => (
+          <li key={s} className="flex items-start gap-2.5 text-sm text-muted">
+            <span className="shrink-0 mt-1.5 size-1.5 rounded-full bg-border-strong" aria-hidden="true" />
+            <span className="leading-snug">{s}</span>
+          </li>
+        ))}
       </ol>
     </div>
   );
