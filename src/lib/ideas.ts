@@ -6,6 +6,7 @@ import { stagesFor } from "./ai/stages";
 import { computeScore } from "./scoring";
 import { actions, newId, snapshot } from "./store";
 import { currentIntelligence, type AIMeta } from "./useAI";
+import { locksGeneration } from "./business-intent";
 import { SCORE_DIMENSIONS, type BusinessIdea, type FounderProfile, type ScoreDimension } from "./types";
 
 /**
@@ -229,6 +230,15 @@ export function useIdeaGeneration() {
      * forgetting impossible.
      */
     const feedback = snapshot().ideaFeedback;
+    /*
+     * READ HERE, NOT PASSED BY EACH CALLER.
+     *
+     * The same reasoning `ideaFeedback` above is read this way: three
+     * components generate ideas and a fourth will exist eventually, and a
+     * generation that silently ignores an explicit direction because a new call
+     * site forgot an argument is exactly the failure this exists to fix.
+     */
+    const lock = locksGeneration(snapshot().businessIntent) ? snapshot().businessIntent! : null;
 
     const runBatch = async (angle: { brief: string; count: number; angleId?: Angle["angleId"] }, index: number) => {
       // --- Built-in engine: instant, local, free -------------------------
@@ -236,7 +246,13 @@ export function useIdeaGeneration() {
         const generated = engine.generateIdeas(options.profile, {
           angle: angle.angleId ?? "balanced",
           count: angle.count,
-          industryId: options.industryId,
+          /*
+           * An explicit direction outranks the industry the caller asked for.
+           * The founder named it; a UI default did not.
+           */
+          industryId: lock?.industryId ?? options.industryId,
+          problemId: lock?.problemId ?? undefined,
+          tradeLabel: lock?.label,
           constraints: options.constraints,
           avoid: [...seen],
           /*
@@ -296,7 +312,13 @@ export function useIdeaGeneration() {
         const generated = engine.generateIdeas(options.profile, {
           angle: angle.angleId ?? "balanced",
           count: angle.count,
-          industryId: options.industryId,
+          /*
+           * An explicit direction outranks the industry the caller asked for.
+           * The founder named it; a UI default did not.
+           */
+          industryId: lock?.industryId ?? options.industryId,
+          problemId: lock?.problemId ?? undefined,
+          tradeLabel: lock?.label,
           constraints: options.constraints,
           avoid: [...seen],
           /*

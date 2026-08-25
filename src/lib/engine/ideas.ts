@@ -44,6 +44,17 @@ export interface Candidate {
   /** Pre-scoring fit, used to decide which candidates are worth building out. */
   fit: number;
   notes: string[];
+  /**
+   * The trade the founder named, when they named one.
+   *
+   * Titles are built from the *topic*, and the topic is derived from the
+   * problem — which is written from the customer's point of view. So a founder
+   * who asked for a car detailing business got "Vehicle Presentation Service
+   * for Small Fleets": accurate, on-trade, and not a phrase anybody has ever
+   * said out loud. Carrying their word through means the list they read back
+   * uses it.
+   */
+  trade?: string;
 }
 
 export interface GenerateOptions {
@@ -52,6 +63,22 @@ export interface GenerateOptions {
   count?: number;
   /** Restrict to one industry (used by category exploration). */
   industryId?: string;
+  /**
+   * Restrict to one problem inside that industry — the trade, not the market.
+   *
+   * This is what separates "car detailing" from "automotive". Without it, a
+   * founder who said "I want to build a car detailing business" was shown a
+   * pre-purchase inspection service, a fleet upkeep service and a
+   * quote-checking channel: all genuinely automotive, none of them the thing
+   * they asked for. See `lib/business-intent.ts`.
+   */
+  problemId?: string;
+  /**
+   * What the founder called that trade — "car detailing", not "presentation".
+   * Used for the titles, so the results read in their language rather than the
+   * catalogue's. See `Candidate.trade`.
+   */
+  tradeLabel?: string;
   /** Extra free-text constraints entered for this batch only. */
   constraints?: string;
   /** Names already shown, so batches don't repeat each other. */
@@ -341,7 +368,9 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
   let searchSpace: Industry[];
   if (options.industryId) {
     // Category browsing explores a market the founder may have no stated
-    // affinity for — that's the point of it, so look it up directly.
+    // affinity for — that's the point of it, so look it up directly. An
+    // explicit business intent arrives the same way and for the same reason:
+    // the founder named it, so their interest scores are not the authority.
     const requested = INDUSTRIES.find((i) => i.id === options.industryId);
     searchSpace = requested ? [requested] : signals.industries.map((i) => i.industry);
   } else {
@@ -363,13 +392,30 @@ export function buildCandidates(profile: FounderProfile, options: GenerateOption
       if (blocks.noConsumers && !segment.business) continue;
 
       for (const problem of industry.problems) {
+        /*
+         * The trade the founder named, when they named one.
+         *
+         * Applied here rather than by filtering the batch afterwards, because
+         * filtering afterwards is what produces an empty screen: the caps and
+         * the ranking would have already spent the batch on other problems.
+         */
+        if (options.problemId && problem.id !== options.problemId) continue;
+
         for (const model of usable) {
+          /*
+           * A hands-on trade cannot be delivered down a wire, and inside a lock
+           * that is most of the batch rather than an occasional oddity — see
+           * `IndustryProblem.handsOn`. Applied only when locked: across a broad
+           * batch the same pairing is a minority and the variety is worth more
+           * than the edge case.
+           */
+          if (options.problemId && problem.handsOn && model.mode === "online") continue;
           // Not every segment in a market has every problem in it. Pairing
           // freely produces confident nonsense — a problem belonging to one
           // group described as the pain of a group that doesn't have it.
           if (problem.segments && !problem.segments.includes(segment.id)) continue;
 
-          const base = { industry, segment, problem, model };
+          const base = { industry, segment, problem, model, trade: options.tradeLabel };
           const { fit, notes } = scoreCandidate(base, signals, options.angle);
           if (fit < 0) continue;
 
@@ -440,9 +486,15 @@ function nameFor(c: Candidate): string {
   return businessTitle({ topic: topicFor(c), model: c.model, segment: c.segment });
 }
 
-/** A short noun phrase for what the business is about. See `topics.ts`. */
+/**
+ * A short noun phrase for what the business is about. See `topics.ts`.
+ *
+ * The founder's own word for the trade wins when there is one. They typed it;
+ * reading the catalogue's phrasing back at them is how an app sounds like it
+ * was not listening.
+ */
 function topicFor(c: Candidate): string {
-  return topicForProblem(c.problem.id, c.industry.label);
+  return c.trade ?? topicForProblem(c.problem.id, c.industry.label);
 }
 
 function titleCase(text: string): string {
@@ -765,6 +817,25 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
   const offset = candidates.length > 0 ? Math.abs(seed) % candidates.length : 0;
   const ordered = [...candidates.slice(offset), ...candidates.slice(0, offset)];
 
+  /*
+   * WHEN THE FOUNDER NAMED THE TRADE, THE CAPS MEASURE THE WRONG THING.
+   *
+   * The caps below exist to stop one batch being five versions of the same
+   * business, and they do it by spreading across problem, topic and industry —
+   * which is right when the founder is exploring, and exactly backwards when
+   * they have said "I want to build a car detailing business". Every candidate
+   * then shares an industry, a problem and a topic by construction, so the
+   * one-per-problem rule alone cut a ten-idea request down to **one** idea, and
+   * the industry cap would have held it to three.
+   *
+   * Inside a lock those three axes carry no information, so the spread has to
+   * come from the axes that still differ: which customer, which delivery model,
+   * and at what scale. That is precisely the variety a founder wants here —
+   * mobile against shop-based, one car against a dealership's forecourt — and
+   * it is why the per-kind allowance widens rather than narrows.
+   */
+  const locked = !!options.problemId;
+
   for (const candidate of ordered) {
     if (chosen.length >= count) break;
 
@@ -776,11 +847,12 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
     const kindUses = usedKinds.get(candidate.model.kind) ?? 0;
     const topic = topicFor(candidate);
     const topicUses = usedTopics.get(topic) ?? 0;
-    if (modelUses >= 2 || segmentUses >= 2) continue;
+    if (modelUses >= 2 || segmentUses >= (locked ? 4 : 2)) continue;
     const industryUses = usedIndustries.get(candidate.industry.id) ?? 0;
-    if (kindUses >= 2 || topicUses >= 2 || industryUses >= 3) continue;
+    if (kindUses >= (locked ? 5 : 2)) continue;
+    if (!locked && (topicUses >= 2 || industryUses >= 3)) continue;
     if (usedPairs.has(pairKey)) continue;
-    if (usedProblems.has(`${candidate.industry.id}:${candidate.problem.id}`)) continue;
+    if (!locked && usedProblems.has(`${candidate.industry.id}:${candidate.problem.id}`)) continue;
 
     const idea = materializeCandidate(candidate, profile, seed + chosen.length, options.constraints ? "constraints" : "generated");
     const key = idea.name.toLowerCase().replace(/[^a-z0-9]/g, "");

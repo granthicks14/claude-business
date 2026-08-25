@@ -7,6 +7,8 @@
  * for a database later means writing an adapter, not rewriting the app.
  */
 
+import type { BusinessIntent } from "./business-intent";
+
 export type ID = string;
 
 /** Where a piece of information came from. Shown in the UI so users can tell
@@ -983,6 +985,15 @@ export interface AppState {
    * Optional so a vault written before this existed still loads.
    */
   ideaFeedback?: IdeaFeedback;
+  /**
+   * What the founder said they wanted to build, kept whole.
+   *
+   * Optional because most sentences do not contain one, and because every
+   * stored state written before this existed has to keep loading. See
+   * `lib/business-intent.ts` for what it is and why an interest could not do
+   * the job.
+   */
+  businessIntent?: BusinessIntent;
   /**
    * The last workspace page opened, so Home can offer to resume.
    *

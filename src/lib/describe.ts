@@ -230,12 +230,24 @@ export function aliasPattern(alias: string): RegExp {
    * therefore made the gap visible for the first time.
    *
    * Stripping the plural and making it optional matches both. Guarded so it
-   * only fires on something that looks like a real plural: at least four
-   * characters left over, and not an "-ss"/"-us"/"-is" ending, so "business"
-   * and "analysis" are left exactly as they were.
+   * only fires on something that looks like a real plural: not an
+   * "-ss"/"-us"/"-is" ending, so "business" and "analysis" are left exactly as
+   * they were, and not "-aas", which is only ever "saas".
+   *
+   * THE LENGTH FLOOR WAS ONE TOO HIGH.
+   *
+   * It required five characters, which quietly excluded the four-letter plurals
+   * in the industry table: "cars", "dogs", "cats", "pets". So `aliasPattern`
+   * produced `\bcars\b`, and **"I want to build a car detailing business" did
+   * not match the automotive industry at all** — it matched only on "detailing",
+   * which `home-services` also lists, and resolved to home services.
+   *
+   * Four is the right floor. Every four-letter case in the tables is a real
+   * plural of a real singular somebody would type, and the endings excluded
+   * above already catch the words where the trailing "s" is not a plural.
    */
   const looksPlural =
-    /s$/i.test(alias) && alias.length >= 5 && !/(?:ss|us|is)$/i.test(alias);
+    /s$/i.test(alias) && alias.length >= 4 && !/(?:ss|us|is|aas)$/i.test(alias);
   const stem = looksPlural ? escaped.slice(0, -1) : escaped;
   const plural = looksPlural || !/s$/i.test(alias) ? "s?" : "";
   return new RegExp(`\\b${stem}${plural}\\b`, "i");

@@ -8,6 +8,7 @@ import { Button, Eyebrow, Textarea } from "./ui";
 import { describeToProfile } from "@/lib/describe";
 import { intakeFromText } from "@/lib/intake";
 import { INTENT_LABEL, angleFor, readIntent, type Intent, type IntentReading } from "@/lib/intent";
+import { readBusinessIntent } from "@/lib/business-intent";
 import { actions, snapshot, useAppState } from "@/lib/store";
 
 /**
@@ -354,6 +355,25 @@ function dispatch(
   actions.saveProfile(
     described.read.length > 0 ? { ...profile, completedOnboarding: true } : profile,
   );
+
+  /*
+   * THE SENTENCE ITSELF, BEFORE ANYTHING DISTILS IT.
+   *
+   * Everything above this line reduces what was typed to interests, skills,
+   * budget and hours — which is the right thing to do with a description of a
+   * person and the wrong thing to do with an instruction. "I want to build a
+   * car detailing business" survived that reduction as `interests:
+   * ["detailing"]`, and interests rank markets without ever gating them, so
+   * the generator was free to return an AI workflow toolkit. Measured: four of
+   * ten ideas automotive, none of them detailing.
+   *
+   * Recorded whatever the strength turns out to be — an interest-level reading
+   * changes nothing about generation and is still worth keeping, because it is
+   * what the "your direction" strip reads back and what "change direction"
+   * clears.
+   */
+  const direction = readBusinessIntent(reading.raw ?? "");
+  if (direction) actions.setBusinessIntent(direction);
   push(withAngle(reading.route, angleFor(reading)));
   return "done";
 }

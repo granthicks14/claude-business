@@ -35,6 +35,7 @@ import type {
   SelectedBusiness,
   StrategyVersion,
 } from "./types";
+import type { BusinessIntent } from "./business-intent";
 import { BUSINESS_MODELS } from "./engine/knowledge/models";
 import { INDUSTRIES } from "./engine/knowledge/industries";
 import { businessTitle, looksAutoNamed } from "./engine/naming";
@@ -575,6 +576,27 @@ export function snapshot(): AppState {
 /* -------------------------------------------------------------------------- */
 
 export const actions = {
+  /**
+   * Record what the founder said they want to build.
+   *
+   * Separate from the profile on purpose. A profile describes the person and is
+   * edited a field at a time; this is one statement they made, kept whole, and
+   * replaced wholesale when they change direction. Folding it into the profile
+   * is how it became `interests: ["detailing"]` in the first place.
+   */
+  setBusinessIntent(intent: BusinessIntent) {
+    update((s) => ({ ...s, businessIntent: intent }));
+  },
+
+  /** "Not what you meant?" — drops the lock without touching anything else. */
+  clearBusinessIntent() {
+    update((s) => {
+      const next = { ...s };
+      delete next.businessIntent;
+      return next;
+    });
+  },
+
   saveProfile(profile: Partial<FounderProfile>) {
     update((s) => ({
       ...s,

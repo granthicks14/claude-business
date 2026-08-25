@@ -57,6 +57,32 @@ export interface IndustryProblem {
   /** What the customer does today instead. */
   alternative: string;
   /**
+   * The words a founder would use for this job, as opposed to the words the
+   * problem is written in.
+   *
+   * Problems are stated from the customer's point of view — "Vehicles that look
+   * neglected" — which is right for explaining the opportunity and useless for
+   * recognising a request. Nobody types that; they type "car detailing". This
+   * is the bridge, and it is what lets an explicit business intent resolve to a
+   * trade rather than only to an industry.
+   *
+   * Optional and deliberately partial, like the niche catalogue: a problem with
+   * no `trades` list is still reachable through its own prose, just less
+   * reliably. Adding one is how a trade becomes precisely addressable.
+   */
+  trades?: string[];
+  /**
+   * True when the job cannot be done down a wire.
+   *
+   * Only consulted when a founder has locked generation to this trade, and it
+   * exists because of a specific piece of nonsense: "Car Detailing Service for
+   * Small Fleets and Dealers — online". The model was a productised service,
+   * which is normally online-delivered, and nothing in the pairing knew that
+   * you cannot detail a car remotely. Across an unlocked batch this is diluted
+   * by variety; inside a lock it is most of the list.
+   */
+  handsOn?: boolean;
+  /**
    * Which segment ids in this industry actually have this problem.
    *
    * Without this the generator pairs every segment with every problem, which
