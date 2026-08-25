@@ -169,6 +169,21 @@ write to `StyleSpec` — there is no code path from "make it more premium" to a
 price or a customer. That structure *is* the guarantee; an instruction telling
 a model not to change the business would only be a hope.
 
+### The rebrand, and the two things it was not allowed to touch
+
+The identity moved from spruce-and-clay on warm paper to **ink and signal** —
+achromatic brand, one azure, Instrument Serif and Manrope. Two things were
+constraints rather than choices and both survived intact: nothing paid or
+remote was introduced (all three faces are open-licensed and emitted at build
+time, so `font-src 'self'` is unchanged and there is still no `public/`), and
+the accessibility floor held — every token carries its measured contrast and
+`check:visual` verifies it in both themes.
+
+The old token names are aliased rather than renamed. `--accent`, `--mark` and
+`--info` are read in several hundred call sites; repointing them in `:root`
+renames the brand in one place instead of in a sweep that would certainly miss
+something, and anything still asking for "accent" correctly gets ink.
+
 ### The name, and the key that didn't change
 
 The product is Groundwork: the work you do before you build. The localStorage
@@ -899,83 +914,80 @@ These are product requirements, not style preferences:
 
 ## Look and feel
 
-The product is **Groundwork**, and the interface is a **drafting table**: ink on
-paper, ruled lines, figures set in a technical face, and structure carried by
-typography rather than by four hundred rounded rectangles. Someone should be
-able to see a screenshot with the wordmark cropped off and know it is this.
+The product is **Groundwork**, and the register is **ink and signal**: a serious
+publication's front page rather than a dashboard. Ink on paper, ruled lines,
+a real type scale, and structure carried by hierarchy instead of by four hundred
+rounded rectangles. Someone should be able to see a screenshot with the wordmark
+cropped off and know it is this.
 
-Two audits produced this section. The first found the framework's default font
-stack, an accent at hue 275 — the violet every AI product ships — cool
-blue-grey neutrals, and six radius values with no rule about which went where.
-The second found what was left: two blurred radial blobs drifting behind every
-page header (one of them at hue 330), a teal-to-magenta gradient on the front
-page headline, a masked grid background, 394 cards, coloured score donuts with
-haloes on five pages, sixty pills, and illustrations bobbing on infinite loops.
+Three audits produced this section. The first found the framework's default font
+stack, an accent at hue 275 — the violet every AI product ships — and six radius
+values with no rule about which went where. The second found blurred blobs, a
+gradient headline, 394 cards and coloured score donuts. The third measured the
+result and found that the *scale* had never been adopted: 89% of all text sat
+between 11px and 14px.
 
-- **Two brand colours and no more.** `--accent` is **spruce**, a deep desaturated
-  green: the product itself, the thing you click, the business you are building.
-  `--mark` is **clay**, warm and earthy: what is still open — an opportunity, a
-  direction, the one figure on a page that matters most. Everything else is
-  status (`good`, `warn`, `bad`, `info`) and **status is never a brand colour**.
-- **The `-soft` tints are whispers.** There are 127 of them and 48 are full
-  callout panels; at any real saturation a page shows four blocks of four
-  colours and reads as a carnival. Held close to the paper they group a block
-  without competing with the text on it. The border and the coloured text do
-  the signalling.
-- **Three typefaces, self-hosted, and that is the limit.** Fraunces for
-  headings, IBM Plex Sans for everything operable, IBM Plex Mono for eyebrow
-  labels and small figures. All emitted at build time by `next/font`
-  (`lib/fonts.ts`), so `font-src 'self'` holds and nothing is fetched from
-  another company's server. All open-licensed; no paid font anywhere.
+- **The brand is achromatic, and that is a constraint rather than a taste.**
+  Status colour appears on almost every screen here, so a brand hue collides
+  with `good`, `warn` or `bad`; violet is the AI default. Going achromatic frees
+  the whole spectrum for meaning. `--ink` is the brand — primary buttons are
+  ink, and on a page of hairlines a solid slab is unmissable. It inverts in dark
+  mode, so the highest-contrast thing on screen is always the thing to press.
+- **`--signal` is the one hue, and it marks one thing at a time**: the figure
+  that matters, the control you are meant to use, where you are. It exists
+  because `--info` was retired as a status — "informational" was never a state
+  this product needed — so blue here can never be read as a state.
+- **The `-soft` tints are whispers.** At any real saturation a page shows four
+  blocks of four colours and reads as a carnival. Held close to the paper they
+  group a block without competing; the border and the coloured text signal.
+- **Three typefaces, self-hosted, and that is the limit.** Instrument Serif for
+  display — high-contrast, drawn to be set large, and this is a tool whose job
+  is to tell a founder their idea does not hold up. Manrope for everything
+  operable, chosen over IBM Plex Sans because its numerals hold a column and
+  this interface stacks figures on figures. JetBrains Mono for eyebrow labels.
+  All emitted at build time by `next/font`, so `font-src 'self'` holds and
+  nothing is fetched from another company's server. All open-licensed.
+- **The type scale is remapped onto Tailwind's own utilities.** A good semantic
+  scale existed and nothing used it: the app was built from 674 `text-sm`, 373
+  `text-xs` and 187 `text-[13px]` across seventy files. Redefining `--text-sm`
+  and `--text-xs` in `@theme` moved a thousand call sites at once — the same
+  move the radii use. It took two passes: 13/15 still left 933 runs at 13px
+  carrying explanatory prose, so the pair is 14/16 and the middle register went
+  from 115 runs to 533.
 - **A card means something.** It is a discrete object you could pick up — one
-  idea, one competitor, one business — never a container for a paragraph. It
-  carries no shadow. `Section`, `Split`, `Rail`, `DataList`, `Figure` and
-  `Stages` in `ui.tsx` are the default containers; `Card` is the exception.
+  idea, one competitor, one business — never a container for a paragraph, and
+  it carries no shadow. `Section`, `Split`, `Rail`, `DataList`, `Figure` and
+  `Stages` are the default containers. Measured before this rule was enforced:
+  18 cards on `/business`, 20 on `/business/website`.
 - **Structure is rules, rails and eyebrows.** `.rule` is a hairline between
-  blocks and does most of the work. `.rail` is a weighted left edge carrying a
-  meaning colour without becoming a tinted rectangle. `.eyebrow` is a small
-  mono capital label — it replaced the coloured pill that used to sit above
-  every section, and unlike the pill it costs nothing from the palette.
+  blocks and does most of the work; `.rule-y` bands a specification; `.rail` is
+  a weighted left edge carrying a meaning colour without becoming a tinted
+  rectangle; `.eyebrow` is a small mono capital label.
 - **A score is type, never a donut.** `ScoreRing` renders the figure large and
   tabular with a hairline bar and the band named in words. An arc adds no
-  precision the digits don't have and takes eight times the space; the halo
-  that used to sit behind it was decoration pretending to be emphasis. The
-  `glow` prop is still accepted and deliberately ignored.
-- **Three radii, and Tailwind's scale is mapped onto them.** `--radius-card`,
-  `--radius-control`, `--radius-pill`. `rounded-lg`, `rounded-md` and the rest
-  are redefined in `@theme` so 219 existing call sites land on a chosen value
-  and there is no fourth radius to reach for.
-- **The eyebrow is uppercased; a badge is not.** An eyebrow is a short label
-  somebody wrote by hand. A badge carries whatever it is given, and "Stage 6/10
-  · First customer" set in capitals is shouting. Capitals also change what
-  `innerText` returns, which is worth knowing before writing an assertion
-  against page text.
-- **Colour is a signal, never decoration.** Emphasis goes through `<Hi>`, which
-  has four tones and no more: `accent` (the subject), `good` (something earned),
-  `warn` (needs attention), `mark` (the one key figure on the page). All four
-  must be visibly different: `mark` was painted in the accent's own colours for
-  a while, which quietly made the four-tone system a three-tone one.
+  precision the digits don't have. Bars and the opportunity matrix stay where
+  comparison genuinely helps. `/business` carried four different score
+  treatments at once — a pill, a big numeral, a bar list and a numeral grid —
+  which is the actual problem a single component solves.
+- **Buttons have four ranks and the difference is weight, not elevation.**
+  Primary is a slab of ink, one per page; secondary is a hairline outline and is
+  what a repeated per-item action uses; ghost has no chrome; danger is outlined
+  in `bad`. `subtle` survives as an alias of secondary because a fifth rank is
+  what makes the other four stop meaning anything.
+- **Three radii, and Tailwind's scale is mapped onto them.**
 - **Illustrations are inline SVG** in `components/art.tsx`, plus the product
-  diagram in `components/groundwork-diagram.tsx`. There is no `public/` and no
-  CDN, so nothing is fetched. Strokes use `currentColor` and details use the
-  tokens, so one drawing serves both themes. No brains, no robots, no sparkles,
-  and no lightbulbs — `IdeasArt` was one, and a glowing lightbulb is the
-  universal stock symbol for "idea" and therefore says nothing.
+  diagram and `ModelDiagram`. There is no `public/` and no CDN. They were
+  rendering at `text-muted/60` — about 2:1 — which is not a drawing but a smudge
+  in the corner, and reads as a fault rather than as art. Full strength now.
 - **The front page draws the product.** `GroundworkDiagram` is one continuous
-  survey drawing read left to right: empty ground, three staked footprints, two
-  struck through and the survivor measured, then the elevation built out. An
-  earlier version cycled the four stages on a timer, which meant that
-  three-quarters of the time the most important composition on the site was a
-  mostly empty grid. Everything is drawn at once now and the interaction is
-  subtractive — pointing at a stage dims the others.
-- **Motion is short, once, and never load-bearing.** Entrances ≤ 0.4s, draw-ins
-  ≤ 0.7s. There are no infinite loops: `.float` and `.aurora` are gone, and
-  nothing conveys information that isn't also in the text. The global
-  `prefers-reduced-motion` block disables all of it; don't work around it.
+  survey drawing: empty ground, three staked footprints, two struck through and
+  the survivor measured, then the elevation built out.
+- **Motion is short, once, and never load-bearing.** Entrances ≤ 0.4s, no
+  infinite loops, nothing conveying information that isn't also in the text.
+  The `prefers-reduced-motion` block disables all of it.
 - Never glow or colour a low score red as an alarm — a low score early on is
   normal, and the copy says so.
-- A low score never blocks a choice. Say what's weak, then get out of the way:
-  the profile was written in five minutes and the user knows more than it does.
+- A low score never blocks a choice.
 
 ## Content and layout
 
@@ -984,11 +996,15 @@ paragraph length and how many equal-weight primary actions competed on each
 page. It found body text set between 96 and 160 characters per line on 33 of
 them, heading-level skips on 11, and 14 filled primary buttons on one page.
 
-- **The measure is a token, applied once.** `--measure` (68ch) and
-  `--measure-heading` (45ch) cap prose in the base layer via `:where()`, so the
-  rule can only ever narrow a paragraph, never widen one, and any component
-  that genuinely needs full width overrides it with a plain utility. Tables and
-  grid cells are exempt — structured data wants the width.
+- **The measure is a token, applied once — and for a while it was applied
+  never.** `--measure` (68ch) and `--measure-heading` (22ch) cap prose in the
+  base layer via `:where()`, so the rule can only ever narrow a paragraph and
+  any component needing full width overrides it with a plain utility. Both were
+  referenced in two base-layer rules and **defined nowhere**, so
+  `max-width: var(--measure)` resolved to nothing and the browser dropped the
+  declaration. The rule this file documented as "applied once" had never applied
+  at all, which is most of why paragraphs ran the full width of a 1440px screen.
+  Set in `ch` so they track the font size rather than fighting it.
 - **Never set a reading width in pixels.** `max-w-2xl` on 12px text is 93
   characters a line, because a px width does not track font size. That was the
   single paragraph left over after the measure went in.
@@ -1022,9 +1038,34 @@ them, heading-level skips on 11, and 14 filled primary buttons on one page.
 The invariants above are checked, not asserted — `npm run check:visual`.
 
 `scripts/visual-qa.mjs` opens the production build in Chromium, signs in, loads
-the worked example and sweeps ten routes in both themes, failing on any gradient
+the worked example, sends one coach message and sweeps seventeen routes in both
+themes at 1280px and once at 320px — 51 combinations. It fails on any gradient
 background, any blurred pseudo-element, more than three shadowed elements, more
-than six fully-round ones, or any text below the WCAG minimum for its size.
+than six fully-round ones, any text below the WCAG minimum for its size, any
+text at a size outside the scale, more than six sections wearing a card, more
+than three filled primaries, or any stuck control trapped under fixed chrome.
+
+Several of those rules needed more than one attempt to state correctly, and the
+failures are written into the file because each looked right:
+
+- The **round** rule counted inline "explain this word" triggers with no
+  background and no border. A shape needs a fill or an edge before its corners
+  exist.
+- The **card** rule counted `/business/spend`'s three pricing routes and four
+  spending stages as seven boxed sections, because each sat in its own wrapper
+  and had no card siblings. A card among three or more is a list; a card alone
+  is a section in a box, which is the thing the rule is about.
+- The **scale** rule flagged `--text-h2` at 28.16px and `--text-metric` at 41px
+  — both `clamp()` values that are correct and on no list. Discrete steps are
+  checked below 20px only; the failure it exists to prevent lived entirely
+  there.
+- The **occlusion** rule flagged ordinary tab buttons that merely sit at the
+  bar's height before you scroll, then — once narrowed to stuck elements —
+  missed the defect it was written for, because a sticky element inside `main`
+  unsticks past `main` and the footer sits below it. It walks nine scroll
+  positions now. The sweep also moved from 390px to 320px: at 375, 390 and 414
+  the gap between the coach's send button and the bar was exactly zero — flush,
+  and passing — while the smallest supported phone overlapped.
 
 **It measures painted pixels, and that is not a figure of speech.** The first
 version of the file matched `rgb()` with a regular expression; Tailwind v4 emits
