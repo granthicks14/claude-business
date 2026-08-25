@@ -57,6 +57,13 @@ const ROUTES = [
   "/profile",
   "/account",
   "/explore",
+  /*
+   * The coach earns a place because it is the one page with a sticky composer,
+   * and that composer was shipped underneath the fixed bottom bar — the send
+   * button unreachable on every phone. It is the route most likely to break
+   * this way again.
+   */
+  "/coach",
   "/cost",
   "/privacy",
 ];
@@ -67,7 +74,53 @@ const LIMITS = {
   blurredPseudoElements: 0,
   shadowed: 3,
   fullyRound: 6,
+  /*
+   * A card is a discrete object — one idea, one competitor, one business. It is
+   * not a container for a paragraph. Before this ceiling existed, /business
+   * carried eighteen and /business/website twenty, all near-identical full-width
+   * boxes at equal weight, which is the shape a page takes when nobody is
+   * counting. Twelve allows a genuine list of objects and refuses a page built
+   * out of boxes.
+   */
+  cards: 12,
+  /*
+   * One filled primary per page. Repeated per-item actions are secondary — "use
+   * this" as a primary twelve times means the page has no primary at all.
+   * Three is the ceiling rather than one because a few pages are genuinely
+   * three stages of one workflow, far apart and in sequence.
+   */
+  primaries: 3,
 };
+
+/**
+ * The type scale, and the only sizes allowed on a page.
+ *
+ * This exists because the app was measured with 89% of its text between 11px
+ * and 14px and nothing at all between 18 and 44 — a designed scale sitting in
+ * the tokens while a shadow scale of 674 `text-sm` and 187 `text-[13px]` ran
+ * the interface. A scale nobody checks is a suggestion.
+ *
+ * 11 is the mono eyebrow and the one size allowed below 13, because it is
+ * tracked capitals rather than prose. Sub-pixel rounding means the check
+ * matches to the nearest pixel.
+ */
+const SCALE = [11, 13, 14, 16, 18];
+/**
+ * Only the small end is checked against discrete steps, and that is deliberate.
+ *
+ * Headings and figures are set with `clamp()`, so at a 1280px viewport
+ * `--text-h2` resolves to 28.16px and `--text-metric` to 41px — values that are
+ * correct and are not on any list. Checking a fluid size against discrete steps
+ * fights the clamp and teaches people to widen the list until it means nothing.
+ *
+ * The failure this exists to prevent lived entirely below 20px anyway: 674
+ * `text-sm`, 373 `text-xs` and 187 `text-[13px]` running the interface while
+ * the designed scale sat unused. So sizes below the display band must be on the
+ * scale exactly, and anything at or above it only has to be at or above it.
+ */
+const DISPLAY_FLOOR = 20;
+/** Anything a person reads runs at this or above. 11 is the mono eyebrow. */
+const MIN_READABLE = 11;
 
 /* -------------------------------------------------------------------------- */
 /* Finding playwright                                                          */
@@ -142,13 +195,17 @@ function contrast(fg, bg) {
  * few thousand nodes on ten routes in two themes is the difference between a
  * check people run and one they stop running.
  */
-const COLLECT = () => {
+const COLLECT = ({ SCALE_IN_PAGE, DISPLAY_FLOOR_IN_PAGE }) => {
   const out = {
     gradients: [],
     blurredPseudoElements: [],
     shadowed: [],
     fullyRound: [],
     text: [],
+    cards: 0,
+    primaries: 0,
+    offScale: [],
+    occluded: [],
   };
 
   const describe = (el) => {
@@ -235,6 +292,12 @@ const COLLECT = () => {
 
     if (style.boxShadow && style.boxShadow !== "none") out.shadowed.push(describe(el));
 
+    const cls = typeof el.className === "string" ? el.className : "";
+    if (/(^|\s)card(\s|$)/.test(cls)) out.cards++;
+    // A primary is the one filled slab on the page. Matched on the token
+    // rather than on a colour, so a themed page counts the same in both.
+    if (/(^|\s)bg-ink(\s|$)/.test(cls) && (el.tagName === "BUTTON" || el.tagName === "A")) out.primaries++;
+
     /*
      * "Fully round" means a pill or a circle: a radius at least half the
      * shorter side. Measured against the box rather than by matching a token,
@@ -255,6 +318,22 @@ const COLLECT = () => {
     if (!ownText) continue;
     if (parseFloat(style.opacity) < 0.5) continue;
 
+    /*
+     * SVG text is measured in user units, not pixels.
+     *
+     * A label set at `font-size: 4px` inside `viewBox="0 0 100 100"` paints at
+     * 4 × the scale factor — around 20px in a 500px-wide chart — but
+     * `getComputedStyle` reports the pre-scale number. Flagging it would be
+     * reporting a fault in the checker as a fault in the page, so anything
+     * inside an `<svg>` is left to the contrast check, which reads real pixels.
+     */
+    const px = Math.round(parseFloat(style.fontSize));
+    const inSvg = el.ownerSVGElement !== undefined && el.ownerSVGElement !== null;
+    const onScale = inSvg || px >= DISPLAY_FLOOR_IN_PAGE || SCALE_IN_PAGE.includes(px);
+    if (!onScale) {
+      out.offScale.push(`${describe(el)} @ ${px}px — "${ownText.slice(0, 30)}"`);
+    }
+
     const bg = effectiveBackground(el);
     const fg = toRGB(style.color);
     if (!bg || !fg || fg.alpha < 0.9) continue;
@@ -266,6 +345,29 @@ const COLLECT = () => {
       size: parseFloat(style.fontSize),
       weight: Number(style.fontWeight) || 400,
     });
+  }
+
+  /*
+   * Controls hidden underneath fixed chrome.
+   *
+   * This is here because it was a real, shipped defect and nothing would have
+   * caught it: at 390x844 the coach's composer sat at y=701 and the fixed
+   * bottom bar started at y=787, so the send button was underneath the
+   * navigation and the coach could not be used on a phone at all. Nothing
+   * errored, nothing overflowed, and every other check passed.
+   */
+  const bar = document.querySelector('nav[aria-label="Primary"]');
+  const header = document.querySelector("header");
+  const barTop = bar ? bar.getBoundingClientRect().top : null;
+  const headerBottom = header ? header.getBoundingClientRect().bottom : null;
+  for (const el of document.querySelectorAll("main button, main a, main textarea, main input, main select")) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    const underBar = barTop !== null && r.top < barTop && r.bottom > barTop;
+    const underHeader = headerBottom !== null && r.top < headerBottom && r.bottom > headerBottom;
+    if (underBar || underHeader) {
+      out.occluded.push(`${describe(el)} "${(el.textContent || el.placeholder || "").trim().slice(0, 28)}"`);
+    }
   }
 
   return out;
@@ -378,9 +480,21 @@ async function main() {
 
     const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" }).catch(() => chromium.launch());
 
-    for (const theme of ["light", "dark"]) {
-      console.log(`\n--- ${theme} ---`);
-      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    /*
+     * Both themes at desktop, and one pass at phone width.
+     *
+     * The mobile pass exists because the worst defect this check has ever had
+     * to catch only existed at 390px: the coach's send button underneath the
+     * fixed bottom bar. A sweep that only looks at 1280 is a sweep that cannot
+     * see the navigation that only appears below `lg`.
+     */
+    for (const [theme, width, height] of [
+      ["light", 1280, 900],
+      ["dark", 1280, 900],
+      ["light", 390, 844],
+    ]) {
+      console.log(`\n--- ${theme} @ ${width}px ---`);
+      const context = await browser.newContext({ viewport: { width, height } });
       const page = await context.newPage();
 
       // The theme is stamped on the root by an inline script reading storage,
@@ -401,8 +515,8 @@ async function main() {
         // One frame, so the attribute change is resolved before measuring.
         await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 
-        const found = await page.evaluate(COLLECT);
-        const label = `${route} (${theme})`;
+        const found = await page.evaluate(COLLECT, { SCALE_IN_PAGE: SCALE, DISPLAY_FLOOR_IN_PAGE: DISPLAY_FLOOR });
+        const label = `${route} (${theme} ${width})`;
 
         if (found.gradients.length > LIMITS.gradients) {
           fail(`${label}: ${found.gradients.length} gradient background(s)`, found.gradients.slice(0, 3).join("\n      "));
@@ -417,6 +531,24 @@ async function main() {
           fail(
             `${label}: ${found.shadowed.length} shadowed elements, limit ${LIMITS.shadowed}`,
             found.shadowed.slice(0, 5).join(", "),
+          );
+        }
+        if (found.cards > LIMITS.cards) {
+          fail(`${label}: ${found.cards} cards, limit ${LIMITS.cards} — sections in boxes`);
+        }
+        if (found.primaries > LIMITS.primaries) {
+          fail(`${label}: ${found.primaries} filled primary actions, limit ${LIMITS.primaries}`);
+        }
+        if (found.occluded.length > 0) {
+          fail(
+            `${label}: ${found.occluded.length} control(s) underneath fixed chrome`,
+            found.occluded.slice(0, 4).join("\n      "),
+          );
+        }
+        if (found.offScale.length > 0) {
+          fail(
+            `${label}: ${found.offScale.length} text run(s) at a size outside the scale`,
+            found.offScale.slice(0, 4).join("\n      "),
           );
         }
         if (found.fullyRound.length > LIMITS.fullyRound) {
@@ -454,9 +586,17 @@ async function main() {
           found.blurredPseudoElements.length === 0 &&
           found.shadowed.length <= LIMITS.shadowed &&
           found.fullyRound.length <= LIMITS.fullyRound &&
+          found.cards <= LIMITS.cards &&
+          found.primaries <= LIMITS.primaries &&
+          found.occluded.length === 0 &&
+          found.offScale.length === 0 &&
           unreadable.length === 0
         ) {
-          pass(label, `${found.text.length} text runs, ${found.shadowed.length} shadowed, ${found.fullyRound.length} round`);
+          pass(
+            label,
+            `${found.text.length} runs · ${found.cards} cards · ${found.primaries} primary · ` +
+              `${found.shadowed.length} shadowed · ${found.fullyRound.length} round`,
+          );
         }
       }
 

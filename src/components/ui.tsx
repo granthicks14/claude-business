@@ -49,8 +49,24 @@ type Size = "sm" | "md" | "lg";
  * fifth rank that makes the other four stop meaning anything.
  */
 const VARIANTS: Record<Variant, string> = {
+  /*
+   * The disabled fill is opaque, and that is not a detail.
+   *
+   * It was `bg-ink/40` — a translucent slab with page-coloured text on it — so
+   * the label's legibility depended entirely on whatever happened to be behind
+   * the button. Measured, the coach's Send button came back at 1.00:1: the
+   * contrast check could not resolve a 40%-alpha ground, walked up to the page
+   * behind it, and found paper text sitting on paper. A disabled control still
+   * has to be readable; it is telling somebody why they cannot proceed.
+   *
+   * The first repair swapped the fill for `border-strong` and kept paper text,
+   * which measured 1.71:1 — a light grey slab with near-white type on it. The
+   * shape a disabled button wants is the inverse of the enabled one: a quiet
+   * ground with muted type. `text-muted` on `surface-2` measures 6.73:1.
+   */
   primary:
-    "bg-ink text-bg hover:bg-ink-hover disabled:bg-ink/40 font-semibold " +
+    "bg-ink text-bg hover:bg-ink-hover font-semibold " +
+    "disabled:bg-surface-2 disabled:text-muted disabled:border disabled:border-border " +
     "shadow-none focus-visible:outline-offset-[3px]",
   secondary:
     "bg-surface text-text border border-border-strong hover:border-ink hover:bg-surface-2",

@@ -323,7 +323,9 @@ function WhereYouAre() {
   const next = useAppState(nextActionFor);
   const completeness = useMemo(() => profileCompleteness(profile), [profile]);
   const revenue = business?.revenue.reduce((sum, r) => sum + r.amount, 0) ?? 0;
+  const unlocked = useUnlocked();
 
+  if (!unlocked) return null;
   if (!business && completeness.percent >= 90) return null;
 
   return (
@@ -540,8 +542,29 @@ function selectJourney(s: AppState): {
  * Position is carried by weight, colour and the words "You are here" together,
  * so it survives greyscale and colour blindness.
  */
+/**
+ * Whether anybody is signed in.
+ *
+ * The marketing pages render the ordinary application against an empty store —
+ * deliberately, so the front page has real content in its HTML and a locked
+ * visitor sees the same thing a brand-new one does. The side effect was that a
+ * stranger got the full sidebar including a progress report about a profile
+ * they do not have: "Your profile 35%", "Your journey 0/10", and five empty
+ * phases. Personal progress shown to somebody with nothing is not orientation,
+ * it is an empty form.
+ */
+function useUnlocked(): boolean {
+  return useSyncExternalStore(
+    subscribeVault,
+    () => isUnlocked(),
+    () => false,
+  );
+}
+
 function JourneySpine() {
   const journey = useAppState(selectJourney);
+  const unlocked = useUnlocked();
+  if (!unlocked) return null;
 
   return (
     <div className="px-1 pb-4 pt-3">
@@ -632,11 +655,7 @@ function ModeToggle() {
  * Hidden while locked, because a lock button on a sign-in screen is noise.
  */
 function LockNow() {
-  const unlocked = useSyncExternalStore(
-    subscribeVault,
-    () => isUnlocked(),
-    () => false,
-  );
+  const unlocked = useUnlocked();
   if (!unlocked) return null;
 
   return (

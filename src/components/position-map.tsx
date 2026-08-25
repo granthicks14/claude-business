@@ -99,7 +99,7 @@ export function PositionMap({ points, className = "" }: { points: MapPoint[]; cl
             y={selected.opportunity >= 50 ? 8 : 50}
             width={42}
             height={42}
-            fill="var(--accent-soft)"
+            fill="var(--signal-soft)"
             opacity="0.7"
           />
 
@@ -108,16 +108,16 @@ export function PositionMap({ points, className = "" }: { points: MapPoint[]; cl
           <line x1="8" y1="92" x2="92" y2="92" stroke="var(--border-strong)" strokeWidth="0.8" />
           <line x1="8" y1="8" x2="8" y2="92" stroke="var(--border-strong)" strokeWidth="0.8" />
 
-          <text x="50" y="4.5" textAnchor="middle" className="fill-[var(--faint)]" style={{ fontSize: "4px" }}>
+          <text x="50" y="4.5" textAnchor="middle" className="fill-[var(--text-faint)]" style={{ fontSize: "4px" }}>
             more opportunity
           </text>
-          <text x="50" y="99" textAnchor="middle" className="fill-[var(--faint)]" style={{ fontSize: "4px" }}>
+          <text x="50" y="99" textAnchor="middle" className="fill-[var(--text-faint)]" style={{ fontSize: "4px" }}>
             less opportunity
           </text>
-          <text x="9" y="50" className="fill-[var(--faint)]" style={{ fontSize: "4px" }}>
+          <text x="9" y="50" className="fill-[var(--text-faint)]" style={{ fontSize: "4px" }}>
             safer
           </text>
-          <text x="91" y="50" textAnchor="end" className="fill-[var(--faint)]" style={{ fontSize: "4px" }}>
+          <text x="91" y="50" textAnchor="end" className="fill-[var(--text-faint)]" style={{ fontSize: "4px" }}>
             riskier
           </text>
 
