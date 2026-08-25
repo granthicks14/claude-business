@@ -3,7 +3,8 @@
 import { useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { AIPanel, PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { AIPanel, PageHero, Ready, RequireBusiness } from "@/components/page";
+import { ChecklistArt } from "@/components/art";
 import {
   Badge,
   Button,
@@ -71,8 +72,9 @@ function Tasks({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="What to do"
+        art={<ChecklistArt className="w-full" />}
         description="Concrete tasks, sized to your weekly hours. Tick them off as you go — progress feeds the health score on your dashboard."
       />
 

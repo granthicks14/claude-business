@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { PageHero, Ready } from "@/components/page";
-import { IdeasArt } from "@/components/art";
+import { MapArt } from "@/components/art";
 import { Badge, Button, Card, Hi, LinkButton, Meter, Section, SectionHeader } from "@/components/ui";
 import { EXPLORE_NOTE, defaultPreferences, exploreIndustries, type ExplorePreferences, type IndustryFit } from "@/lib/explore";
 import { useAppState } from "@/lib/store";
@@ -54,7 +54,7 @@ function Explore() {
     <div className="page-column">
       <PageHero
         title="Which industry is worth your time?"
-        art={<IdeasArt className="w-full" />}
+        art={<MapArt className="w-full" />}
         description="Eighteen industries, ranked against your money, your hours and what you already know. Move a slider and the order changes — because there's no such thing as the best industry, only the best one for your situation."
       />
 

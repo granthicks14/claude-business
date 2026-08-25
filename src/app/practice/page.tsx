@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { PageHero, Ready, RequireBusiness } from "@/components/page";
+import { TalkArt } from "@/components/art";
 import { Badge, Button, Card, LinkButton, SectionHeader, Tabs, Textarea, useToast } from "@/components/ui";
 import {
   CHECKPOINTS,
@@ -38,8 +39,9 @@ function Practice({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="Practice and pitfalls"
+        art={<TalkArt className="w-full" />}
         description="Rehearse the conversation that gets you paid, and avoid the mistakes that cost beginners the most money."
       />
 

@@ -211,6 +211,17 @@ export function RequireBusiness({ children }: { children: (business: SelectedBus
   return <>{children(business)}</>;
 }
 
+/**
+ * A page title with no breadcrumbs and no illustration.
+ *
+ * Kept for the pages where both would be noise — settings, search, the policy
+ * pages — and deliberately not the default. Eighteen routes were using it,
+ * including the money page, the task list and the validation lab, which is
+ * why half the product had no picture on it at all: not a decision anybody
+ * made, just the header that was easier to type.
+ *
+ * If a page opens a distinct piece of work, it wants `PageHero`.
+ */
 export function PageHeader({
   title,
   description,
@@ -223,13 +234,6 @@ export function PageHeader({
   return <SectionHeader level={1} title={title} description={description} action={action} />;
 }
 
-/**
- * A page header with an illustration.
- *
- * Used where a page opens a distinct piece of work and a picture helps the
- * reader place it before reading a word. The art is decorative and hidden on
- * small screens, where the space is better spent on the text.
- */
 /**
  * The trail above the page title.
  *

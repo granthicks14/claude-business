@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { ToolboxArt } from "@/components/art";
+import { RouteArt } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
 import { Badge, Card, Hi, LinkButton, ScoreRing, SectionHeader } from "@/components/ui";
@@ -59,7 +59,7 @@ function Operations({ business }: { business: SelectedBusiness }) {
     <div className="page-column">
       <PageHero
         title="How this business runs"
-        art={<ToolboxArt className="w-full" />}
+        art={<RouteArt className="w-full" />}
         description="What you'd actually do, how one job turns into money, and what breaks it. Everything here says where it came from."
       />
 

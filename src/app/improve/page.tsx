@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
-import { IdeasArt } from "@/components/art";
+import { SeedArt } from "@/components/art";
 import { Badge, Button, Card, Hi, SectionHeader, Tabs, useToast } from "@/components/ui";
 import { PRICING_NOTE, pricingTiers } from "@/lib/pricing";
 import { VARIANTS_NOTE, ideaVariants, type VariantAngle } from "@/lib/variants";
@@ -52,7 +52,7 @@ function Improve({ business }: { business: SelectedBusiness }) {
     <div className="page-column">
       <PageHero
         title="Make it better"
-        art={<IdeasArt className="w-full" />}
+        art={<SeedArt className="w-full" />}
         description="Not a fresh batch of ideas — five edits to this one, each moving a single lever, all rescored against your real situation."
       />
 

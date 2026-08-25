@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
-import { GrowthArt } from "@/components/art";
+import { ScalesArt } from "@/components/art";
 import { AdvancedOnly } from "@/components/teach";
 import { Badge, Card, Eyebrow, Hi, LinkButton, Meter, Rail, ScoreRing, Section, SectionHeader, Tabs } from "@/components/ui";
 import { PositionMap, type MapPoint } from "@/components/position-map";
@@ -92,7 +92,7 @@ function Quality({ business }: { business: SelectedBusiness }) {
     <div className="page-column">
       <PageHero
         title="Is this a good business?"
-        art={<GrowthArt className="w-full" />}
+        art={<ScalesArt className="w-full" />}
         description="A different question from whether it suits you, whether it's ready to open, or whether you know how it runs. Those have their own scores, and merging them would hide the mismatches that matter."
       />
       <DiscussWithCoach business={business} topic="quality" />

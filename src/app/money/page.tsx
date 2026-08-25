@@ -4,7 +4,8 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
-import { PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { PageHero, Ready, RequireBusiness } from "@/components/page";
+import { LedgerArt } from "@/components/art";
 import {
   Badge,
   Button,
@@ -43,8 +44,9 @@ function Money({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="Money"
+        art={<LedgerArt className="w-full" />}
         description="Model the business before you run it, then track what actually happens. Every number here is calculated in your browser — nothing is sent anywhere."
       />
       <DiscussWithCoach business={business} topic="money" />

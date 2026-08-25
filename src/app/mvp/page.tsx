@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { PageHero, Ready, RequireBusiness } from "@/components/page";
-import { ToolboxArt } from "@/components/art";
+import { BlueprintArt } from "@/components/art";
 import { Badge, Card, Disclosure, Hi, LinkButton, SectionHeader, Stat, Tabs } from "@/components/ui";
 import { withBusiness } from "@/lib/business-param";
 import { COST_BAND_DETAIL, COST_BAND_LABEL, PRICE_DISCLAIMER } from "@/lib/spend";
@@ -43,7 +43,7 @@ function MVP({ business }: { business: SelectedBusiness }) {
     <div className="page-column">
       <PageHero
         title="The smallest thing you could sell"
-        art={<ToolboxArt className="w-full" />}
+        art={<BlueprintArt className="w-full" />}
         description="Not a stripped-down version of the finished thing — the smallest thing a real person could pay you for. Everything else has a date attached, and the date is later than you think."
       />
 

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { GrowthArt, TalkArt } from "@/components/art";
+import { CompassArt, TalkArt } from "@/components/art";
 import { Icon } from "@/components/icons";
 import { PageHero, Ready } from "@/components/page";
 import {
@@ -98,7 +98,7 @@ function Finder() {
     <div className="page-column">
       <PageHero
         title="Find the best opportunity where you live"
-        art={<GrowthArt className="w-full" />}
+        art={<CompassArt className="w-full" />}
         description="For when you don't have a business in mind and mostly care what could actually make money. Tell the app about your area and it will work through what fits."
       />
 

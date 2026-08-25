@@ -300,3 +300,179 @@ export function TalkArt({ className = "", label }: { className?: string; label?:
     </Frame>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* EIGHT MORE, BECAUSE SEVEN DRAWINGS WERE COVERING TWENTY ROUTES              */
+/*                                                                            */
+/* `ToolboxArt` was on the research page, the build page, the operations page, */
+/* the MVP page and the start page — five pages with almost nothing in common  */
+/* beyond being in the same product. A picture that appears on five unrelated  */
+/* screens stops being about any of them and becomes wallpaper, which is a     */
+/* slower way of having no illustration at all.                                */
+/*                                                                            */
+/* Same construction as the seven above: one 200x150 frame, 2px strokes in     */
+/* `currentColor` so the section hue drives them, fills from `--section-soft`  */
+/* and at most one status colour where the drawing genuinely means something   */
+/* by it. Nothing is fetched; there is still no `public/`.                     */
+/* -------------------------------------------------------------------------- */
+
+/** A balance, one pan lower than the other. For "is this any good?". */
+export function ScalesArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      {/* column and base */}
+      <path d="M100 26v96M78 130h44" className="draw" pathLength={1} />
+      <path d="M70 130h60l-6 10H76z" fill="var(--section-soft, var(--signal-soft))" className="draw" pathLength={1} style={{ ["--d" as string]: "54ms" }} />
+      {/*
+        The beam is tilted hard on purpose. At a two-degree lean the drawing
+        reads as a balanced scale with a rendering fault; the whole idea here is
+        that one side has more on it, so the tilt has to survive being 150px
+        wide in a page header.
+      */}
+      <path d="M42 30 158 52" className="draw" pathLength={1} style={{ ["--d" as string]: "90ms" }} />
+      <circle cx="100" cy="41" r="4" fill="var(--section, var(--signal))" stroke="none" />
+      {/* the light pan, held high */}
+      <path d="M42 30v16" className="draw" pathLength={1} style={{ ["--d" as string]: "126ms" }} />
+      <path d="M24 46h36l-7 15H31z" className="draw" pathLength={1} style={{ ["--d" as string]: "162ms" }} />
+      {/* the heavy pan, well down, and the only filled thing in the drawing */}
+      <path d="M158 52v30" className="draw" pathLength={1} style={{ ["--d" as string]: "144ms" }} />
+      <path d="M138 82h40l-8 18h-24z" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "198ms" }} />
+    </Frame>
+  );
+}
+
+/** A surveyed plot map, one parcel marked. For "which industry?". */
+export function MapArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      <rect x="22" y="20" width="156" height="110" rx="2" className="draw" pathLength={1} />
+      {/* parcels */}
+      <path d="M22 56h156M22 94h156M74 20v110M126 20v110" className="draw" pathLength={1} strokeWidth="1.4" style={{ ["--d" as string]: "72ms" }} />
+      {/* the one worth having */}
+      <rect x="74" y="56" width="52" height="38" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "144ms" }} />
+      <path d="M88 75h24M100 63v24" stroke="var(--section, var(--signal))" strokeWidth="1.6" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
+      {/* north mark */}
+      <path d="M164 34v-8l4 4z" fill="currentColor" stroke="none" />
+    </Frame>
+  );
+}
+
+/** A ledger column with a rule under the total. For the money page. */
+export function LedgerArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      <rect x="34" y="16" width="132" height="118" rx="3" className="draw" pathLength={1} />
+      <path d="M116 16v118" className="draw" pathLength={1} strokeWidth="1.4" style={{ ["--d" as string]: "54ms" }} />
+      {/* entries */}
+      <path d="M48 40h50M48 60h44M48 80h52" className="draw" pathLength={1} strokeWidth="1.6" style={{ ["--d" as string]: "108ms" }} />
+      <path d="M128 40h24M128 60h20M128 80h26" stroke="var(--section, var(--signal))" strokeWidth="1.6" className="draw" pathLength={1} style={{ ["--d" as string]: "144ms" }} />
+      {/* the rule, and the total under it */}
+      <path d="M124 98h34" className="draw" pathLength={1} style={{ ["--d" as string]: "198ms" }} />
+      <rect x="122" y="106" width="38" height="14" rx="2" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "234ms" }} />
+    </Frame>
+  );
+}
+
+/** A drawing with one part hatched in and the rest left as outline.
+    For "what to build first, and what not to build yet". */
+export function BlueprintArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      <rect x="24" y="20" width="152" height="108" rx="2" className="draw" pathLength={1} />
+      {/* the whole intended thing, in outline */}
+      <path d="M44 108V52h112v56" className="draw" pathLength={1} strokeWidth="1.4" style={{ ["--d" as string]: "72ms" }} />
+      <path d="M44 52 100 30l56 22" className="draw" pathLength={1} strokeWidth="1.4" style={{ ["--d" as string]: "108ms" }} />
+      {/* the part you actually build now */}
+      <rect x="44" y="72" width="46" height="36" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "162ms" }} />
+      <path d="M50 108 90 78M58 108l32-24M66 108l24-18" stroke="var(--section, var(--signal))" strokeWidth="1.2" opacity="0.55" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
+      <path d="M34 118h132" className="draw" pathLength={1} style={{ ["--d" as string]: "252ms" }} />
+    </Frame>
+  );
+}
+
+/** A lens over a page, magnifying one line. For "what you actually know". */
+export function MagnifierArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      {/* the page */}
+      <path d="M40 14h84l24 24v98H40z" className="draw" pathLength={1} />
+      <path d="M124 14v24h24" className="draw" pathLength={1} style={{ ["--d" as string]: "54ms" }} />
+      <path d="M56 58h58M56 74h44M56 90h52" strokeWidth="1.5" className="draw" pathLength={1} style={{ ["--d" as string]: "108ms" }} />
+      {/* the lens */}
+      <circle cx="116" cy="86" r="30" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "162ms" }} />
+      <path d="M138 108 162 132" stroke="var(--section, var(--signal))" strokeWidth="3" className="draw" pathLength={1} style={{ ["--d" as string]: "216ms" }} />
+      <path d="M100 86h32" stroke="var(--section, var(--signal))" strokeWidth="2.4" className="draw" pathLength={1} style={{ ["--d" as string]: "252ms" }} />
+    </Frame>
+  );
+}
+
+/** A day drawn as a route with stops along it. For "how this business runs". */
+export function RouteArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      {/*
+        A STEPPED PATH, NOT A CURVE.
+        The first version drew a smooth bezier with dots on it and read as a
+        line chart — which in this product is close to a lie, because nothing
+        here plots any data and the app's own rules forbid inventing figures.
+        Right angles and evenly spaced stops read as a route through a day,
+        which is what the page is about.
+      */}
+      <path d="M26 116h30V74h32v30h28V52h60" className="draw" pathLength={1} />
+      {[
+        [26, 116, 0],
+        [56, 74, 90],
+        [116, 104, 162],
+      ].map(([cx, cy, d]) => (
+        <circle
+          key={`${cx}`}
+          cx={cx}
+          cy={cy}
+          r="6"
+          fill="var(--section-soft, var(--signal-soft))"
+          stroke="var(--section, var(--signal))"
+          className="draw"
+          pathLength={1}
+          style={{ ["--d" as string]: `${d}ms` }}
+        />
+      ))}
+      {/* the end of the day, filled: the one stop that is an outcome */}
+      <circle cx="176" cy="52" r="7" fill="var(--section, var(--signal))" stroke="none" />
+      <path d="M20 132h160" className="draw" pathLength={1} strokeWidth="1.4" style={{ ["--d" as string]: "216ms" }} />
+      <path d="M26 138v-6M56 138v-6M116 138v-6M176 138v-6" strokeWidth="1.4" className="draw" pathLength={1} style={{ ["--d" as string]: "252ms" }} />
+    </Frame>
+  );
+}
+
+/** A shoot out of the ground with a measuring stick beside it. For "make it
+    better" — growth you can check rather than growth as an arrow. */
+export function SeedArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      <path d="M24 118h152" className="draw" pathLength={1} />
+      {/* the stem */}
+      <path d="M84 118V64" className="draw" pathLength={1} style={{ ["--d" as string]: "72ms" }} />
+      <path d="M84 88c-16 0-22-12-22-22 13 0 22 9 22 22z" fill="var(--good-soft)" stroke="var(--good)" className="draw" pathLength={1} style={{ ["--d" as string]: "126ms" }} />
+      <path d="M84 74c16 0 22-12 22-22-13 0-22 9-22 22z" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "162ms" }} />
+      {/* the stick, so it is measured rather than merely rising */}
+      <path d="M140 118V38" className="draw" pathLength={1} style={{ ["--d" as string]: "198ms" }} />
+      <path d="M132 100h16M132 80h16M132 60h16M132 44h16" strokeWidth="1.5" className="draw" pathLength={1} style={{ ["--d" as string]: "234ms" }} />
+      <path d="M140 64h18" stroke="var(--section, var(--signal))" strokeWidth="2.6" className="draw" pathLength={1} style={{ ["--d" as string]: "270ms" }} />
+    </Frame>
+  );
+}
+
+/** A compass rose standing on the ground line. For "best opportunity near me". */
+export function CompassArt({ className = "", label }: { className?: string; label?: string }) {
+  return (
+    <Frame className={className} label={label}>
+      <circle cx="100" cy="70" r="46" className="draw" pathLength={1} />
+      <circle cx="100" cy="70" r="34" strokeWidth="1.2" className="draw" pathLength={1} style={{ ["--d" as string]: "54ms" }} />
+      {/* the needle: one half filled, which is the whole point of a compass */}
+      <path d="M100 34 112 70H88z" fill="var(--section, var(--signal))" stroke="none" />
+      <path d="M100 106 88 70h24z" fill="var(--section-soft, var(--signal-soft))" stroke="var(--section, var(--signal))" className="draw" pathLength={1} style={{ ["--d" as string]: "144ms" }} />
+      <path d="M100 18v8M100 114v8M46 70h8M146 70h8" className="draw" pathLength={1} style={{ ["--d" as string]: "198ms" }} />
+      <path d="M24 132h152" className="draw" pathLength={1} style={{ ["--d" as string]: "234ms" }} />
+    </Frame>
+  );
+}

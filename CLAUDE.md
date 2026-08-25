@@ -28,11 +28,11 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:accounts  # 34 account, session-persistence and vault-registry tests
+npm run test:accounts  # 45 account, guest-session and vault-registry tests
 npm run test:scoring   # 52 scoring, title, diversity, memory and refusal tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 74 customer/market/MVP calibration tests
-npm run test:product   # 78 quality/consistency/variant/intake/sample tests
+npm run test:product   # 80 quality/consistency/variant/intake/sample/mode tests
 npm run test:analyze   # 62 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
 npm run test:describe  # natural-language founder profile tests
@@ -183,6 +183,64 @@ The old token names are aliased rather than renamed. `--accent`, `--mark` and
 `--info` are read in several hundred call sites; repointing them in `:root`
 renames the brand in one place instead of in a sweep that would certainly miss
 something, and anything still asking for "accent" correctly gets ink.
+
+### Dark by default, and a hue per section
+
+Dark is what a first visit gets. `<html>` ships with `dark` on it and the
+inline script's job is to *remove* it for somebody who chose light — the
+opposite of how it worked, and the reason it changed: serving light and adding
+`dark` in script meant a stored-dark visitor could get a painted frame of light
+on a slow parse, and a visitor with JavaScript disabled got light for ever. The
+`<head>` theme colours were still the pre-rebrand warm-paper values and are now
+computed from the current `--bg`.
+
+The brand stays achromatic, for the reason it always was: status colour is on
+almost every screen, so a saturated brand hue would compete with `good`, `warn`
+and `bad`. But that argument is about *status*, and it had been quietly read as
+"no colour anywhere" — which is most of why the product measured as bland.
+
+So colour rides the one axis that cannot collide with status: **where you are**,
+never *how something is doing*. One `--section` property is stamped on the frame
+from the same `sectionFor()` that decides which nav item wears the wedge, so the
+colour and the marked link cannot disagree. `.eyebrow`, `.rail`, every `Wedge`
+and every drawing read it. You 330, Brainstorm 294, My business 258, Does it
+hold up? 221, Make it 185 — spaced across the arc status does not use. Home has
+no hue and needs no rule for that: every consumer reads
+`var(--section, <neutral>)`, so the fallback *is* the Home case.
+
+Cyan and teal carry visibly less chroma than magenta in the light theme. That is
+the sRGB gamut at a lightness dark enough to read as text, not a taste decision —
+four lightnesses were measured before settling, and pushing lightness up to
+recover chroma cost more contrast than it gained saturation.
+
+`check:visual` asserts a section hue and a status class never land on one
+element, which is the single thing that would make the palette meaningless.
+
+### The pictures were invisible
+
+`PageHero` painted every illustration at `--border-strong` — about 1.7:1 against
+the paper — under a comment claiming "full strength now", which had been true of
+an earlier revision. The sweep never caught it because it measured the contrast
+of *text* and nothing else. They were also `hidden md:block`, so a phone got no
+art at all, which is the majority of visits and the format where a page of
+unbroken type is hardest to read.
+
+They take the section hue now, phones get a smaller plate above the title, and
+`check:visual` samples what SVGs actually paint.
+
+`art.tsx` went from 7 drawings to 15, because 7 across 20 routes meant
+`ToolboxArt` appeared on research, build, operations, MVP and start — five pages
+with nothing in common beyond being in the same product. A picture on five
+unrelated screens is wallpaper, which is a slower way of having no illustration.
+
+`RouteArt` was first drawn as a smooth bezier with dots on it and read as a line
+chart. In this product that is close to a lie — nothing here plots data and the
+honesty rules forbid inventing figures — so it is a stepped path with stops.
+
+`PageHeader` (no breadcrumbs, no art) was on eighteen routes including the money
+page, the task list and the validation lab. Nobody decided that; it was the
+header that was easier to type. It is now documented as the exception, for pages
+where both would genuinely be noise.
 
 ### The name, and the key that didn't change
 
@@ -572,6 +630,45 @@ That stopped being true the day this feature shipped. It now says what is
 actually done, because the person reading that page is the one deciding how far
 to trust the thing.
 
+### Browsing without an account
+
+The only way into the product was inventing a passphrase — one that cannot be
+reset, because there is no server to reset it from — for an app you had not seen
+a screen of. That is a large commitment to make at the moment a visitor knows
+least about whether they want the thing.
+
+A guest is a **fourth state**, and `isUnlocked()` stays `false` for one
+deliberately: `store.ts:writeNow` refuses to persist while it is false, so a
+guest's work never reaches `localStorage` and the shared-browser leak the vault
+exists to close stays closed. Making guest "unlocked with no account" would have
+re-opened it in one line. Verified in Chromium: a whole guest session walking six
+routes leaves `localStorage` completely empty.
+
+The cost is real, so it is stated continuously rather than once at the door —
+`GuestBanner` rides every route, because people navigate, come back after lunch,
+and start typing real answers into something they believe is saving. It replaces
+`SampleBanner` rather than stacking with it: a guest is always looking at the
+worked example, and two notices about one screen is how people learn to ignore
+both.
+
+`createAccount` has always taken an arbitrary initial state — the same seam the
+pre-vault legacy claim uses — so "keep this" needed no new vault machinery. The
+form opens in a dialog rather than at a route, and that is a correctness
+requirement: the work is in a module variable, so the one screen whose purpose is
+to rescue it must not be reached by a full document load. Two plain
+`<a href="/settings">` anchors were found and converted for the same reason.
+
+The worked example is not carried into the new account, and neither are the coach
+threads scoped to it — a question about a business that is about to stop existing
+leaves an orphaned thread pointing at nothing. `countOwnWork` counts what would
+survive that strip, which is the only definition that keeps the banner honest;
+counting raw totals made it claim "work of your own" for somebody who had only
+asked the coach about the demo, immediately before the next screen correctly told
+them their account would start empty.
+
+`routes.ts` still lists the same public prefixes and they mean something slightly
+different now: the set that renders for a visitor who has made no choice at all.
+
 ### The URL names the business
 
 `activeBusinessId` was global and never appeared in an address, so a workspace
@@ -765,6 +862,33 @@ equally would let somebody reach "80% complete" having skipped their budget and
 their hours, and the figure would be reassuring and wrong. Required means the
 scoring genuinely cannot work without it. The prompt names **one** field with
 the reason it matters — a list of six gaps is a chore, one is a decision.
+
+### A toggle that changed four blocks
+
+`AdvancedOnly` is what the masthead's Simple/Detail switch drives, and it had
+**four call sites** in a forty-route app — while `/settings` promised "full
+metrics and score breakdowns visible by default", "nothing collapsed behind a
+summary" and "financial and market detail up front". Three claims, none true. A
+two-state control that changes nothing visible is worse than no control: people
+press it, watch nothing happen, and correctly conclude the app is not listening.
+
+Seventeen call sites across ten files now — the thirteen-row quality table, the
+ranked threat list, the assumption ledger, the seven evidence cards, the six
+customer lists, the per-sale arithmetic, the scenario spread, the goal
+reverse-engineer, the funnel inputs, the competitor matrix. Measured: 46% less
+text on `/quality`, 55% on `/customers`, 24% on `/validation`.
+
+The control was one word alternating between "Simple" and "Detail", which is
+ambiguous in the worst way for a two-state switch — no way to tell whether it
+names the state you are in or the one you would move to, and the two readings are
+opposites. Both halves are shown and the live one is a slab of ink. It is hidden
+below `sm` and lives in the mobile menu instead, because the masthead row
+measured 27px wider than a 320px viewport and was pushing the menu button off the
+right-hand edge on every route.
+
+`test:product` holds a floor on how many places collapse detail and how widely
+they are spread, since the failure being guarded against is not "the component
+broke" but "the component stopped being used".
 
 ### Four scores, never merged
 
@@ -1005,6 +1129,15 @@ them, heading-level skips on 11, and 14 filled primary buttons on one page.
   declaration. The rule this file documented as "applied once" had never applied
   at all, which is most of why paragraphs ran the full width of a 1440px screen.
   Set in `ch` so they track the font size rather than fighting it.
+- **The page column is a token, and eighteen pages were not using it.** They
+  carried `max-w-3xl` — right when the frame was a 248px sidebar beside a
+  `max-w-5xl` column, and never revisited when the frame became a full-width
+  masthead over an 84rem canvas. So the navigation and the datum ran the full
+  width of a 1440px screen while content stopped two thirds across, leaving
+  480px of nothing beside it, which is most of what read as unfinished in a
+  screenshot. `.page-column` is 64rem: prose is already held by `--measure`, but
+  a card is not, and a single card stretched to 1248px with one line in it looks
+  worse than the dead space did.
 - **Never set a reading width in pixels.** `max-w-2xl` on 12px text is 93
   characters a line, because a px width does not track font size. That was the
   single paragraph left over after the measure went in.

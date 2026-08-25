@@ -8,7 +8,8 @@ import { useState } from "react";
 
 import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
-import { AIPanel, GeneratedNote, PageHeader, Ready, RequireBusiness } from "@/components/page";
+import { AIPanel, GeneratedNote, PageHero, Ready, RequireBusiness } from "@/components/page";
+import { MagnifierArt } from "@/components/art";
 import {
   Badge,
   Card,
@@ -101,8 +102,9 @@ function Validation({ business }: { business: SelectedBusiness }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHero
         title="Validation Lab"
+        art={<MagnifierArt className="w-full" />}
         description="The difference between an idea you like and one people will pay for. Everything below is labelled by how much you can trust it."
       />
       <DiscussWithCoach business={business} topic="validation" />
