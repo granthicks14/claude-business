@@ -35,6 +35,7 @@ writeFileSync(
     'import { eligibleBusinesses, isEligible, sameShape } from "' + cwd + '/src/lib/deck/eligible.ts";',
     'import { industryDeck, businessDeck, surpriseDeck } from "' + cwd + '/src/lib/deck/deal.ts";',
     'import { ideaSummary } from "' + cwd + '/src/lib/idea-summary.ts";',
+    'import { sceneFor } from "' + cwd + '/src/lib/deck/scene.ts";',
     'import { INDUSTRIES } from "' + cwd + '/src/lib/engine/knowledge/industries.ts";',
     'import { emptyProfile } from "' + cwd + '/src/lib/store.ts";',
     "",
@@ -134,6 +135,45 @@ writeFileSync(
     "  };",
     "}",
     "",
+    "/* ------------------------------------- every business gets a picture - */",
+    "{",
+    "  const set = eligibleBusinesses(p);",
+    "  const tools = new Map();",
+    "  const settings = new Map();",
+    "  let missingAlt = 0;",
+    "  let namelessAlt = 0;",
+    "  for (const b of set.businesses) {",
+    "    const s = sceneFor(b);",
+    "    tools.set(s.tool, (tools.get(s.tool) ?? 0) + 1);",
+    "    settings.set(s.setting, (settings.get(s.setting) ?? 0) + 1);",
+    "    if (!s.alt || s.alt.length < 20) missingAlt++;",
+    "    if (!s.alt.includes(b.name)) namelessAlt++;",
+    "  }",
+    "  const top = [...tools.values()].sort((a, b) => b - a)[0];",
+    "  results.scenes = {",
+    "    distinctTools: tools.size,",
+    "    distinctSettings: settings.size,",
+    "    commonestShare: top / set.businesses.length,",
+    "    missingAlt,",
+    "    namelessAlt,",
+    "    deterministic: JSON.stringify(sceneFor(set.businesses[0])) === JSON.stringify(sceneFor(set.businesses[0])),",
+    "  };",
+    "}",
+    "",
+    "/* --------------------------- the trades that must not be misdrawn ---- */",
+    "{",
+    "  const set = eligibleBusinesses(p);",
+    "  const find = (needle) => set.businesses.find((b) => b.name.toLowerCase().includes(needle));",
+    "  const toolFor = (needle) => { const b = find(needle); return b ? sceneFor(b).tool : null; };",
+    "  const settingFor_ = (needle) => { const b = find(needle); return b ? sceneFor(b).setting : null; };",
+    "  results.named = {",
+    "    tripIsNotADog: toolFor('trip planning'),",
+    "    cateringCooks: toolFor('catering'),",
+    "    petIsADog: toolFor('pet'),",
+    "    petIsNotAtADesk: settingFor_('pet'),",
+    "  };",
+    "}",
+    "",
     "console.log(JSON.stringify(results));",
     "",
   ].join("\n"),
@@ -212,6 +252,23 @@ check(
   r.surprise.namesReached === r.surprise.ofNames,
   `${r.surprise.namesReached}/${r.surprise.ofNames} over 4,000 deals`,
 );
+
+console.log("\n--- every business is drawn, and not all the same ---");
+check("no business is left without a picture", r.scenes.missingAlt === 0);
+check("and every alt text names the business it is of", r.scenes.namelessAlt === 0);
+check("the scene is deterministic for a given business", r.scenes.deterministic);
+check("the vocabulary is actually used", r.scenes.distinctTools >= 12, `${r.scenes.distinctTools} different tools, ${r.scenes.distinctSettings} settings`);
+check(
+  "and no single picture covers the catalogue",
+  r.scenes.commonestShare < 0.3,
+  `commonest tool is ${(r.scenes.commonestShare * 100).toFixed(0)}% of businesses`,
+);
+
+console.log("\n--- the trades that were being drawn wrong ---");
+check("a trip-planning business is not drawn as a dog", r.named.tripIsNotADog === "backpack", String(r.named.tripIsNotADog));
+check("a catering business is drawn cooking", r.named.cateringCooks === "pan", String(r.named.cateringCooks));
+check("a pet business is drawn with a dog", r.named.petIsADog === "dog", String(r.named.petIsADog));
+check("and that dog is not sitting at a desk", r.named.petIsNotAtADesk !== "desk", String(r.named.petIsNotAtADesk));
 
 console.log(failures === 0 ? "\nALL DECK TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
