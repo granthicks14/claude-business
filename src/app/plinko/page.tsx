@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { PlinkoBoard } from "@/components/plinko/board";
 import { CreateAccount, useAppOpen, useGuest } from "@/components/account-gate";
 import { Ready } from "@/components/page";
-import { PageHero } from "@/components/page";
 import { Button, Dialog, Eyebrow, LinkButton, Section } from "@/components/ui";
 import { boardFor, businessBoard, FAIRNESS_NOTE, industryBoard, slotLabels } from "@/lib/plinko/discovery";
 import type { BusinessSlot, IndustrySlot } from "@/lib/plinko/discovery";
@@ -189,18 +188,25 @@ function Plinko() {
   };
 
   return (
-    <div className="page-column py-8">
-      <PageHero
-        title="Can't decide? Play Plinko"
-        description={
-          stage === "industry"
-            ? "Drop a ball and let it pick an industry. Then narrow it down to a business you could actually start."
-            : `Now the businesses inside ${industry?.label}. Drop again.`
-        }
-      />
+    <div className="page-column py-6">
+      {/*
+        A compact header rather than `PageHero`, which is the documented
+        exception for a page where the usual masthead would be noise.
+        Measured: the standard hero plus breadcrumbs took 315px before any
+        content, on a page whose whole job is one button — which is how the
+        button ended up below the fold at 1280x900 and again at 1440x800 after
+        the board had already been narrowed twice. One line of instruction is
+        all this page needs; everything else about it is the board.
+      */}
+      <h1 className="text-h2 font-display leading-tight">Can&apos;t decide? Play Plinko</h1>
+      <p className="text-body text-muted leading-relaxed mt-2 max-w-prose">
+        {stage === "industry"
+          ? "Drop a ball, land on an industry, then narrow it to a business you could actually start."
+          : `Now the businesses inside ${industry?.label}. Drop again.`}
+      </p>
 
-      <Section ruled={false}>
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+      <Section ruled={false} className="mt-6">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
           <Eyebrow>{stage === "industry" ? "Step 1 — the industry" : "Step 2 — the business"}</Eyebrow>
           {industry && stage === "business" && (
             <p className="text-caption text-muted">
@@ -209,7 +215,7 @@ function Plinko() {
           )}
         </div>
 
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-xl mx-auto">
           <PlinkoBoard
             board={board}
             labels={labels}

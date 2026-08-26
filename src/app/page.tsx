@@ -204,6 +204,44 @@ function Door({ href, label, detail }: { href: string; label: string; detail: st
   );
 }
 
+/**
+ * THE ANSWER TO THE BOX ABOVE IT.
+ *
+ * The ask bar is the primary action and it assumes something the hardest
+ * visitor to help does not have: a sentence. "I don't know what I want to
+ * build" typed into a field that wants a business description is a person
+ * meeting the exact obstacle that stopped them, on the first screen.
+ *
+ * So this sits directly underneath, framed as the alternative rather than as a
+ * rival — one rule, one line, one outlined button. Not a card: §5 warns against
+ * another tile competing with everything else on the page, and the house rule
+ * is that a card is a discrete object you could pick up, never a container for
+ * a sentence. Not a filled button either; the page already has its one.
+ *
+ * It renders only for somebody with no business yet, which is the same
+ * condition the ask bar uses. Offering to help a returning founder decide what
+ * to build would be the app forgetting they already had.
+ */
+function NothingToType() {
+  return (
+    <div className="rule mt-6 pt-5">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <Eyebrow>Nothing to type?</Eyebrow>
+        <p className="text-sm font-medium">Let chance narrow it down.</p>
+      </div>
+      <p className="text-caption text-muted mt-2 leading-relaxed max-w-md">
+        Drop a ball, land on an industry, then drop again to reach a specific
+        business — explained, scored, and yours to keep or throw back.
+      </p>
+      <div className="mt-3">
+        <LinkButton href="/plinko" variant="secondary" size="sm">
+          Play Business Plinko
+        </LinkButton>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const ready = useStoreReady();
   const state = useAppState((s) => s);
@@ -398,6 +436,7 @@ export default function HomePage() {
               {ready && business ? null : (
                 <div className="mt-8">
                   <AskBar autoFocus={false} />
+                  <NothingToType />
                 </div>
               )}
 

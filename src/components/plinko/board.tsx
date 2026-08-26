@@ -123,6 +123,21 @@ export function PlinkoBoard({
     <div>
       <svg
         viewBox={`0 0 ${board.width} ${board.height}`}
+        preserveAspectRatio="xMidYMid meet"
+        /*
+         * BOUNDED BY THE VIEWPORT'S HEIGHT, NOT ONLY ITS WIDTH.
+         *
+         * Sized on width alone the board grows until it fills the screen, and
+         * on a 1280x900 laptop that put "Drop the ball" at y=1002 — a game
+         * whose entire instruction is "press this", shipped with the button
+         * below the fold. Narrowing it fixed one viewport and not the next;
+         * 1440x800 is shorter still.
+         *
+         * A `vh` cap with `meet` is the version that holds everywhere: the
+         * drawing scales down to fit and centres itself, letterboxing at the
+         * sides rather than pushing the only control off the screen.
+         */
+        style={{ maxHeight: "min(40vh, 420px)" }}
         className="w-full h-auto select-none"
         role="img"
         aria-label={
@@ -248,20 +263,19 @@ export function PlinkoBoard({
         lets long names wrap onto two lines instead of overlapping, and reflows
         on a narrow screen instead of overflowing it.
       */}
-      <ul
-        className="plinko-legend mt-2 list-none"
-        style={{ ["--plinko-slots" as string]: board.slots }}
-      >
+      <ul className="plinko-legend mt-3 list-none">
         {labels.slots.map((label, i) => (
           <li
             key={i}
-            className={`leading-tight py-1 break-words text-left sm:text-center ${
+            className={`leading-tight py-0.5 text-left ${
               landed === i ? "text-text font-semibold" : "text-muted"
             }`}
             style={{ fontSize: "var(--text-caption)" }}
             aria-current={landed === i ? "true" : undefined}
           >
-            <span className="text-faint tabular-nums sm:hidden">{i + 1}. </span>
+            <span className={landed === i ? "text-text tabular-nums" : "text-faint tabular-nums"}>
+              {i + 1}.{" "}
+            </span>
             {label}
           </li>
         ))}

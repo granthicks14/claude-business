@@ -66,12 +66,33 @@ export interface Drop {
  * pixels — the SVG scales them.
  */
 export const DEFAULT_BOARD: BoardSpec = {
-  width: 100,
-  height: 108,
+  /*
+   * WIDER THAN TALL, BECAUSE THE BUTTON HAS TO BE ON THE SAME SCREEN.
+   *
+   * The first version was 100x108 — near square, which is what a Plinko
+   * cabinet looks like and completely wrong here. Rendered at the page's
+   * reading width it came out 726px tall, so on a 900px laptop the board
+   * filled the viewport and "Drop the ball" sat below the fold: a game whose
+   * one instruction is "press this" shipped with the button off screen.
+   *
+   * These proportions put the whole thing — heading, board, legend and button
+   * — inside one screen at 1280x900, which is the only measurement that
+   * matters for a page with a single action.
+   *
+   * The width was then tuned, because widening the board makes the bias worse:
+   * the ball has further to travel sideways to reach an edge, so at 148 units
+   * the outer slots took 0.33% each — a 70:1 spread, and a slot hit once in
+   * three hundred drops is decoration. Eleven rows at 120 units gives 8:1 with
+   * every slot reachable. More rows makes it dramatically worse rather than
+   * better: at fifteen rows four slots go completely unreachable, which is the
+   * binomial tail, not a bug to fix.
+   */
+  width: 120,
+  height: 96,
   rows: 11,
   slots: 10,
-  pegRadius: 1.15,
-  ballRadius: 2.1,
+  pegRadius: 1.2,
+  ballRadius: 2.2,
 };
 
 /**

@@ -1208,40 +1208,47 @@
 /* ========================================================================== */
 
 /*
- * One column per slot works on a laptop and is unreadable on a phone.
+ * ONE COLUMN PER SLOT DOES NOT SURVIVE REAL NAMES.
  *
- * At 320px with ten slots each column is about 28px, and a single word like
- * "Catering" is wider than that at the smallest size on the scale — so the
- * labels stopped wrapping and started pushing the page sideways. Measured: 40px
- * of horizontal overflow, which `check:visual` now fails on.
+ * It was tried twice. Ten columns in the page's reading width is 57px each,
+ * and the catalogue contains "E-commerce & products" and "Automotive" — so the
+ * labels either overflowed the page or, once `overflow-wrap: anywhere` stopped
+ * that, broke mid-word into "Automoti / ve". A label that has to be
+ * reassembled by the reader is not a label.
  *
- * Below `sm` the labels become an ordinary two-column legend keyed to numbers
- * drawn in the slots; from `sm` up they line up underneath the slots again.
- * The numbers are on the board at every width so the two readings never have
- * to be reconciled.
+ * The slots carry numbers instead and this is an ordinary numbered legend, in
+ * as many columns as the width can give each entry a readable measure. The
+ * numbers are drawn on the board at every size, so the legend and the board
+ * never need to be lined up by eye.
  */
 .plinko-legend {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25rem 0.75rem;
+  gap: 0.25rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .plinko-legend {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .plinko-legend {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 /*
  * `anywhere`, not `break-word`.
  *
  * These are generated business names and nothing bounds the length of a single
- * word in one. `overflow-wrap: break-word` leaves an over-long token sticking
- * out of its column; `anywhere` also lets the browser count the break when it
- * works out the minimum content width, which is what actually stops the grid
- * from being pushed wider than the screen.
+ * word in one. `break-word` leaves an over-long token sticking out of its
+ * column; `anywhere` also lets the browser count the break when it works out
+ * the minimum content width, which is what actually stops the grid being
+ * pushed wider than the screen. With five columns rather than ten it almost
+ * never has to fire.
  */
 .plinko-legend > li {
   overflow-wrap: anywhere;
-}
-
-@media (min-width: 640px) {
-  .plinko-legend {
-    grid-template-columns: repeat(var(--plinko-slots, 10), minmax(0, 1fr));
-    gap: 1px;
-  }
 }
