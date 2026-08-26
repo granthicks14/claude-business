@@ -70,6 +70,15 @@ const storedKeys = (page) => page.evaluate(() => Object.keys(localStorage).filte
 
 /** Does the page mention this business anywhere? */
 const mentions = async (page, text) => (await page.locator("body").innerText()).includes(text);
+/*
+ * The same question, ignoring case.
+ *
+ * `.eyebrow` is uppercased in CSS and `innerText` returns what is painted, so
+ * a check for "Who pays" fails against a screen that plainly says WHO PAYS.
+ * That is a property of the stylesheet, not of the page being wrong.
+ */
+const mentionsLoosely = async (page, text) =>
+  (await page.locator("body").innerText()).toLowerCase().includes(text.toLowerCase());
 
 async function createAccountOnScreen(page, label) {
   /*
@@ -438,6 +447,114 @@ async function main() {
     await styled.waitForTimeout(400);
     check(await mentions(styled, "Signed in as Stylist"), "the account menu names the account");
     check(await mentions(styled, "Founder profile"), "and reaches the profile, settings and security");
+
+    console.log("\n--- Plinko: anonymous play, and keeping what it found ---");
+
+    /*
+     * §23 AND §56's TEST A AND TEST G, IN ONE RUN.
+     *
+     * The claim being checked is that somebody with no account can play the
+     * whole thing, and that the moment they want to keep a result they are
+     * asked rather than quietly losing it. That second half is the one worth
+     * a browser: a locked visitor has no key, `writeNow` discards writes, and
+     * a "Keep" button that appeared to work would lose the business silently —
+     * which is exactly why every other creating route sits behind a gate.
+     */
+    const noAccountPlayer = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await noAccountPlayer.goto(`${ORIGIN}/plinko`, { waitUntil: "networkidle" });
+
+    check(
+      (await noAccountPlayer.getByRole("button", { name: "Drop the ball" }).count()) > 0,
+      "a visitor with no account can play without signing in",
+    );
+
+    await noAccountPlayer.getByRole("button", { name: "Skip the animation" }).click();
+    await noAccountPlayer.waitForTimeout(400);
+    check(await mentions(noAccountPlayer, "You landed on"), "the first drop lands on an industry");
+
+    await noAccountPlayer.getByRole("button", { name: "Go deeper" }).click();
+    await noAccountPlayer.waitForTimeout(300);
+    await noAccountPlayer.getByRole("button", { name: "Skip the animation" }).click();
+    await noAccountPlayer.waitForTimeout(500);
+    check(await mentions(noAccountPlayer, "Your business"), "the second drop reaches a specific business");
+    check(await mentionsLoosely(noAccountPlayer, "Who pays"), "and the result is explained, not just named");
+
+    await noAccountPlayer.getByRole("button", { name: "Keep for later" }).click();
+    await noAccountPlayer.waitForTimeout(500);
+    check(
+      (await noAccountPlayer.locator('[role="dialog"]').count()) > 0,
+      "keeping it asks a visitor with nowhere to keep it to make an account",
+    );
+
+    /* The result must survive that account being made — not be thrown away by it. */
+    const discovered =
+      (await noAccountPlayer.locator('main p[aria-live="polite"]').first().innerText().catch(() => "")) || "";
+    await noAccountPlayer.locator('[role="dialog"] input').first().fill("Plinko Player");
+    const dialogFields = noAccountPlayer.locator('[role="dialog"] input[type="password"]');
+    await dialogFields.nth(0).fill("correct horse battery staple");
+    await dialogFields.nth(1).fill("correct horse battery staple");
+    const ack = noAccountPlayer.locator('[role="dialog"] input[type="checkbox"]').first();
+    if (await ack.count()) await ack.check();
+    await noAccountPlayer.locator('[role="dialog"] form button[type="submit"]').first().click();
+    await noAccountPlayer.waitForTimeout(3500);
+
+    check(
+      noAccountPlayer.url().includes("/business"),
+      "and the business it found opens in the workspace once the account exists",
+      noAccountPlayer.url(),
+    );
+    check(
+      discovered ? await mentions(noAccountPlayer, discovered.split(" for ")[0].trim()) : false,
+      "carrying the business the ball actually landed on",
+      discovered.slice(0, 46),
+    );
+
+    console.log("\n--- Plinko: an account holder keeps to the shortlist ---");
+
+    const player = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await player.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
+    await createAccountOnScreen(player, "Player Two");
+    await player.waitForTimeout(800);
+
+    await player.goto(`${ORIGIN}/plinko`, { waitUntil: "networkidle" });
+    await player.getByRole("button", { name: "Skip the animation" }).click();
+    await player.waitForTimeout(400);
+    await player.getByRole("button", { name: "Go deeper" }).click();
+    await player.waitForTimeout(300);
+    await player.getByRole("button", { name: "Skip the animation" }).click();
+    await player.waitForTimeout(500);
+
+    const found = (await player.locator('main p[aria-live="polite"]').first().innerText().catch(() => "")) || "";
+    await player.getByRole("button", { name: "Keep for later" }).click();
+    await player.waitForTimeout(600);
+
+    check(
+      (await player.getByRole("button", { name: "Kept" }).count()) > 0,
+      "the button confirms rather than going quiet",
+    );
+    check(await mentions(player, "kept"), "and says how many are kept this session");
+    check(
+      (await player.locator('[role="dialog"]').count()) === 0,
+      "an account holder is not asked to make another one",
+    );
+
+    /* The shortlist is the store — no Plinko-specific list to drift from it. */
+    await player.getByRole("link", { name: /See them, or compare them/i }).click();
+    await player.waitForTimeout(1500);
+    check(player.url().includes("/lab"), "keeping reaches the existing shortlist", player.url());
+    check(
+      found ? await mentions(player, found.split(" for ")[0].trim()) : false,
+      "and the kept business is in it",
+      found.slice(0, 46),
+    );
+
+    await player.reload({ waitUntil: "networkidle" });
+    await player.waitForTimeout(1200);
+    check(
+      found ? await mentions(player, found.split(" for ")[0].trim()) : false,
+      "and it is still there after a refresh",
+    );
+
   } catch (error) {
     fail("the run itself threw", String(error?.message ?? error));
   } finally {

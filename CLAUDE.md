@@ -39,10 +39,11 @@ npm run test:describe  # 56 natural-language founder profile tests
 npm run test:intent    # 59 intent-router tests: what it reads, and what it refuses
 npm run test:iq        # 37 pipeline tests: the audit that started the work
 npm run test:direction # 21 tests: an instruction is not an interest
-npm test               # all eleven — 687 checks
+npm run test:plinko    # 36 tests: is the ball fair, and is the result a business
+npm test               # all twelve — 722 checks
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
-npm run check:persist  # 51 browser checks: does the work survive every path
+npm run check:persist  # 64 browser checks: does the work survive every path
 npm run check:visual   # 74 browser checks: look-and-feel, accents, density, motion,
                        #   horizontal overflow, and dialog geometry
 ```
@@ -84,6 +85,8 @@ src/lib/legal.ts        What the app actually does with data. The policy pages
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/appearance.ts   Theme, accent, density, motion. Written to the browser
                         key for pre-paint and to the account for portability.
+src/lib/plinko/         Business Plinko. A seeded ball simulation, and boards
+                        built from the knowledge base rather than a second list.
 src/lib/business-intent.ts  Interest, preference, instruction. Only the third
                         locks generation to a trade.
 src/lib/hostinger.ts    Website brief + the consistency lock.
@@ -667,6 +670,88 @@ The overflow reporter needed a second pass of its own: it named the widest
 element past the edge, which after the table was correctly wrapped was the
 table — inside its own scroller, legitimately wide. It skips scroller
 descendants now. Blaming the wrong element cost one wrong fix.
+
+### Business Plinko
+
+`/plinko` is the door for somebody who cannot answer "what do you want to
+build?". Every other entrance asks them to supply something first — an idea, an
+industry, a sentence — which is fine for people who have one and is the exact
+obstacle that stopped everybody else. This asks for nothing: press a button and
+the app commits to a direction on your behalf. Reacting to a suggestion is a far
+easier job than producing one, and disagreeing with a result is itself
+information the founder did not have a minute earlier.
+
+**The ball is simulated, not chosen.** `plinko/physics.ts` integrates it step by
+step and the slot is wherever it ends up. Picking a slot and animating towards
+it would be a rigged game with honest-looking motion, and "drop the ball" would
+stop being a true description of what happened. No physics dependency — a
+rigid-body library is hundreds of kilobytes shipped to every visitor so a ball
+can fall past thirty pegs. Everything is seeded, so a drop replays exactly,
+which is what makes it testable in the node suite and lets the reduced-motion
+path reach the *same* slot rather than a parallel implementation of it.
+
+**Constants were tuned against measurement.** The first guess looked right and
+left 2.4% of balls stuck on a peg until the step cap — on screen, a ball that
+hangs there for ever. Twelve gravity/restitution pairs at 6,000 drops each
+showed that a bouncier ball is a stuck ball. Stall detection covers the
+remainder, because tuning alone only reached 1 in 20,000 and that is still a
+real person watching a ball sit on a peg.
+
+**The fairness problem is the interesting one, and it is a product problem
+rather than a physics one.** Plinko is binomial: measured over 60,000 drops the
+centre slots take 18.7% each and the outer ones 2.3%. Pin an industry to a slot
+and the tool recommends the middle one eight times more often than the edge one
+— silently, wearing the costume of randomness. So **the slots are reshuffled
+before every drop**. The bias then lands on positions, which nobody cares about,
+and industries come out between 0.93x and 1.06x of even. `FAIRNESS_NOTE` says so
+on the page, because a claim like that belongs where the reader can act on it.
+
+Widening the board makes the bias worse — the ball has further to travel
+sideways to reach an edge — so at 148 units the outer slots took 0.33% each and
+a slot hit once in three hundred drops is decoration. Eleven rows at 120 units
+gives 8:1 with every slot reachable. More rows is dramatically worse: at fifteen
+rows four slots become unreachable, which is the binomial tail, not a bug.
+
+**The second board is the real engine.** `businessBoard` calls `generateIdeas`
+with the industry set, so a Plinko result is scored, argued against and turned
+into a plan by exactly the machinery every other idea goes through. A
+Plinko-specific list of business names would be a second catalogue that drifts
+from the first and produces results nothing else in the app can read.
+
+That needed a **third lock level** in `engine/ideas.ts`. `{ industryId }` alone
+returned **exactly three ideas for every one of the eighteen industries**,
+because `industryUses >= 3` — a cap that measures spread *across* markets — was
+still applying to a batch that is deliberately one market. Capping by industry
+once the founder has chosen the industry is the same category error as capping
+by problem once they have chosen the trade. The caps re-key to customer and
+model kind, and every industry now yields 8-10 distinct businesses across at
+least three customer types. `/lab`'s category browsing gets the same lift.
+
+**Keeping a result is the shortlist, not a new store.** Favourites, history and
+comparison all already exist as `state.ideas`, `/lab?tab=shortlist` and
+`/compare`. A Plinko-specific saved list would drift from that one and would
+arrive at "compare my Plinko results" as a separate screen from "compare my
+ideas".
+
+**It is public, and that is the point.** Asking somebody who cannot name a
+business to invent an unrecoverable passphrase first puts the product's largest
+commitment in front of its smallest. It qualifies under `routes.ts`'s existing
+rule rather than bending it — the game reads the knowledge base and writes
+nothing. The moment it *would* write, it asks, and the result rides into the new
+account on `CreateAccount`'s seed.
+
+**Four defects that only appeared in a browser.** Slot labels drawn as SVG
+`<text>` collided into an unreadable smear and were sized in viewBox units — the
+same label 9px on a phone and 17px on a laptop, outside the type scale. One HTML
+column per slot failed too: ten columns in the reading width is 57px each, and
+the catalogue contains "E-commerce & products", so labels either overflowed the
+page or broke mid-word into "Automoti / ve". The slots carry numbers and the
+legend is an ordinary numbered list. Shortening also *invented* duplicates the
+full names did not have — "Household System Audit" beside "Household System
+Consultancy" — so colliding labels escalate through increasing specificity until
+the group is genuinely distinct, which itself took two attempts. And the board
+was near-square, so "Drop the ball" shipped below the fold at 1280x900; it is
+capped in `vh` now and the page uses the compact-header exception.
 
 ### The engine
 

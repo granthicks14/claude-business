@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { PlinkoBoard } from "@/components/plinko/board";
@@ -91,6 +92,8 @@ function Plinko() {
   const guest = useGuest();
   const canKeep = open || guest;
   const [keeping, setKeeping] = useState<BusinessIdea | null>(null);
+  /* Names kept this session, so the button can confirm rather than go quiet. */
+  const [kept, setKept] = useState<string[]>([]);
 
   const industrySlots = useMemo(() => industryBoard(round, seenIndustries), [round, seenIndustries]);
   const businessSlots = useMemo(
@@ -187,6 +190,28 @@ function Plinko() {
     router.push(`/business?b=${id}`);
   };
 
+  /*
+   * KEEPING SOMETHING IS NOT A NEW FEATURE, IT IS THE SHORTLIST.
+   *
+   * The brief asks for favourites, a history of discoveries, and eventually a
+   * way to compare them. All three already exist: `state.ideas` is the
+   * shortlist, `/lab?tab=shortlist` shows it, and `/compare` reads it. A
+   * Plinko-specific store of saved results would be a second list of the same
+   * things, drifting from the first, and would arrive at "compare my Plinko
+   * results" as a separate screen from "compare my ideas".
+   *
+   * So keeping one adds it to the shortlist and nothing else — no selection,
+   * no navigation, because the point of this button is to carry on playing.
+   */
+  const keepForLater = (idea: BusinessIdea) => {
+    if (!canKeep) {
+      setKeeping(idea);
+      return;
+    }
+    actions.addIdeas([idea]);
+    setKept((prev) => [idea.name, ...prev]);
+  };
+
   return (
     <div className="page-column py-6">
       {/*
@@ -270,6 +295,9 @@ function Plinko() {
             <BusinessResult
               slot={result as BusinessSlot}
               onBuild={buildThis}
+              onKeep={keepForLater}
+              kept={kept.includes((result as BusinessSlot).idea.name)}
+              keptCount={kept.length}
               onReplay={replayStage}
               onBack={backToIndustries}
             />
@@ -358,11 +386,17 @@ function IndustryResult({
 function BusinessResult({
   slot,
   onBuild,
+  onKeep,
+  kept,
+  keptCount,
   onReplay,
   onBack,
 }: {
   slot: BusinessSlot;
   onBuild: (idea: BusinessIdea) => void;
+  onKeep: (idea: BusinessIdea) => void;
+  kept: boolean;
+  keptCount: number;
   onReplay: () => void;
   onBack: () => void;
 }) {
@@ -400,6 +434,9 @@ function BusinessResult({
           a 320px page 48px sideways. The industry is already named directly
           above the board, so the button does not have to carry it.
         */}
+        <Button variant="secondary" onClick={() => onKeep(idea)} disabled={kept}>
+          {kept ? "Kept" : "Keep for later"}
+        </Button>
         <Button variant="secondary" onClick={onReplay}>
           Another business
         </Button>
@@ -407,6 +444,17 @@ function BusinessResult({
           Different industry
         </Button>
       </div>
+
+      {keptCount > 0 && (
+        <p className="text-caption text-muted mt-3 leading-relaxed">
+          {keptCount === 1 ? "One business kept" : `${keptCount} businesses kept`} this
+          session.{" "}
+          <Link href="/lab?tab=shortlist" className="text-accent-text font-medium underline underline-offset-2">
+            See them, or compare them
+          </Link>
+          .
+        </p>
+      )}
 
       <p className="text-caption text-faint mt-4 leading-relaxed">
         &ldquo;Build this&rdquo; saves it and opens the workspace, where it is
