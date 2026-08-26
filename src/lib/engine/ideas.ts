@@ -836,6 +836,31 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
    */
   const locked = !!options.problemId;
 
+  /*
+   * A THIRD LEVEL: THE INDUSTRY IS CHOSEN, THE TRADE IS NOT.
+   *
+   * `locked` above is the trade lock — the founder said "car detailing" and
+   * every candidate shares a problem. There is a level between that and an
+   * open batch, and Plinko is what surfaced it: the industry has been picked
+   * and the whole point is to see what businesses exist *inside* it.
+   *
+   * Measured before this existed: `{ industryId }` alone returned **exactly
+   * three ideas for every one of the eighteen industries**, because
+   * `industryUses >= 3` was still applying — a cap that measures spread across
+   * markets, applied to a batch that is deliberately one market. Capping by
+   * industry when the user has chosen the industry is the same category error
+   * as capping by problem when they have chosen the trade.
+   *
+   * So the caps re-key to what variety actually means here: which customer,
+   * and what kind of business serving them. The industry and topic caps go,
+   * the per-problem rule widens to two — different segments with the same
+   * underlying problem are genuinely different businesses — and the
+   * model-at-segment pair rule stays, because that is the one that stops the
+   * board repeating itself.
+   */
+  const industryChosen = !locked && !!options.industryId;
+  const problemUses = new Map<string, number>();
+
   for (const candidate of ordered) {
     if (chosen.length >= count) break;
 
@@ -847,12 +872,14 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
     const kindUses = usedKinds.get(candidate.model.kind) ?? 0;
     const topic = topicFor(candidate);
     const topicUses = usedTopics.get(topic) ?? 0;
-    if (modelUses >= 2 || segmentUses >= (locked ? 4 : 2)) continue;
+    if (modelUses >= (industryChosen ? 3 : 2) || segmentUses >= (locked || industryChosen ? 4 : 2)) continue;
     const industryUses = usedIndustries.get(candidate.industry.id) ?? 0;
-    if (kindUses >= (locked ? 5 : 2)) continue;
-    if (!locked && (topicUses >= 2 || industryUses >= 3)) continue;
+    if (kindUses >= (locked ? 5 : industryChosen ? 4 : 2)) continue;
+    if (!locked && !industryChosen && (topicUses >= 2 || industryUses >= 3)) continue;
     if (usedPairs.has(pairKey)) continue;
-    if (!locked && usedProblems.has(`${candidate.industry.id}:${candidate.problem.id}`)) continue;
+    const problemKey = `${candidate.industry.id}:${candidate.problem.id}`;
+    if (industryChosen && (problemUses.get(problemKey) ?? 0) >= 2) continue;
+    if (!locked && !industryChosen && usedProblems.has(problemKey)) continue;
 
     const idea = materializeCandidate(candidate, profile, seed + chosen.length, options.constraints ? "constraints" : "generated");
     const key = idea.name.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -865,6 +892,7 @@ export function generateIdeas(profile: FounderProfile, options: GenerateOptions 
     usedTopics.set(topic, topicUses + 1);
     usedIndustries.set(candidate.industry.id, industryUses + 1);
     usedPairs.add(pairKey);
+    problemUses.set(problemKey, (problemUses.get(problemKey) ?? 0) + 1);
     usedProblems.add(`${candidate.industry.id}:${candidate.problem.id}`);
     chosen.push(idea);
   }
