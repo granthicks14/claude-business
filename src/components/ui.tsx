@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import {
   createContext,
   useCallback,
@@ -1259,6 +1260,27 @@ export function Tabs({
   );
 }
 
+/**
+ * Whether the subtree is inside a Dialog.
+ *
+ * A dialog already draws a panel and already prints a title beside its close
+ * button, so a component that renders its own `Card` and `SectionHeader` —
+ * correct when it is a whole page — produces a card inside a panel under two
+ * identical headings once it is reused in a modal. Measured after the account
+ * doors moved into the masthead: two `h2`s reading "Create your account", one
+ * above the other.
+ *
+ * Context rather than a prop because the components that need to know are
+ * reached through intermediaries (`UnlockAnyAccount` renders one of two
+ * children), and threading a boolean through those only to describe where the
+ * caller put them is how the two copies drift.
+ */
+const InDialog = createContext(false);
+
+export function useInDialog() {
+  return useContext(InDialog);
+}
+
 export function Dialog({
   open,
   onClose,
@@ -1294,9 +1316,35 @@ export function Dialog({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  /*
+   * Mounted, so the portal is only reached on the client.
+   *
+   * `createPortal` needs a real `document.body`, which does not exist during
+   * the server render, and returning different trees on the two passes is a
+   * hydration mismatch. A dialog is never open on first paint anyway.
+   */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  return (
+  if (!open || !mounted) return null;
+
+  /*
+   * PORTALLED TO `document.body`, AND THAT IS A CORRECTNESS FIX RATHER THAN
+   * TIDINESS.
+   *
+   * `position: fixed` is resolved against the nearest ancestor that has a
+   * `transform`, `filter` or `backdrop-filter` — not against the viewport.
+   * The masthead is `sticky ... backdrop-blur-md`, so when `AccountControl`
+   * began rendering the create-account dialog from inside it, `inset-0`
+   * resolved to the header's box. Measured: the overlay came out **1280x64**
+   * instead of 1280x900, and the panel centred on a 64px bar with its top at
+   * -346px — most of the form off the top of the screen, a sliver visible in
+   * the middle. Nothing about the dialog's own classes was wrong.
+   *
+   * Any component rendering a dialog from inside blurred or transformed chrome
+   * would hit this, so the escape belongs here once rather than in each caller.
+   */
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
@@ -1325,10 +1373,13 @@ export function Dialog({
             </svg>
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto flex-1">{children}</div>
+        <div className="px-5 py-4 overflow-y-auto flex-1">
+          <InDialog.Provider value={true}>{children}</InDialog.Provider>
+        </div>
         {footer && <div className="px-5 py-3.5 border-t border-border flex justify-end gap-2 shrink-0">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

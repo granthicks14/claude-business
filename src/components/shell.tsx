@@ -547,9 +547,26 @@ function AccountControl() {
             is the primary action for the people who do not have one, and they
             are the majority of the people who see this.
           */}
-          <Button variant="ghost" size="sm" onClick={doors.openSignIn} className="hidden sm:inline-flex">
-            Sign in
-          </Button>
+          {/*
+            The hiding lives on a wrapper, not on the Button.
+
+            `hidden sm:inline-flex` on the Button itself does not work: the
+            component's own base class is `inline-flex`, so two unprefixed
+            display utilities collide and CSS source order decides — which it
+            did, against us. Measured at 320px: Sign in computed to
+            `display: flex` at 72px wide, and the cluster ran 70px past the
+            right edge, pushing the menu button off screen. That is the exact
+            failure the Simple/Detail control was moved into the mobile menu to
+            avoid, reintroduced by putting two more buttons beside it.
+
+            A span carries no display utility of its own, so the responsive
+            rule is unopposed.
+          */}
+          <span className="hidden sm:inline-flex">
+            <Button variant="ghost" size="sm" onClick={doors.openSignIn}>
+              Sign in
+            </Button>
+          </span>
           {/*
             One accessible name, not two.
 

@@ -733,7 +733,59 @@ async function main() {
 
         const found = await page.evaluate(COLLECT, { SCALE_IN_PAGE: SCALE, DISPLAY_FLOOR_IN_PAGE: DISPLAY_FLOOR });
         found.occluded = await occludedAcrossScroll(page);
+        /*
+         * HORIZONTAL OVERFLOW, WHICH THIS SWEEP DID NOT MEASURE FOR A LONG
+         * TIME.
+         *
+         * CLAUDE.md has carried "no horizontal overflow at 390px" as a
+         * convention since the design system was written, and nothing checked
+         * it. The cost came due when the account doors went into the masthead:
+         * at 320px the control cluster ran **70px** past the right edge and
+         * pushed the menu button off the screen — the identical failure that
+         * moved Simple/Detail into the mobile menu — and this file swept `/`
+         * at 320 and called it a PASS.
+         *
+         * One pixel of tolerance because subpixel layout rounding can report a
+         * scrollWidth a hair over the viewport on a page that is visibly fine.
+         */
+        found.overflowX = await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
         const label = `${route} (${theme} ${width})`;
+
+        if (found.overflowX > 1) {
+          const worst = await page.evaluate(() => {
+            let bad = null;
+            /*
+             * Content inside a horizontal scroller is allowed to be wider than
+             * the viewport — that is the design rule, not a defect. Without
+             * this the reporter names the widest element on the page, which
+             * after a table is correctly wrapped is the table, and the actual
+             * offender stays hidden. That cost one wrong fix.
+             */
+            const scrollers = [...document.querySelectorAll("body *")].filter((el) => {
+              const ox = getComputedStyle(el).overflowX;
+              return ox === "auto" || ox === "scroll" || ox === "hidden";
+            });
+            for (const el of document.querySelectorAll("body *")) {
+              const r = el.getBoundingClientRect();
+              if (r.width === 0) continue;
+              if (scrollers.some((sc) => sc !== el && sc.contains(el))) continue;
+              if (r.right > window.innerWidth + 1 && (!bad || r.right > bad.right)) {
+                bad = {
+                  right: Math.round(r.right),
+                  what: el.tagName + "." + String(el.className || "").slice(0, 50),
+                  text: (el.textContent || "").trim().slice(0, 40),
+                };
+              }
+            }
+            return bad;
+          });
+          fail(
+            `${label}: overflows horizontally by ${found.overflowX}px`,
+            worst ? `${worst.what} reaches ${worst.right}px — "${worst.text}"` : "",
+          );
+        }
 
         if (found.gradients.length > LIMITS.gradients) {
           fail(`${label}: ${found.gradients.length} gradient background(s)`, found.gradients.slice(0, 3).join("\n      "));
@@ -807,6 +859,7 @@ async function main() {
           found.primaries <= LIMITS.primaries &&
           found.occluded.length === 0 &&
           found.offScale.length === 0 &&
+          found.overflowX <= 1 &&
           unreadable.length === 0
         ) {
           pass(
@@ -989,6 +1042,80 @@ async function main() {
         else pass("motion " + mode + " collapses movement and hides nothing", m.seen + " elements");
       }
       await context.close();
+    }
+
+
+    /* ================================================= the dialog escapes == */
+
+    /*
+     * A DIALOG MUST FILL THE VIEWPORT, NOT ITS PARENT.
+     *
+     * `position: fixed` resolves against the nearest ancestor carrying a
+     * `transform`, `filter` or `backdrop-filter` — not against the viewport.
+     * The masthead is `sticky ... backdrop-blur-md`, so the moment the account
+     * doors were rendered from inside it the overlay measured **1280x64** and
+     * the panel centred on the header with its top at **-346px**: most of the
+     * create-account form above the top of the screen, a sliver visible in the
+     * middle. `Dialog` portals to `document.body` for this reason.
+     *
+     * Asserted on the overlay's geometry rather than on the portal, because
+     * the portal is the current fix and the requirement is that the dialog is
+     * reachable — a later refactor may satisfy it another way.
+     */
+    {
+      console.log("\n--- dialogs ---");
+      for (const [w, h] of [[1280, 900], [320, 640]]) {
+        const context = await browser.newContext({ viewport: { width: w, height: h } });
+        const page = await context.newPage();
+        await page.goto(ORIGIN + "/", { waitUntil: "networkidle" });
+
+        const opener = page.getByRole("button", { name: "Create account", exact: true }).first();
+        if ((await opener.count()) === 0) {
+          fail("dialogs (" + w + "): no Create account control in the masthead");
+          await context.close();
+          continue;
+        }
+        await opener.click();
+        await page.waitForSelector('[role="dialog"]');
+        /* Let the entrance settle — mid-animation geometry is not the resting state. */
+        await page.waitForTimeout(600);
+
+        const m = await page.evaluate(() => {
+          const d = document.querySelector('[role="dialog"]');
+          const overlay = d.parentElement;
+          const r = d.getBoundingClientRect();
+          const o = overlay.getBoundingClientRect();
+          return {
+            overlayW: Math.round(o.width),
+            overlayH: Math.round(o.height),
+            vw: window.innerWidth,
+            vh: window.innerHeight,
+            onScreen: r.top >= -1 && r.left >= -1 && r.bottom <= window.innerHeight + 1 && r.right <= window.innerWidth + 1,
+            box: Math.round(r.width) + "x" + Math.round(r.height) + " @" + Math.round(r.left) + "," + Math.round(r.top),
+            headings: [...d.querySelectorAll("h1,h2,h3")].map((x) => x.textContent.trim()),
+            overflowX: document.documentElement.scrollWidth - window.innerWidth,
+          };
+        });
+
+        const fillsViewport = Math.abs(m.overlayW - m.vw) <= 1 && Math.abs(m.overlayH - m.vh) <= 1;
+        const dupes = m.headings.length !== new Set(m.headings).size;
+
+        if (!fillsViewport) {
+          fail(
+            "dialog (" + w + "): the overlay is not the viewport",
+            m.overlayW + "x" + m.overlayH + " inside a " + m.vw + "x" + m.vh + " window — it is resolving against a transformed ancestor",
+          );
+        } else if (!m.onScreen) {
+          fail("dialog (" + w + "): the panel is not fully on screen", m.box);
+        } else if (dupes) {
+          fail("dialog (" + w + "): the same heading twice", m.headings.join(" / "));
+        } else if (m.overflowX > 1) {
+          fail("dialog (" + w + "): opening it overflows the page by " + m.overflowX + "px");
+        } else {
+          pass("the create-account dialog fills the viewport at " + w + "px", m.box);
+        }
+        await context.close();
+      }
     }
 
     await browser.close();

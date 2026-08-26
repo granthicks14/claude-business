@@ -258,8 +258,15 @@ function CostAudit() {
           ))}
         </ol>
         <div className="mt-4">
+          {/*
+            Kept short because buttons are `whitespace-nowrap`.
+
+            "Change which system generates results" cannot wrap, so at 320px it
+            measured 293px and pushed the page 14px wider than the viewport.
+            The surrounding list already says what "this" is.
+          */}
           <LinkButton href="/settings" size="sm">
-            Change which system generates results
+            Change this in Settings
           </LinkButton>
         </div>
       </Card>
@@ -269,7 +276,20 @@ function CostAudit() {
 
 function Table({ entries }: { entries: Entry[] }) {
   return (
-    <table className="w-full text-sm">
+    /*
+     * The table scrolls, the page does not.
+     *
+     * Five columns cannot fit 320px and should not try — squeezing them makes
+     * every cell a two-character column. The design rules say wide content
+     * scrolls inside its own container, and this is the case they were written
+     * for: measured at 14px of horizontal page overflow at 320px, which drags
+     * the whole layout sideways including the masthead.
+     *
+     * `min-w-3xl` so the columns keep a readable width inside the scroller
+     * instead of collapsing to fit it.
+     */
+    <div className="overflow-x-auto -mx-4 px-4">
+      <table className="w-full min-w-3xl text-sm">
       <thead>
         <tr className="border-b border-border text-left">
           {["Service", "Purpose", "Required?", "Paid?", "Free alternative & status"].map((h) => (
@@ -299,6 +319,7 @@ function Table({ entries }: { entries: Entry[] }) {
           </tr>
         ))}
       </tbody>
-    </table>
+      </table>
+    </div>
   );
 }

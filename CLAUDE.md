@@ -43,7 +43,8 @@ npm test               # all eleven — 687 checks
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
 npm run check:persist  # 51 browser checks: does the work survive every path
-npm run check:visual   # 72 browser checks: look-and-feel, accents, density, motion
+npm run check:visual   # 74 browser checks: look-and-feel, accents, density, motion,
+                       #   horizontal overflow, and dialog geometry
 ```
 
 ## Architecture
@@ -617,6 +618,55 @@ move a number. A register that could suppress a caveat would be a way to ask the
 app to be less careful, which is not a preference this product can offer.
 `test:product` measures the three against each other rather than against
 wording.
+
+### The dialog that rendered inside the masthead
+
+"The box where I'm supposed to put my name and password is very small in the
+centre of the screen." `Dialog`'s own classes were correct and unchanged; what
+changed is where it was rendered from.
+
+`position: fixed` resolves against the nearest ancestor carrying a `transform`,
+`filter` or `backdrop-filter` — **not** against the viewport. The masthead is
+`sticky top-0 ... backdrop-blur-md`, so once `AccountControl` rendered the
+create-account dialog from inside it, `inset-0` resolved to the header's box.
+Measured: the overlay came out **1280x64** instead of 1280x900, and the panel
+centred on a 64px bar with its top at **-346px** — most of the form above the
+top of the screen.
+
+`Dialog` portals to `document.body` now. The escape belongs in the component
+rather than in each caller, because any component rendering a dialog from
+inside blurred or transformed chrome hits the identical thing.
+
+Two more defects fell out of the same investigation:
+
+**`hidden` lost to the component's own display class.** `Sign in` carried
+`hidden sm:inline-flex`, and `Button`'s base class is `inline-flex` — two
+unprefixed display utilities, resolved by CSS source order, which went against
+the `hidden`. It computed to `display: flex` at 320px, the masthead cluster ran
+**70px** past the right edge, and the menu button went off screen: exactly the
+failure that moved Simple/Detail into the mobile menu, reintroduced by putting
+two more buttons beside it. The responsive rule lives on a wrapping `span` now,
+which carries no display utility to lose to.
+
+**Two identical headings.** `CreateAccount` renders its own `Card` and
+`SectionHeader` — right as a whole-page gate, wrong inside a dialog that
+already draws a panel and prints the title. `useInDialog()` is a context
+`Dialog` provides, so the three account panels adapt without a prop threaded
+through `UnlockAnyAccount` to describe where its caller put it.
+
+**And `check:visual` swept `/` at 320px and passed the whole time.** It had
+rules for gradients, blur, shadows, radii, contrast, type scale, cards,
+primaries and occlusion — and none for horizontal overflow, which this file has
+listed as a convention since the design system was written. It measures it on
+every route now, and found a real pre-existing one immediately: `/cost` was
+14px over at 320px, from a `whitespace-nowrap` button whose label could not
+wrap. The five-column table on that page was wrapped in a scroller at the same
+time, which the design rules already required.
+
+The overflow reporter needed a second pass of its own: it named the widest
+element past the edge, which after the table was correctly wrapped was the
+table — inside its own scroller, legitimately wide. It skips scroller
+descendants now. Blaming the wrong element cost one wrong fix.
 
 ### The engine
 

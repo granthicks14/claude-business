@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Icon } from "./icons";
-import { Badge, Button, Card, Dialog, Field, Hi, Input, SectionHeader } from "./ui";
+import { Badge, Button, Card, Dialog, Field, Hi, Input, SectionHeader, useInDialog } from "./ui";
 import { needsAccount } from "@/lib/routes";
 import { actions, clearInMemoryState, emptyState, hydrateFrom, markReadyEmpty, snapshot } from "@/lib/store";
 import { SAMPLE_BUSINESS_ID, sampleBusiness } from "@/lib/sample";
@@ -394,6 +394,43 @@ function SignIn() {
  * an empty picker, because "sign in" with nothing to sign in to is the kind of
  * dead end that makes people assume they have lost something.
  */
+/**
+ * The frame these three panels sit in, which differs by where they are used.
+ *
+ * As a whole-page gate they are a card with their own heading. Inside a dialog
+ * the panel and the heading are already drawn, so repeating both gives a card
+ * in a panel under two identical `h2`s. The description still earns its place
+ * either way — it is the sentence explaining that there is no email and no
+ * password reset — so it survives as prose when the title does not.
+ */
+function Panel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  const inDialog = useInDialog();
+
+  if (inDialog) {
+    return (
+      <div>
+        <p className="text-caption text-muted leading-relaxed mb-4">{description}</p>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="p-5">
+      <SectionHeader title={title} description={description} />
+      {children}
+    </Card>
+  );
+}
+
 export function UnlockAnyAccount({ onDone, onCreate }: { onDone: () => void; onCreate: () => void }) {
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [selected, setSelected] = useState<AccountRecord | null>(null);
@@ -450,11 +487,10 @@ function PickAccount({
   onCreate: () => void;
 }) {
   return (
-    <Card className="p-5">
-      <SectionHeader
-        title="Welcome back"
-        description="Pick your account to unlock it. Everything you saved last time is waiting inside."
-      />
+    <Panel
+      title="Welcome back"
+      description="Pick your account to unlock it. Everything you saved last time is waiting inside."
+    >
       <ul className="space-y-2 mt-1">
         {accounts.map((a) => (
           <li key={a.id}>
@@ -483,7 +519,7 @@ function PickAccount({
           Sharing this device? Give each person their own account — nobody can open anyone else&apos;s.
         </p>
       </div>
-    </Card>
+    </Panel>
   );
 }
 
@@ -524,8 +560,7 @@ function UnlockAccount({
   };
 
   return (
-    <Card className="p-5">
-      <SectionHeader title={`Unlock ${account.label}`} description="Enter the passphrase you chose for this account." />
+    <Panel title={`Unlock ${account.label}`} description="Enter the passphrase you chose for this account.">
       <form onSubmit={submit} className="space-y-3">
         <Field label="Passphrase">
           <Input
@@ -568,7 +603,7 @@ function UnlockAccount({
         sent anywhere, so nothing can recover it. If you have an exported backup file you can create a new account and
         import it.
       </p>
-    </Card>
+    </Panel>
   );
 }
 
@@ -665,11 +700,10 @@ export function CreateAccount({
   };
 
   return (
-    <Card className="p-5">
-      <SectionHeader
-        title={hasOthers ? "Create another account" : "Create your account"}
-        description="No email, no password reset emails, nothing sent anywhere. Just a name for this device and a passphrase that encrypts your work."
-      />
+    <Panel
+      title={hasOthers ? "Create another account" : "Create your account"}
+      description="No email, no password reset emails, nothing sent anywhere. Just a name for this device and a passphrase that encrypts your work."
+    >
 
       {seed && (
         <div className="rail rail-good py-1 mb-4">
@@ -762,7 +796,7 @@ export function CreateAccount({
           )}
         </div>
       </form>
-    </Card>
+    </Panel>
   );
 }
 
