@@ -7,8 +7,9 @@ import { useRouter } from "next/navigation";
 import { PlinkoBoard } from "@/components/plinko/board";
 import { CreateAccount, useAppOpen, useGuest } from "@/components/account-gate";
 import { Ready } from "@/components/page";
-import { Button, Dialog, Eyebrow, LinkButton, Section } from "@/components/ui";
+import { Button, Dialog, Eyebrow, LinkButton, Section, Select } from "@/components/ui";
 import { boardFor, businessBoard, FAIRNESS_NOTE, industryBoard, slotLabels } from "@/lib/plinko/discovery";
+import { INDUSTRIES } from "@/lib/engine/knowledge/industries";
 import type { BusinessSlot, IndustrySlot } from "@/lib/plinko/discovery";
 import { drop as simulate, type Drop } from "@/lib/plinko/physics";
 import { ideaSummary } from "@/lib/idea-summary";
@@ -280,6 +281,50 @@ function Plinko() {
           <p className="text-caption text-muted text-center mt-6" aria-live="polite">
             Dropping…
           </p>
+        )}
+
+        {/*
+          THE FOUNDER WHO ALREADY KNOWS THE INDUSTRY.
+          Walking through the five users the brief names found one real gap:
+          somebody who arrives knowing they want automotive had to play a round
+          of roulette to reach the automotive board, which is the app deciding
+          something they had already decided — the same mistake the ask bar was
+          built to stop. Skipping is not a lesser path; the second board is
+          identical however you reach it.
+          One `select`, below the buttons and after the game, because it is the
+          minority case and §31 is right that this page must not become twenty
+          controls.
+        */}
+        {stage === "industry" && !landed && (
+          <div className="rule mt-8 pt-5 flex flex-wrap items-end gap-3">
+            <div className="min-w-0">
+              <label htmlFor="known-industry" className="block">
+                <Eyebrow>Already know the industry?</Eyebrow>
+              </label>
+              <Select
+                id="known-industry"
+                className="mt-2 max-w-xs"
+                defaultValue=""
+                onChange={(e) => {
+                  const found = INDUSTRIES.find((i) => i.id === e.target.value);
+                  if (!found) return;
+                  setSeenIndustries((prev) => [found.id, ...prev].slice(0, 12));
+                  setIndustry({ industry: found, label: found.label });
+                  setStage("business");
+                  reset();
+                }}
+              >
+                <option value="">Skip to its businesses…</option>
+                {[...INDUSTRIES]
+                  .sort((a, b) => a.label.localeCompare(b.label))
+                  .map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.label}
+                    </option>
+                  ))}
+              </Select>
+            </div>
+          </div>
         )}
       </Section>
 

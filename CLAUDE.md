@@ -44,8 +44,9 @@ npm test               # all twelve — 722 checks
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
 npm run check:persist  # 64 browser checks: does the work survive every path
-npm run check:visual   # 74 browser checks: look-and-feel, accents, density, motion,
+npm run check:visual   # 76 browser checks: look-and-feel, accents, density, motion,
                        #   horizontal overflow, and dialog geometry
+npm run check:play     # the five users, played rather than imagined
 ```
 
 ## Architecture
@@ -752,6 +753,16 @@ Consultancy" — so colliding labels escalate through increasing specificity unt
 the group is genuinely distinct, which itself took two attempts. And the board
 was near-square, so "Drop the ball" shipped below the fold at 1280x900; it is
 capped in `vh` now and the page uses the compact-header exception.
+
+**The five users are a script, not a paragraph.** `check:play` walks the brief's
+own five — no idea what they want, just poking, wants a real opportunity,
+already knows the industry, on a phone — and a review like that is worth
+exactly as much as its willingness to fail. Written as prose it becomes a
+description of the feature working. Run, it caught the one thing the design had
+genuinely left out: the founder who arrives knowing they want automotive had to
+play a round of roulette to reach the automotive board, which is the app
+deciding something they had already decided. There is a select for that now, and
+the second board is identical however you reach it.
 
 ### The engine
 
