@@ -35,6 +35,14 @@ import type {
   SelectedBusiness,
   StrategyVersion,
 } from "./types";
+import { DEFAULT_ADVICE, type Advice } from "./types";
+import {
+  DEFAULT_APPEARANCE,
+  applyAppearance,
+  readAppearance,
+  storeAppearance,
+  type Appearance,
+} from "./appearance";
 import type { BusinessIntent } from "./business-intent";
 import { BUSINESS_MODELS } from "./engine/knowledge/models";
 import { INDUSTRIES } from "./engine/knowledge/industries";
@@ -439,6 +447,21 @@ function migrate(raw: unknown): AppState {
 export function hydrateFrom(raw: unknown) {
   state = migrate(raw);
   hydrated = true;
+
+  /*
+   * The account's appearance wins over whatever this browser was set to.
+   *
+   * Both copies exist for a reason — see `lib/appearance.ts` — and this is the
+   * moment the precedence between them is decided. Somebody who set their theme
+   * on a laptop and restores the backup on a phone should see their theme, not
+   * the phone's leftover default; and the browser key is rewritten so the next
+   * pre-paint script agrees rather than flashing back for one frame.
+   */
+  if (state.settings.appearance) {
+    applyAppearance(state.settings.appearance);
+    storeAppearance(state.settings.appearance);
+  }
+
   /*
    * Watch for other tabs from the moment there is something to keep in sync.
    *
@@ -960,6 +983,45 @@ export const actions = {
 
   setExperienceMode(experienceMode: AppState["settings"]["experienceMode"]) {
     update((s) => ({ ...s, settings: { ...s.settings, experienceMode } }));
+  },
+
+  /**
+   * Appearance, written to the state and to the browser at the same moment.
+   *
+   * Both, because they answer different questions: the state copy travels with
+   * the account, the browser copy is what the pre-paint script can read while
+   * the vault is still locked. Applying it here rather than in the component
+   * means every caller gets the live change for free.
+   */
+  setAppearance(patch: Partial<Appearance>) {
+    update((s) => {
+      const next = readAppearance({ ...(s.settings.appearance ?? DEFAULT_APPEARANCE), ...patch });
+      applyAppearance(next);
+      storeAppearance(next);
+      return { ...s, settings: { ...s.settings, appearance: next } };
+    });
+  },
+
+  /**
+   * Back to the defaults — and *only* the four appearance fields.
+   *
+   * Named narrowly on purpose. A "reset" that quietly took businesses, ideas or
+   * the founder profile with it would be the most expensive misunderstanding
+   * available on a settings page.
+   */
+  resetAppearance() {
+    update((s) => {
+      applyAppearance(DEFAULT_APPEARANCE);
+      storeAppearance(DEFAULT_APPEARANCE);
+      return { ...s, settings: { ...s.settings, appearance: DEFAULT_APPEARANCE } };
+    });
+  },
+
+  setAdvice(patch: Partial<Advice>) {
+    update((s) => ({
+      ...s,
+      settings: { ...s.settings, advice: { ...DEFAULT_ADVICE, ...s.settings.advice, ...patch } },
+    }));
   },
 
   /** Merge-patch the business's own identity. Creates it on first write. */

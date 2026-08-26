@@ -20,7 +20,8 @@ import { diagnoseStuck, nextAction } from "../engine/actions";
 import { list, money, openingPrice, resolveContext, titleCase } from "../engine/context";
 import type { IdeaContext } from "../engine/context";
 import type { Epistemics } from "../intel/epistemics";
-import type { SelectedBusiness } from "../types";
+import { TERMS, type Term } from "../glossary";
+import type { AdviceTone, SelectedBusiness } from "../types";
 
 import { TOPIC_LABEL } from "./classify";
 import type { Facts, PlannedAspect } from "./plan";
@@ -732,6 +733,127 @@ What is normal and rarely said: the first customer takes far longer than expecte
 /* Composition                                                                 */
 /* -------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------- */
+/* The register                                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * WHAT `settings.advice.tone` ACTUALLY DOES.
+ *
+ * It shipped as three options with three specific promises written next to
+ * them — "terms defined as they appear", "assumes the vocabulary", "leads with
+ * the numbers" — read by nothing. That is the Simple/Detail failure this repo
+ * already has a section about, except worse: an inert toggle disappoints,
+ * whereas a label making a claim the code does not honour is untrue.
+ *
+ * THE RULE THAT KEEPS IT HONEST: register changes how something is said, never
+ * what is said. None of these branches may add a finding, drop a caveat or move
+ * a number. `plain` appends definitions of words already used; `professional`
+ * appends nothing; `analytical` states the grade the section already carries.
+ * A register that could suppress a caveat would be a way to ask the app to be
+ * less careful, which is not a preference this product can offer.
+ *
+ * Applied in `write()` rather than inside each writer, because there are
+ * fifty-four writers and a preference every one of them had to remember is a
+ * preference that would be wrong in some of them within a month.
+ */
+
+/**
+ * Glossary terms that appear in a body, most specific first.
+ *
+ * Matched against `TERMS` directly rather than against `Facts.retrieved`, which
+ * is keyed on the *question*. Somebody asking "am I making money" never types
+ * "contribution margin", and that is exactly the word the answer comes back
+ * with — so defining what they asked about would miss the one term they needed.
+ *
+ * Longest first so "unit economics" wins over "unit", and capped at two: a
+ * section trailing five definitions is a textbook, not an answer.
+ */
+function termsUsedIn(body: string): Term[] {
+  const haystack = body.toLowerCase();
+  const found: { term: Term; at: number; len: number }[] = [];
+
+  for (const t of TERMS) {
+    for (const name of [t.term, ...(t.aka ?? [])]) {
+      const needle = name.toLowerCase();
+      /*
+       * Word boundaries by hand rather than by RegExp, because a glossary term
+       * is user-facing data and several contain characters a pattern would
+       * read as syntax.
+       */
+      const at = indexOfWord(haystack, needle);
+      if (at >= 0) {
+        found.push({ term: t, at, len: needle.length });
+        break;
+      }
+    }
+  }
+
+  found.sort((a, b) => b.len - a.len || a.at - b.at);
+
+  const out: Term[] = [];
+  for (const f of found) {
+    if (out.some((t) => t.id === f.term.id)) continue;
+    /*
+     * Skip a term whose name sits inside one already taken — otherwise
+     * "unit economics" drags in "unit" and the reader gets the same sentence
+     * explained twice at two levels of usefulness.
+     */
+    if (out.some((t) => t.term.toLowerCase().includes(f.term.term.toLowerCase()))) continue;
+    out.push(f.term);
+    if (out.length === 2) break;
+  }
+  return out;
+}
+
+/** `haystack.indexOf(needle)`, but only when it lands on a whole word. */
+function indexOfWord(haystack: string, needle: string): number {
+  const isWord = (ch: string) => /[a-z0-9]/.test(ch);
+  let from = 0;
+  for (;;) {
+    const at = haystack.indexOf(needle, from);
+    if (at < 0) return -1;
+    const before = at === 0 ? "" : haystack[at - 1];
+    const after = haystack[at + needle.length] ?? "";
+    if (!isWord(before) && !isWord(after)) return at;
+    from = at + 1;
+  }
+}
+
+/**
+ * How sure this section is, in a sentence.
+ *
+ * The grade is on screen as a badge already. Saying it in words is not
+ * duplication for the reader who chose this register: a badge reading
+ * "assumption" is a label, and "this is believed and untested — it is what an
+ * experiment would kill" is the reason to go and test it.
+ */
+const GRADE_IN_WORDS: Record<Epistemics, string> = {
+  fact: "Stated as fact: you entered this, or it is true by construction.",
+  evidence: "Grounded in evidence: something recorded that actually happened.",
+  inference: "An inference drawn from that evidence — reasonable, not proven.",
+  estimate: "An estimate: the arithmetic is right, the inputs may not be.",
+  assumption: "An assumption — believed and untested. This is what an experiment would kill.",
+  scenario: "A scenario, deliberately. A what-if, never a prediction.",
+  unknown: "Not known. Nothing recorded bears on it yet.",
+};
+
+function applyRegister(body: string, grade: Epistemics, tone: AdviceTone | undefined): string {
+  /*
+   * `professional` is the bare body, so it is also the safe default for a
+   * stored state carrying a tone this build does not know about.
+   */
+  if (tone === "professional") return body;
+
+  if (tone === "analytical") {
+    return body + "\n\n_" + GRADE_IN_WORDS[grade] + "_";
+  }
+
+  const terms = termsUsedIn(body);
+  if (terms.length === 0) return body;
+  return body + "\n\n" + terms.map((t) => "**" + t.term + "** — " + t.short).join("\n\n");
+}
+
 function write(c: Ctx, planned: PlannedAspect): Section | null {
   const { aspect } = planned;
 
@@ -739,7 +861,7 @@ function write(c: Ctx, planned: PlannedAspect): Section | null {
     return {
       id: aspect.id,
       heading: aspect.heading,
-      body: planned.gap ?? "",
+      body: applyRegister(planned.gap ?? "", "unknown", c.f.tone),
       // A stated gap is not an estimate or an inference — it is the absence of
       // one, and grading it as anything else would misrepresent the whole point.
       grade: "unknown",
@@ -770,7 +892,7 @@ function write(c: Ctx, planned: PlannedAspect): Section | null {
   return {
     id: aspect.id,
     heading: aspect.heading,
-    body,
+    body: applyRegister(body, aspect.grade, c.f.tone),
     grade: aspect.grade,
     reasoner: aspect.reasoner,
     answerable: true,

@@ -51,7 +51,14 @@ interface CoachContext {
  * The signature is unchanged so `/coach` did not have to move.
  */
 export function answer(question: string, { state, business, journal }: CoachContext): string {
-  const understanding = understand(question, business, state.profile, state.ideas);
+  const understanding = understand(
+    question,
+    business,
+    state.profile,
+    state.ideas,
+    state.settings.advice?.responseStyle,
+    state.settings.advice?.tone,
+  );
   const composed = compose(understanding);
   const body = render(composed);
 

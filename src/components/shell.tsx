@@ -9,7 +9,9 @@ import { Icon, type IconName } from "./icons";
 import { Wedge, Wordmark } from "./brand";
 import { stageLabel } from "./journey";
 import { Button, Dialog, ToastProvider } from "./ui";
-import { AccountGate, signOut } from "./account-gate";
+import { AccountGate, signOut, useSignInDoors } from "./account-gate";
+import { currentAccount } from "@/lib/vault";
+import { applyAppearance, loadAppearance, watchSystemTheme } from "@/lib/appearance";
 import { withBusiness } from "@/lib/business-param";
 import { actions, activeBusiness, useAppState } from "@/lib/store";
 import { isGuest, isOpen, subscribeVault } from "@/lib/vault";
@@ -41,7 +43,26 @@ import { overflowSections, sectionFor, topSections, useNav, type NavSection } fr
  * suite. This is a second presentation of it, which is the whole reason that
  * function was pulled out of the hook.
  */
+/**
+ * Keep the painted appearance in step with the stored one.
+ *
+ * Two jobs. The `matchMedia` listener is what makes "system" mean *follow* the
+ * system rather than *sample it once at page load*. And re-applying on change
+ * covers the case the inline script cannot: a locked visitor who unlocks into
+ * an account whose appearance differs from this browser's.
+ */
+function useAppearance() {
+  const appearance = useAppState((s) => s.settings.appearance);
+
+  useEffect(() => {
+    const resolved = appearance ?? loadAppearance();
+    applyAppearance(resolved);
+    return watchSystemTheme(() => appearance ?? loadAppearance());
+  }, [appearance]);
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
+  useAppearance();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const sections = useNav();
@@ -183,7 +204,7 @@ function Masthead({ menuOpen, onToggleMenu }: { menuOpen: boolean; onToggleMenu:
         <div className="flex items-center gap-1 ml-auto lg:ml-0 shrink-0">
           <ModeToggle className="hidden sm:inline-flex mr-1" />
           <ThemeToggle />
-          <LockNow />
+          <AccountControl />
           <button
             onClick={onToggleMenu}
             aria-expanded={menuOpen}
@@ -497,113 +518,216 @@ function ModeToggle({ className = "" }: { className?: string }) {
  *
  * Hidden while locked, because a lock button on a sign-in screen is noise.
  */
-function LockNow() {
+/**
+ * THE ONE CONTROL THAT ANSWERS "AM I SIGNED IN, AND HOW DO I GET IN?"
+ *
+ * The masthead carried Simple/Detail, a theme toggle and an unlabelled padlock.
+ * There was no Create account, no Sign in, and no indication of which account
+ * you were in — so a first-time visitor on any route but the landing page had
+ * no way to make one, and a returning one had no way back.
+ *
+ * One slot, three states. Locked: the two doors. Guest: the same doors, because
+ * that is exactly who needs them, with the work-preserving path behind them.
+ * Unlocked: the account, named, with everything about it behind one menu.
+ */
+function AccountControl() {
   const open = useAppOpen();
   const guest = useGuest();
-  const [asking, setAsking] = useState(false);
-  if (!open) return null;
+  const doors = useSignInDoors();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [locking, setLocking] = useState(false);
+  const account = open && !guest ? currentAccount() : null;
+
+  if (!open || guest) {
+    return (
+      <>
+        <div className="flex items-center gap-1.5">
+          {/*
+            Sign in first in the DOM but second in weight: creating an account
+            is the primary action for the people who do not have one, and they
+            are the majority of the people who see this.
+          */}
+          <Button variant="ghost" size="sm" onClick={doors.openSignIn} className="hidden sm:inline-flex">
+            Sign in
+          </Button>
+          {/*
+            One accessible name, not two.
+
+            With both spans in the button the computed name was "Create
+            accountSign up" — the responsive label leaking into assistive
+            technology, and into anything matching on the name.
+          */}
+          <Button variant="primary" size="sm" onClick={doors.openCreate} aria-label="Create account">
+            <span className="hidden sm:inline" aria-hidden="true">Create account</span>
+            <span className="sm:hidden" aria-hidden="true">Sign up</span>
+          </Button>
+        </div>
+        {doors.dialog}
+      </>
+    );
+  }
 
   return (
     <>
-      <button
-        onClick={() => setAsking(true)}
-        title={
-          guest
-            ? "Stop looking around — this session and everything in it is discarded"
-            : "Lock or sign out"
-        }
-        aria-label={guest ? "End this session" : "Lock or sign out"}
-        className="h-9 px-2.5 inline-flex items-center gap-1.5 rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
-      >
-        <svg viewBox="0 0 24 24" className="size-[17px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <rect x="4" y="10.5" width="16" height="10" rx="2" />
-          <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
-        </svg>
-        {/*
-          A LABEL, AND A QUESTION BEFORE IT ACTS.
+      <div className="relative">
+        <button
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-label={`Account: ${account?.label ?? "signed in"}`}
+          className="h-9 pl-1 pr-2 inline-flex items-center gap-2 rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
+        >
+          <span className="size-7 rounded-full bg-signal-soft text-signal-text grid place-items-center text-caption font-semibold shrink-0">
+            {(account?.label ?? "?").slice(0, 1).toUpperCase()}
+          </span>
+          {/* The name is hidden below `sm`: the 320px masthead is already
+              measured and tight, and the initial identifies the account. */}
+          <span className="hidden sm:inline text-sm font-medium max-w-28 truncate">{account?.label}</span>
+        </button>
 
-          This was an unlabelled 36px padlock wired straight to `signOut()`,
-          which calls `forgetKeys()` — so one stray click on an ambiguous icon
-          silently deleted a week-long "stay signed in on this device" key, with
-          no confirmation and nothing said. That is the most plausible cause of
-          "it keeps logging me out even though I ticked the box", and it is why
-          the two very different things this button did are now two choices.
-        */}
-        <span className="hidden sm:inline text-sm font-medium">{guest ? "End" : "Lock"}</span>
-      </button>
+        {menuOpen && (
+          <>
+            {/* A click anywhere else closes it, which is what a menu does. */}
+            <button
+              aria-hidden="true"
+              tabIndex={-1}
+              onClick={() => setMenuOpen(false)}
+              className="fixed inset-0 z-40 cursor-default"
+            />
+            <div
+              role="menu"
+              className="absolute right-0 top-full mt-1.5 z-50 min-w-56 rounded-lg border border-border bg-surface shadow-lg py-1.5"
+            >
+              <p className="px-3 py-1.5 text-caption text-faint">Signed in as {account?.label}</p>
+              <div className="rule my-1.5" />
+              {[
+                { href: "/profile", label: "Founder profile" },
+                { href: "/settings", label: "Settings" },
+                { href: "/lab?tab=shortlist", label: "Saved ideas" },
+                { href: "/account", label: "Account and security" },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  role="menuitem"
+                  onClick={() => setMenuOpen(false)}
+                  className="block px-3 py-2 text-sm hover:bg-surface-2 transition-colors"
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div className="rule my-1.5" />
+              <button
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setLocking(true);
+                }}
+                className="block w-full text-left px-3 py-2 text-sm hover:bg-surface-2 transition-colors"
+              >
+                Lock or sign out
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
-      {asking && (
-        <Dialog open onClose={() => setAsking(false)} title={guest ? "End this session?" : "Lock, or sign out?"}>
-          {guest ? (
-            <div className="space-y-4">
-              <p className="text-body leading-relaxed">
-                You are browsing without an account, so everything in this session
-                — including anything you have made — is discarded and cannot be
-                recovered.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="danger" onClick={() => signOut()}>
-                  End it and discard everything
-                </Button>
-                <Button variant="ghost" onClick={() => setAsking(false)}>
-                  Keep looking around
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              <div className="rule pb-4">
-                <p className="text-body font-medium">Lock now</p>
-                <p className="text-caption text-muted mt-1 leading-relaxed">
-                  Asks for your passphrase again straight away. This device stays
-                  remembered, so it is the passphrase and not the week.
-                </p>
-                <Button className="mt-3" variant="primary" onClick={() => signOut({ keepDevice: true })}>
-                  Lock
-                </Button>
-              </div>
-              <div>
-                <p className="text-body font-medium">Sign out of this device</p>
-                <p className="text-caption text-muted mt-1 leading-relaxed">
-                  Also stops this browser remembering you, so the next visit
-                  starts from the sign-in screen. Nothing is deleted — your work
-                  stays encrypted here and your passphrase opens it again.
-                </p>
-                <Button className="mt-3" variant="secondary" onClick={() => signOut()}>
-                  Sign out
-                </Button>
-              </div>
-            </div>
-          )}
-        </Dialog>
-      )}
+      {locking && <LockDialog onClose={() => setLocking(false)} />}
     </>
   );
 }
 
+/**
+ * Locking and signing out, kept apart.
+ *
+ * They were one unlabelled padlock wired straight to `signOut()`, which calls
+ * `forgetKeys()` — so one stray click silently deleted a week-long "stay signed
+ * in on this device" key. Two different intentions, two choices, and the
+ * destructive one says what it costs.
+ */
+function LockDialog({ onClose }: { onClose: () => void }) {
+  const guest = useGuest();
+
+  return (
+    <Dialog open onClose={onClose} title={guest ? "End this session?" : "Lock, or sign out?"}>
+      {guest ? (
+        <div className="space-y-4">
+          <p className="text-body leading-relaxed">
+            You are browsing without an account, so everything in this session —
+            including anything you have made — is discarded and cannot be
+            recovered.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="danger" onClick={() => signOut()}>
+              End it and discard everything
+            </Button>
+            <Button variant="ghost" onClick={onClose}>
+              Keep looking around
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <div className="rule pb-4">
+            <p className="text-body font-medium">Lock now</p>
+            <p className="text-caption text-muted mt-1 leading-relaxed">
+              Asks for your passphrase again straight away. This device stays
+              remembered, so it is the passphrase and not the week.
+            </p>
+            <Button className="mt-3" variant="primary" onClick={() => signOut({ keepDevice: true })}>
+              Lock
+            </Button>
+          </div>
+          <div>
+            <p className="text-body font-medium">Sign out of this device</p>
+            <p className="text-caption text-muted mt-1 leading-relaxed">
+              Also stops this browser remembering you, so the next visit starts
+              from the sign-in screen. Nothing is deleted — your work stays
+              encrypted here and your passphrase opens it again.
+            </p>
+            <Button className="mt-3" variant="secondary" onClick={() => signOut()}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+      )}
+    </Dialog>
+  );
+}
+
+/**
+ * The quick light/dark flip, routed through the one appearance system.
+ *
+ * It used to write `abb:theme` and toggle the class itself, which was fine
+ * while a binary toggle was the whole of theming. Now that Settings owns
+ * theme, accent, density and motion together, a second writer would drift:
+ * flip here, open Settings, and the radio would still be showing whatever it
+ * last read.
+ *
+ * So this is a shortcut into `actions.setAppearance`, not a parallel path. It
+ * only ever picks light or dark — "system" is a deliberate choice made in
+ * Settings, and silently un-setting it because somebody wanted one dark
+ * evening would be the toggle overruling a preference.
+ */
 function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const stored = useAppState((s) => s.settings.appearance?.theme);
+  const [dark, setDark] = useState(true);
 
   useEffect(() => {
-    setTheme(document.documentElement.classList.contains("dark") ? "dark" : "light");
-  }, []);
+    setDark(document.documentElement.classList.contains("dark"));
+  }, [stored]);
 
   return (
     <button
       onClick={() => {
-        const next = theme === "dark" ? "light" : "dark";
-        setTheme(next);
-        document.documentElement.classList.toggle("dark", next === "dark");
-        try {
-          localStorage.setItem("abb:theme", next);
-        } catch {
-          /* storage unavailable — the toggle still works for this session */
-        }
+        const next = dark ? "light" : "dark";
+        setDark(!dark);
+        actions.setAppearance({ theme: next });
       }}
-      aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+      aria-label={`Switch to ${dark ? "light" : "dark"} theme`}
       className="size-9 grid place-items-center rounded-lg text-muted hover:bg-surface-2 hover:text-text transition-colors"
     >
-      {theme === "dark" ? <Icon.sun className="size-[17px]" /> : <Icon.moon className="size-[17px]" />}
+      {dark ? <Icon.sun className="size-[17px]" /> : <Icon.moon className="size-[17px]" />}
     </button>
   );
 }

@@ -1,4 +1,4 @@
-import type { BusinessIdea, FounderProfile, SelectedBusiness } from "../types";
+import type { AdviceTone, BusinessIdea, FounderProfile, ResponseStyle, SelectedBusiness } from "../types";
 import { classify, TOPIC_LABEL, type Reading, type TopicId } from "./classify";
 import { retrieve, type Retrieved } from "./retrieve";
 import { planAnswer, type Facts, type Plan } from "./plan";
@@ -82,10 +82,14 @@ export function understand(
   profile: FounderProfile,
   /** The founder's other saved ideas. Only opportunity cost reads them. */
   savedIdeas: BusinessIdea[] = [],
+  /** From `settings.advice`. Read once here so no writer has to know about it. */
+  responseStyle?: ResponseStyle,
+  /** Also from `settings.advice`. Changes the register, never the content. */
+  tone?: AdviceTone,
 ): Understanding {
   const reading = classify(question);
   const retrieved = retrieve(question);
-  const facts = factsFrom(business, profile, savedIdeas, reading, retrieved);
+  const facts = { ...factsFrom(business, profile, savedIdeas, reading, retrieved), responseStyle, tone };
   const plan = planAnswer(facts);
 
   /*

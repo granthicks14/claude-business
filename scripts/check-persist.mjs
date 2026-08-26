@@ -72,13 +72,19 @@ const storedKeys = (page) => page.evaluate(() => Object.keys(localStorage).filte
 const mentions = async (page, text) => (await page.locator("body").innerText()).includes(text);
 
 async function createAccountOnScreen(page, label) {
+  /*
+   * Scoped to the form, because the masthead now carries a "Create account"
+   * button too — which is the feature, and which makes an unscoped match
+   * ambiguous the moment it renders.
+   */
   await page.getByLabel("Account name").fill(label);
   await page.getByLabel("Passphrase", { exact: true }).fill(PASSPHRASE);
   await page.getByLabel("Passphrase again").fill(PASSPHRASE);
   await page.getByRole("radio", { name: /stay signed in on this device/i }).check();
   await page.getByRole("checkbox").last().check();
-  await page.getByRole("button", { name: "Create account" }).click();
-  await page.getByRole("button", { name: "Create account" }).waitFor({ state: "detached", timeout: 25_000 });
+  const submit = page.locator("form").getByRole("button", { name: "Create account" });
+  await submit.click();
+  await submit.waitFor({ state: "detached", timeout: 25_000 });
 }
 
 async function main() {
@@ -238,8 +244,12 @@ async function main() {
      * week-long device key. One stray click ended a session somebody had
      * deliberately chosen, silently.
      */
-    const lock = page2.getByRole("button", { name: /lock or sign out/i }).first();
-    if (await lock.count()) {
+    /* Locking lives inside the account menu now, which is where it belongs. */
+    const menu = page2.getByRole("button", { name: /^Account:/i }).first();
+    if (await menu.count()) {
+      await menu.click();
+      await page2.waitForTimeout(300);
+      const lock = page2.getByRole("menuitem", { name: /lock or sign out/i }).first();
       await lock.click();
       await page2.waitForTimeout(500);
       check(
@@ -265,7 +275,7 @@ async function main() {
       await page2.waitForTimeout(800);
       check(await mentions(page2, "grooming"), "and the work is all still there after unlocking");
     } else {
-      fail("no lock control found on /account");
+      fail("no account menu found in the masthead");
     }
 
     /* ============================================== the two #109 regressions == */
@@ -342,6 +352,92 @@ async function main() {
     await fresh2.waitForTimeout(800);
     check(await mentions(fresh2, "Create account"), "a stranger is offered an account on the landing page");
     check(await mentions(fresh2, "Sign in"), "and a way back in if they already have one");
+    /* =============================================== appearance preferences == */
+    console.log("\n--- settings, and whether they stay set ---");
+
+    const styled = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await styled.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
+    await createAccountOnScreen(styled, "Stylist");
+    await styled.waitForTimeout(800);
+
+    await styled.goto(`${ORIGIN}/settings?tab=appearance`, { waitUntil: "networkidle" });
+    await styled.waitForTimeout(800);
+    check(await mentions(styled, "Make Groundwork yours"), "Settings opens on Appearance");
+
+    const read = () =>
+      styled.evaluate(() => {
+        const r = document.documentElement;
+        return {
+          theme: r.dataset.theme,
+          accent: r.dataset.accent,
+          density: r.dataset.density,
+          motion: r.dataset.motion,
+          dark: r.classList.contains("dark"),
+          signal: getComputedStyle(r).getPropertyValue("--signal").trim(),
+        };
+      });
+
+    const before = await read();
+    await styled.getByRole("radio", { name: "Rose" }).click();
+    await styled.getByRole("radio", { name: "Compact" }).click();
+    await styled.getByRole("radio", { name: "Off" }).click();
+    await styled.getByRole("radio", { name: "Light" }).click();
+    await styled.waitForTimeout(600);
+
+    const after = await read();
+    check(after.accent === "rose", "the accent applies the moment it is pressed", after.accent);
+    check(after.signal !== before.signal, "and it really repaints --signal", `${before.signal} → ${after.signal}`);
+    check(after.density === "compact", "density applies live", after.density);
+    check(after.motion === "off", "motion applies live", after.motion);
+    check(after.dark === false, "and the theme switches without a reload");
+
+    await styled.reload({ waitUntil: "networkidle" });
+    await styled.waitForTimeout(1000);
+    const reloaded = await read();
+    check(
+      reloaded.accent === "rose" && reloaded.density === "compact" && reloaded.motion === "off" && !reloaded.dark,
+      "every choice survives a refresh, with no flash of the old one",
+      JSON.stringify(reloaded),
+    );
+
+    /* Reset touches appearance and nothing else. */
+    await styled.getByRole("button", { name: "Reset appearance" }).click();
+    await styled.waitForTimeout(600);
+    const reset = await read();
+    check(reset.accent === "azure" && reset.density === "comfortable" && reset.motion === "full", "reset returns the defaults", JSON.stringify(reset));
+
+    const strangerStyle = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await strangerStyle.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    await strangerStyle.waitForTimeout(600);
+    const theirs = await strangerStyle.evaluate(() => document.documentElement.dataset.accent);
+    check(theirs === "azure", "another browser gets the defaults, not this account's", String(theirs));
+
+    /* ==================================================== the account control == */
+    console.log("\n--- the account control in the masthead ---");
+
+    const anon = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await anon.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    await anon.waitForTimeout(600);
+    check(
+      (await anon.getByRole("button", { name: "Create account" }).count()) > 0,
+      "a signed-out visitor sees Create account in the masthead",
+    );
+    check((await anon.getByRole("button", { name: "Sign in" }).count()) > 0, "and Sign in beside it");
+
+    await styled.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    await styled.waitForTimeout(800);
+    check(
+      (await styled.getByRole("button", { name: /Account: Stylist/i }).count()) > 0,
+      "a signed-in founder sees which account they are in",
+    );
+    check(
+      (await styled.getByRole("button", { name: "Create account" }).count()) === 0,
+      "and is not asked to create one",
+    );
+    await styled.getByRole("button", { name: /Account: Stylist/i }).click();
+    await styled.waitForTimeout(400);
+    check(await mentions(styled, "Signed in as Stylist"), "the account menu names the account");
+    check(await mentions(styled, "Founder profile"), "and reaches the profile, settings and security");
   } catch (error) {
     fail("the run itself threw", String(error?.message ?? error));
   } finally {

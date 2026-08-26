@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { Suspense, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { Icon } from "@/components/icons";
 import { PageHeader, Ready } from "@/components/page";
@@ -24,6 +25,14 @@ import {
   useToast,
 } from "@/components/ui";
 import { download } from "@/lib/export";
+import { DEFAULT_ADVICE } from "@/lib/types";
+import {
+  ACCENTS,
+  ACCENT_LABEL,
+  ACCENT_NOTE,
+  DEFAULT_APPEARANCE,
+  isDefaultAppearance,
+} from "@/lib/appearance";
 import {
   DEFAULT_PRIORITIES,
   PRIORITY_HELP,
@@ -53,35 +62,293 @@ const PREFERENCES = Object.keys(PREFERENCE_LABEL) as BusinessPreference[];
 export default function SettingsPage() {
   return (
     <Ready>
-      <Settings />
+      {/* `useSearchParams` needs a boundary. `null` rather than a skeleton:
+          `Ready` already withholds until the store has hydrated. */}
+      <Suspense fallback={null}>
+        <Settings />
+      </Suspense>
     </Ready>
   );
 }
 
+const TABS = [
+  { id: "appearance", label: "Appearance" },
+  { id: "profile", label: "Founder profile" },
+  { id: "mode", label: "How much to explain" },
+  { id: "priorities", label: "What you're optimising for" },
+  { id: "ai", label: "Intelligence" },
+  { id: "data", label: "Your data" },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+const isTab = (v: string | null): v is TabId => TABS.some((t) => t.id === v);
+
 function Settings() {
-  const [tab, setTab] = useState<"profile" | "mode" | "priorities" | "ai" | "data">("profile");
+  /*
+   * The category is in the URL, so a settings panel can be linked to.
+   *
+   * It was `useState`, which meant the account menu's "Settings" and any future
+   * "change this in Settings" link could only ever drop somebody on the first
+   * tab and leave them hunting. Same pattern as `/lab` and `/business`, and for
+   * the same reason — including the mount-only-effect mistake `/lab` documents
+   * at length, which is why this reads `useSearchParams` behind a boundary.
+   */
+  const router = useRouter();
+  const raw = useSearchParams()?.get("tab") ?? null;
+  const tab: TabId = isTab(raw) ? raw : "appearance";
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Settings" description="Your founder profile, how AI is connected, and what happens to your data." />
+      <PageHeader title="Settings" description="How Groundwork looks, how much it explains, and what happens to your data." />
 
       <Tabs
         active={tab}
-        onChange={(id) => setTab(id as typeof tab)}
-        tabs={[
-          { id: "profile", label: "Founder profile" },
-          { id: "mode", label: "How much to explain" },
-          { id: "priorities", label: "What you're optimising for" },
-          { id: "ai", label: "Intelligence" },
-          { id: "data", label: "Your data" },
-        ]}
+        onChange={(id) => router.replace(`/settings?tab=${id}`, { scroll: false })}
+        tabs={TABS.map((t) => ({ id: t.id, label: t.label }))}
       />
 
+      {tab === "appearance" && <AppearanceSettings />}
       {tab === "profile" && <ProfileSignpost />}
-      {tab === "mode" && <ExperienceSetting />}
+      {tab === "mode" && (
+        <div className="space-y-6">
+          <ExperienceSetting />
+          <AdviceSetting />
+        </div>
+      )}
       {tab === "priorities" && <PrioritiesSetting />}
       {tab === "ai" && <AISetup />}
       {tab === "data" && <DataSettings />}
+    </div>
+  );
+}
+
+/**
+ * How the engine talks.
+ *
+ * Two axes, and neither one changes a fact. `responseStyle` is a section
+ * budget — the planner already ranks aspects by weight, so fewer means "the
+ * most important ones only" rather than "the same answer, abbreviated".
+ * `tone` is register, and it reaches the optional provider's system text as
+ * well, so a configured deployment sounds the same as the built-in engine.
+ *
+ * Deliberately not a third detail level: `experienceMode` above already drives
+ * seventeen `AdvancedOnly` call sites, and a second overlapping axis would mean
+ * two controls that both claim to decide how much you see.
+ */
+function AdviceSetting() {
+  const advice = useAppState((s) => s.settings.advice) ?? DEFAULT_ADVICE;
+
+  return (
+    <Card className="p-5 space-y-6">
+      <SectionHeader
+        title="How answers are written"
+        description="Applies to the built-in engine and to an optional AI provider alike. Neither setting changes what the app believes — only how much of it you get, and in what register."
+      />
+      <Choice
+        label="Length"
+        options={[
+          { id: "brief" as const, label: "Straight to the point", note: "The two strongest sections only." },
+          { id: "balanced" as const, label: "Balanced", note: "Up to four sections. The default." },
+          { id: "detailed" as const, label: "Detailed", note: "Up to six, including the weaker signals and the gaps." },
+        ]}
+        value={advice.responseStyle}
+        onChange={(responseStyle) => actions.setAdvice({ responseStyle })}
+      />
+      <div className="rule pt-5">
+        <Choice
+          label="Register"
+          options={[
+            { id: "plain" as const, label: "Plain English", note: "Terms defined as they appear. The default." },
+            { id: "professional" as const, label: "Professional", note: "Assumes the vocabulary; fewer asides." },
+            { id: "analytical" as const, label: "Analytical", note: "Leads with the numbers and the assumptions behind them." },
+          ]}
+          value={advice.tone}
+          onChange={(tone) => actions.setAdvice({ tone })}
+        />
+      </div>
+    </Card>
+  );
+}
+
+/* ----------------------------------------------------------------- appearance */
+
+/** A row of choices, labelled, with the consequence of each written next to it. */
+function Choice<T extends string>({
+  label,
+  hint,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  options: { id: T; label: string; note?: string }[];
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-medium">{label}</p>
+      {hint && <p className="text-caption text-muted mt-1 leading-relaxed max-w-prose">{hint}</p>}
+      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5 mt-2.5">
+        {options.map((o) => {
+          const active = o.id === value;
+          return (
+            <button
+              key={o.id}
+              role="radio"
+              aria-checked={active}
+              title={o.note}
+              onClick={() => onChange(o.id)}
+              className={`min-h-9 px-3 rounded-md text-sm font-medium transition-colors border ${
+                active
+                  ? "bg-ink text-bg border-ink"
+                  : "bg-surface text-muted border-border hover:border-border-strong hover:text-text"
+              }`}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+      {options.find((o) => o.id === value)?.note && (
+        <p className="text-caption text-faint mt-2 leading-relaxed max-w-prose">
+          {options.find((o) => o.id === value)!.note}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Make Groundwork yours.
+ *
+ * Every control here is live — they are attribute swaps on `<html>`, so there
+ * is nothing to save and nothing to reload. The specimen underneath exists
+ * because the alternative is choosing a colour and then going to look for
+ * something that uses it: it puts a primary button, a marked figure, a section
+ * label and a status badge side by side, which between them is most of what any
+ * of these settings touches.
+ */
+function AppearanceSettings() {
+  const stored = useAppState((s) => s.settings.appearance);
+  const a = stored ?? DEFAULT_APPEARANCE;
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-5 space-y-6">
+        <SectionHeader
+          title="Make Groundwork yours"
+          description="Everything here changes as you press it. Nothing is saved separately, and nothing here touches your businesses or your profile."
+        />
+
+        <Choice
+          label="Theme"
+          options={[
+            { id: "system" as const, label: "System", note: "Follows your device, and keeps following it if that changes." },
+            { id: "light" as const, label: "Light" },
+            { id: "dark" as const, label: "Dark" },
+          ]}
+          value={a.theme}
+          onChange={(theme) => actions.setAppearance({ theme })}
+        />
+
+        <div className="rule pt-5">
+          <p className="text-sm font-medium">Accent</p>
+          <p className="text-caption text-muted mt-1 leading-relaxed max-w-prose">
+            One hue, used for the figure that matters and the control you are
+            meant to press. It deliberately does not recolour the whole app:
+            green, amber and red mean <em>good</em>, <em>careful</em> and{" "}
+            <em>bad</em> on almost every screen here, and a brand colour
+            competing with those would make a healthy business look like a
+            warning.
+          </p>
+          <div role="radiogroup" aria-label="Accent" className="flex flex-wrap gap-2 mt-3">
+            {ACCENTS.map((id) => {
+              const active = id === a.accent;
+              return (
+                <button
+                  key={id}
+                  role="radio"
+                  aria-checked={active}
+                  aria-label={ACCENT_LABEL[id]}
+                  title={ACCENT_NOTE[id]}
+                  onClick={() => actions.setAppearance({ accent: id })}
+                  data-accent={id}
+                  className={`min-h-9 pl-2 pr-3 inline-flex items-center gap-2 rounded-md text-sm font-medium border transition-colors ${
+                    active ? "border-ink text-text" : "border-border text-muted hover:border-border-strong"
+                  }`}
+                >
+                  {/* The swatch renders in the accent it names, because
+                      `data-accent` on the button re-scopes the tokens. */}
+                  <span className="size-4 rounded-full bg-signal shrink-0" />
+                  {ACCENT_LABEL[id]}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-caption text-faint mt-2 leading-relaxed max-w-prose">{ACCENT_NOTE[a.accent]}</p>
+        </div>
+
+        <div className="rule pt-5">
+          <Choice
+            label="Density"
+            hint="Compact removes vertical space so more fits on screen. Text size and tap targets do not change — a mode that shrinks the things you have to hit is not a density setting."
+            options={[
+              { id: "comfortable" as const, label: "Comfortable" },
+              { id: "compact" as const, label: "Compact" },
+            ]}
+            value={a.density}
+            onChange={(density) => actions.setAppearance({ density })}
+          />
+        </div>
+
+        <div className="rule pt-5">
+          <Choice
+            label="Motion"
+            hint="If your device already asks for reduced motion, that is respected whatever is set here."
+            options={[
+              { id: "full" as const, label: "Full" },
+              { id: "reduced" as const, label: "Reduced", note: "Entrances and scroll reveals stop; buttons still respond to a press." },
+              { id: "off" as const, label: "Off", note: "No animation or transition anywhere." },
+            ]}
+            value={a.motion}
+            onChange={(motion) => actions.setAppearance({ motion })}
+          />
+        </div>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader title="What that looks like" description="The four things these settings actually touch, together." />
+        <div className="flex flex-wrap items-center gap-3">
+          <Button variant="primary" size="sm">Primary action</Button>
+          <span className="eyebrow text-signal-text">Marked figure</span>
+          <span className="text-metric tabular-nums text-signal">72</span>
+          <Badge tone="good">Good</Badge>
+          <Badge tone="warn">Careful</Badge>
+          <Badge tone="bad">Bad</Badge>
+        </div>
+        <p className="text-caption text-muted mt-4 leading-relaxed max-w-prose">
+          The three badges never change with the accent. That is the point of
+          keeping the brand achromatic: whatever you pick, a status still reads
+          as a status.
+        </p>
+      </Card>
+
+      <Card className="p-5">
+        <SectionHeader
+          title="Reset appearance"
+          description="Theme, accent, density and motion back to their defaults. Your businesses, ideas, profile and account are not touched."
+        />
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={isDefaultAppearance(a)}
+          onClick={() => actions.resetAppearance()}
+        >
+          {isDefaultAppearance(a) ? "Already the defaults" : "Reset appearance"}
+        </Button>
+      </Card>
     </div>
   );
 }

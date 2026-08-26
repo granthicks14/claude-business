@@ -494,6 +494,82 @@ results.navMatching = {
   sectionPageHasNoSelfCrumb: crumbsFor(sections, "/business").length === 2,
 };
 
+/* --------------------------------------------------- preferences ------- */
+
+/*
+ * Appearance and advice are new optional fields on settings. Optional is the
+ * whole compatibility story -- every state written before they existed has to
+ * keep loading -- and a hand-edited browser key has to coerce rather than reach
+ * the DOM as an attribute value.
+ */
+{
+  const appearance = await import("../src/lib/appearance.ts");
+  const hostile = appearance.readAppearance({
+    theme: "<script>", accent: 42, density: null, motion: "sideways",
+  });
+
+  results.preferences = {
+    defaultsAreStable: JSON.stringify(appearance.DEFAULT_APPEARANCE) === JSON.stringify(appearance.readAppearance({})),
+    hostileInputCoerces: JSON.stringify(hostile) === JSON.stringify(appearance.DEFAULT_APPEARANCE),
+    everyAccentIsKnown: appearance.ACCENTS.every((a: string) => typeof appearance.ACCENT_LABEL[a] === "string"),
+    everyAccentExplainsItself: appearance.ACCENTS.every((a: string) => (appearance.ACCENT_NOTE[a] ?? "").length > 20),
+    defaultIsRecognised: appearance.isDefaultAppearance(appearance.DEFAULT_APPEARANCE),
+    aChangeIsNotDefault: !appearance.isDefaultAppearance({ ...appearance.DEFAULT_APPEARANCE, accent: "rose" }),
+    /* An old state with no appearance field still loads. */
+    oldStateLoads: (() => {
+      hydrateFrom({ version: 1, settings: { intelligence: "engine", experienceMode: "beginner" } });
+      return !!snapshot().settings && snapshot().settings.appearance === undefined;
+    })(),
+  };
+}
+
+/* Response style is a section budget, not a different answer. */
+{
+  const iq = await import("../src/lib/iq/index.ts");
+  const sample = await import("../src/lib/sample.ts");
+  const biz = sample.sampleBusiness();
+  const prof = sample.sampleProfile();
+  const q = "How do I price this when nobody is buying?";
+  const count = (style?: string) => iq.understand(q, biz, prof, [], style as never).plan.aspects.length;
+  results.responseStyle = {
+    brief: count("brief"),
+    balanced: count("balanced"),
+    detailed: count("detailed"),
+    defaultMatchesBalanced: count(undefined) === count("balanced"),
+  };
+}
+
+/*
+ * Register changes how it is said, never what is said.
+ *
+ * The control shipped once with three specific promises next to it and no
+ * reader at all, which is the failure this asserts against. Measured on the
+ * section count and the body length rather than on wording, so editing a
+ * sentence does not break it.
+ */
+{
+  const iq = await import("../src/lib/iq/index.ts");
+  const sample = await import("../src/lib/sample.ts");
+  const biz = sample.sampleBusiness();
+  const prof = sample.sampleProfile();
+  const q = "Am I making money?";
+  const say = (tone?: string) => {
+    const u = iq.understand(q, biz, prof, [], "balanced", tone as never);
+    const c = iq.compose(u);
+    return { n: c.sections.length, chars: c.sections.map((s: { body: string }) => s.body).join("").length };
+  };
+  const plain = say("plain");
+  const professional = say("professional");
+  const analytical = say("analytical");
+  results.tone = {
+    sameSections: plain.n === professional.n && professional.n === analytical.n && plain.n > 0,
+    plainDefines: plain.chars > professional.chars,
+    analyticalGrades: analytical.chars > professional.chars,
+    threeDistinctLengths: new Set([plain.chars, professional.chars, analytical.chars]).size === 3,
+    defaultIsPlain: say(undefined).chars === plain.chars,
+  };
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -700,6 +776,27 @@ function walk(dir) {
   check("and the detail it hides is spread across the workspace, not one page", inFiles.size >= 8,
     `${inFiles.size} files`);
 }
+
+console.log("\n--- preferences ---");
+check("appearance defaults are stable", r.preferences.defaultsAreStable);
+check("a hand-edited browser key coerces to the defaults", r.preferences.hostileInputCoerces);
+check("every accent has a label", r.preferences.everyAccentIsKnown);
+check("and says what it is for", r.preferences.everyAccentExplainsItself);
+check("the defaults are recognised as default", r.preferences.defaultIsRecognised);
+check("and a change is not", r.preferences.aChangeIsNotDefault);
+check("a state written before appearance existed still loads", r.preferences.oldStateLoads);
+
+console.log("\n--- response style is a budget, not a rewrite ---");
+check("brief says less than balanced", r.responseStyle.brief < r.responseStyle.balanced, `${r.responseStyle.brief} vs ${r.responseStyle.balanced}`);
+check("detailed says at least as much", r.responseStyle.detailed >= r.responseStyle.balanced, `${r.responseStyle.detailed}`);
+check("and no preference behaves exactly as balanced", r.responseStyle.defaultMatchesBalanced);
+
+console.log("\n--- register changes how it is said, never what is said ---");
+check("every register answers with the same sections", r.tone.sameSections);
+check("plain English defines the terms it used", r.tone.plainDefines);
+check("analytical states how sure the section is", r.tone.analyticalGrades);
+check("three registers, three genuinely different answers", r.tone.threeDistinctLengths);
+check("and the default is plain English", r.tone.defaultIsPlain);
 
 console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

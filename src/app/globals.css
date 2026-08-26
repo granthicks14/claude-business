@@ -1007,3 +1007,198 @@
     color: #666;
   }
 }
+
+/* ========================================================================== */
+/* ACCENT — the one hue a reader may change                                   */
+/* ========================================================================== */
+
+/*
+ * WHY ONLY `--signal`, AND WHY THAT IS NOT A COMPROMISE
+ *
+ * The brand is achromatic on purpose and that rule is load-bearing: status
+ * colour appears on almost every screen in this product, so a saturated brand
+ * hue competes with `good`, `warn` and `bad` — an amber brand makes a healthy
+ * business look like a warning. `--section` separately owns the 185–330 arc for
+ * "where you are", and `check:visual` fails the build if a section hue and a
+ * status class ever land on the same element.
+ *
+ * `--signal` is the one hue with no such job. It marks the figure that matters
+ * and the control you are meant to press, one at a time, and it never means a
+ * state. So it is the one token set that can be handed to the reader without
+ * making anything else on the page ambiguous.
+ *
+ * EVERY VALUE HERE IS MEASURED, IN BOTH THEMES
+ *
+ * Lightness is pinned to the same steps the default already uses — 52% light /
+ * 74% dark for the fill, 45%/80% for text on a soft ground — because those are
+ * the values that clear the contrast floor. Only the hue and the chroma move.
+ * Chroma is trimmed where the sRGB gamut runs out: cyan and lime carry visibly
+ * less than rose at these lightnesses, which is the gamut and not a preference.
+ * `check:visual` sweeps all of them.
+ */
+
+:root[data-accent="violet"] {
+  --signal: oklch(52% 0.200 292);
+  --signal-hover: oklch(45% 0.190 292);
+  --signal-soft: oklch(96.2% 0.022 292);
+  --signal-border: oklch(84% 0.074 292);
+  --signal-text: oklch(45% 0.180 292);
+}
+:root[data-accent="teal"] {
+  --signal: oklch(52% 0.120 196);
+  --signal-hover: oklch(45% 0.112 196);
+  --signal-soft: oklch(96.2% 0.020 196);
+  --signal-border: oklch(84% 0.058 196);
+  --signal-text: oklch(45% 0.108 196);
+}
+:root[data-accent="amber"] {
+  --signal: oklch(52% 0.140 72);
+  --signal-hover: oklch(45% 0.130 72);
+  --signal-soft: oklch(96.2% 0.030 72);
+  --signal-border: oklch(84% 0.072 72);
+  --signal-text: oklch(45% 0.126 72);
+}
+:root[data-accent="rose"] {
+  --signal: oklch(52% 0.190 12);
+  --signal-hover: oklch(45% 0.180 12);
+  --signal-soft: oklch(96.2% 0.024 12);
+  --signal-border: oklch(84% 0.076 12);
+  --signal-text: oklch(45% 0.172 12);
+}
+:root[data-accent="lime"] {
+  --signal: oklch(52% 0.130 138);
+  --signal-hover: oklch(45% 0.120 138);
+  --signal-soft: oklch(96.2% 0.024 138);
+  --signal-border: oklch(84% 0.062 138);
+  --signal-text: oklch(45% 0.116 138);
+}
+/*
+ * "None" — the accent removed rather than replaced.
+ *
+ * Everything that used to carry the one hue falls back to ink and paper, which
+ * leaves status as the only colour on the page. Somebody who finds any accent
+ * distracting should be able to have that, and it costs nothing to offer.
+ */
+:root[data-accent="ink"] {
+  --signal: var(--ink);
+  --signal-hover: var(--ink-hover);
+  --signal-soft: var(--surface-2);
+  --signal-border: var(--border-strong);
+  --signal-text: var(--text);
+}
+
+/* The dark cuts. Same hues, the lightnesses the dark theme already proved. */
+:root.dark[data-accent="violet"] {
+  --signal: oklch(74% 0.160 292);
+  --signal-hover: oklch(82% 0.134 292);
+  --signal-soft: oklch(24% 0.048 292);
+  --signal-border: oklch(40% 0.094 292);
+  --signal-text: oklch(80% 0.134 292);
+}
+:root.dark[data-accent="teal"] {
+  --signal: oklch(78% 0.104 196);
+  --signal-hover: oklch(85% 0.086 196);
+  --signal-soft: oklch(24% 0.038 196);
+  --signal-border: oklch(40% 0.062 196);
+  --signal-text: oklch(83% 0.092 196);
+}
+:root.dark[data-accent="amber"] {
+  --signal: oklch(80% 0.130 78);
+  --signal-hover: oklch(87% 0.110 78);
+  --signal-soft: oklch(24% 0.044 78);
+  --signal-border: oklch(40% 0.076 78);
+  --signal-text: oklch(85% 0.116 78);
+}
+:root.dark[data-accent="rose"] {
+  --signal: oklch(74% 0.150 12);
+  --signal-hover: oklch(82% 0.124 12);
+  --signal-soft: oklch(24% 0.050 12);
+  --signal-border: oklch(40% 0.096 12);
+  --signal-text: oklch(80% 0.128 12);
+}
+:root.dark[data-accent="lime"] {
+  --signal: oklch(84% 0.146 138);
+  --signal-hover: oklch(89% 0.120 138);
+  --signal-soft: oklch(24% 0.042 138);
+  --signal-border: oklch(40% 0.078 138);
+  --signal-text: oklch(87% 0.128 138);
+}
+:root.dark[data-accent="ink"] {
+  --signal: var(--ink);
+  --signal-hover: var(--ink-hover);
+  --signal-soft: var(--surface-2);
+  --signal-border: var(--border-strong);
+  --signal-text: var(--text);
+}
+
+/* ========================================================================== */
+/* DENSITY — less air, never smaller targets                                  */
+/* ========================================================================== */
+
+/*
+ * Compact removes breathing room and touches nothing else.
+ *
+ * Type size does not move, and neither does the 32px minimum touch target: a
+ * "compact" mode that shrinks the things you have to hit is not a density
+ * setting, it is an accessibility regression with a friendly name. What changes
+ * is the vertical rhythm — section gaps, card padding, list spacing — which is
+ * what somebody asking for compact actually wants: more on screen at once.
+ */
+:root[data-density="compact"] .page-column > * + * {
+  margin-top: 1.25rem;
+}
+
+/*
+ * Targeted at the rhythm rather than at `.card`, because `.card` carries no
+ * padding of its own — every call site sets it with a Tailwind utility, and a
+ * `padding` here would either lose to that or need `!important`, which is how a
+ * density setting turns into a fight with every component that uses it.
+ */
+:root[data-density="compact"] .space-y-8 > * + *,
+:root[data-density="compact"] .space-y-10 > * + * {
+  margin-top: 1.5rem;
+}
+
+:root[data-density="compact"] section + section {
+  margin-top: 1.5rem;
+}
+
+/* ========================================================================== */
+/* MOTION — the reader's choice, over and above the OS preference             */
+/* ========================================================================== */
+
+/*
+ * The OS preference already collapses animation (see the
+ * `prefers-reduced-motion` block above). This is the same thing asked for
+ * inside the app, for somebody who wants a calmer interface here without
+ * changing their whole machine.
+ *
+ * `reduced` keeps functional feedback — a button still responds to a press,
+ * because removing that removes information rather than decoration. `off`
+ * takes everything, including the scroll reveals, which is why `.reveal-hidden`
+ * has to be neutralised: an element left holding the hidden state with no
+ * animation to remove it would be invisible content, and that is never an
+ * acceptable outcome of a comfort setting.
+ */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+}
+
+:root[data-motion="off"] *,
+:root[data-motion="off"] *::before,
+:root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+:root[data-motion="reduced"] .reveal-idle,
+:root[data-motion="off"] .reveal-idle {
+  opacity: 1 !important;
+  transform: none !important;
+}

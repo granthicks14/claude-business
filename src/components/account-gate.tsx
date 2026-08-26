@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { Icon } from "./icons";
-import { Badge, Button, Card, Field, Hi, Input, SectionHeader } from "./ui";
+import { Badge, Button, Card, Dialog, Field, Hi, Input, SectionHeader } from "./ui";
 import { needsAccount } from "@/lib/routes";
 import { actions, clearInMemoryState, emptyState, hydrateFrom, markReadyEmpty, snapshot } from "@/lib/store";
 import { SAMPLE_BUSINESS_ID, sampleBusiness } from "@/lib/sample";
@@ -793,6 +793,40 @@ export function signOut(options: { keepDevice?: boolean } = {}): void {
     else lock();
     clearInMemoryState();
   });
+}
+
+/**
+ * Create an account, sign in, or look around — wherever the question comes up.
+ *
+ * Extracted so the masthead and the landing page cannot drift: they were about
+ * to become two implementations of the same three doors, and the one nobody
+ * looked at would have been the one that broke.
+ *
+ * Dialogs rather than navigation, and that is a correctness requirement rather
+ * than a preference: a guest's work lives in a module variable, so any route
+ * change costing a full document load destroys the very thing the create form
+ * exists to rescue.
+ */
+export function useSignInDoors() {
+  const [mode, setMode] = useState<"create" | "signin" | null>(null);
+
+  const browse = () => {
+    markReadyEmpty();
+    actions.loadSample(sampleBusiness());
+    startGuest();
+  };
+
+  const dialog = mode ? (
+    <Dialog open onClose={() => setMode(null)} title={mode === "create" ? "Create your account" : "Sign in"}>
+      {mode === "create" ? (
+        <CreateAccount legacy={null} hasOthers={false} onDone={() => setMode(null)} />
+      ) : (
+        <UnlockAnyAccount onDone={() => setMode(null)} onCreate={() => setMode("create")} />
+      )}
+    </Dialog>
+  ) : null;
+
+  return { openCreate: () => setMode("create"), openSignIn: () => setMode("signin"), browse, dialog };
 }
 
 export function AccountBadge() {

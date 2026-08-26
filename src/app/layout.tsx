@@ -68,9 +68,27 @@ export const viewport: Viewport = {
  */
 const themeScript = `
 (function(){try{
-  if (localStorage.getItem('abb:theme') === 'light') {
-    document.documentElement.classList.remove('dark');
-  }
+  var r = document.documentElement;
+  var a = {};
+  try { a = JSON.parse(localStorage.getItem('abb:appearance') || '{}') || {}; } catch (e) {}
+
+  /* The pre-'appearance' key, honoured once. See lib/appearance.ts. */
+  var theme = a.theme;
+  if (!theme) { var old = localStorage.getItem('abb:theme'); theme = (old === 'light' || old === 'dark') ? old : 'system'; }
+
+  /*
+   * 'dark' is already on <html> from the server, so this only ever REMOVES it.
+   * That ordering is deliberate and is why a stored-dark visitor never gets a
+   * painted frame of light on a slow parse -- and why a visitor with no script
+   * at all gets dark rather than being stuck in light for ever.
+   */
+  var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (!dark) r.classList.remove('dark');
+
+  r.dataset.theme = theme;
+  r.dataset.accent = a.accent || 'azure';
+  r.dataset.density = a.density || 'comfortable';
+  r.dataset.motion = a.motion || 'full';
 }catch(e){}})();
 `;
 

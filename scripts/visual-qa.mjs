@@ -820,6 +820,177 @@ async function main() {
       await context.close();
     }
 
+    /* ==================================================== the accent matrix == */
+
+    /*
+     * EVERY ACCENT, IN BOTH THEMES, AGAINST THE CONTRAST FLOOR.
+     *
+     * The whole reason the accent recolours `--signal` and nothing else is that
+     * it is one token set and can therefore be checked rather than hoped about.
+     * Shipping it unchecked would give away the only thing that made the
+     * feature defensible.
+     *
+     * Three routes rather than seventeen, chosen because they are where
+     * `--signal` actually lands. Sweeping every route would multiply a
+     * 51-combination pass by seven for no additional signal — the token set is
+     * identical whichever page renders it.
+     */
+    const ACCENTS_TO_CHECK = ["azure", "violet", "teal", "amber", "rose", "lime", "ink"];
+    const ACCENT_ROUTES = ["/settings?tab=appearance", "/quality", "/lab"];
+
+    for (const theme of ["dark", "light"]) {
+      console.log(`\n--- accents @ ${theme} ---`);
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+      await page.addInitScript((t) => {
+        try {
+          window.localStorage.setItem("abb:theme", t);
+        } catch {
+          /* Storage disabled — the attribute below still carries it. */
+        }
+      }, theme);
+      await signIn(page);
+
+      for (const accent of ACCENTS_TO_CHECK) {
+        let worst = null;
+        let runs = 0;
+        for (const route of ACCENT_ROUTES) {
+          await page.goto(ORIGIN + route, { waitUntil: "networkidle" });
+          await page.evaluate(
+            ([t, a]) => {
+              document.documentElement.setAttribute("data-theme", t);
+              document.documentElement.setAttribute("data-accent", a);
+            },
+            [theme, accent],
+          );
+          await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+
+          const found = await page.evaluate(COLLECT, { SCALE_IN_PAGE: SCALE, DISPLAY_FLOOR_IN_PAGE: DISPLAY_FLOOR });
+          runs += found.text.length;
+          for (const t of found.text) {
+            const large = t.size >= 24 || (t.size >= 18.66 && t.weight >= 700);
+            const required = large ? 3 : 4.5;
+            const ratio = contrast(t.color, t.background);
+            if (ratio < required && (!worst || ratio < worst.ratio)) {
+              worst = { ratio, required, where: `${route} ${t.where} "${t.sample}"` };
+            }
+          }
+        }
+        /* No text collected is a broken measurement, not a clean result. */
+        if (runs === 0) fail(`accent ${accent} (${theme}): no text measured`);
+        else if (worst) {
+          fail(
+            `accent ${accent} (${theme}): text below the contrast minimum`,
+            `${worst.where} — ${worst.ratio.toFixed(2)}:1, needs ${worst.required}:1`,
+          );
+        } else {
+          pass(`accent ${accent} holds the floor in ${theme}`, `${runs} runs`);
+        }
+      }
+      await context.close();
+    }
+
+
+    /* ============================================ density, and motion off == */
+
+    /*
+     * DENSITY MAY REMOVE AIR. IT MAY NOT SHRINK A TARGET, AND IT MAY NOT
+     * OVERFLOW.
+     *
+     * `check:persist` already proves the attribute applies and survives a
+     * refresh, which is a different question from whether the result is usable.
+     * Compact tightens vertical rhythm on the narrowest supported phone, and
+     * the two ways that goes wrong are the two measured here: a control that
+     * drops under the 32px floor, and a row that no longer fits in 320px.
+     *
+     * Inline prose links are deliberately not counted. They are not touch
+     * targets, they were never 32px, and including them would flag every
+     * paragraph in the app for something density did not do.
+     */
+    {
+      console.log("\n--- density @ 320px ---");
+      const context = await browser.newContext({ viewport: { width: 320, height: 640 } });
+      const page = await context.newPage();
+      await signIn(page);
+
+      for (const route of ["/", "/quality", "/lab", "/settings?tab=appearance", "/coach"]) {
+        await page.goto(ORIGIN + route, { waitUntil: "networkidle" });
+        await page.evaluate(() => document.documentElement.setAttribute("data-density", "compact"));
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+
+        const m = await page.evaluate(() => {
+          const sel = 'button, [role="button"], [role="tab"], [role="menuitem"], input, select';
+          const small = [];
+          for (const el of document.querySelectorAll(sel)) {
+            const r = el.getBoundingClientRect();
+            if (r.width === 0 && r.height === 0) continue;
+            if (getComputedStyle(el).visibility === "hidden") continue;
+            if (r.height < 32) {
+              small.push((el.textContent || el.getAttribute("aria-label") || el.tagName).trim().slice(0, 30) + " @" + Math.round(r.height) + "px");
+            }
+          }
+          return {
+            small,
+            overflow: document.documentElement.scrollWidth - window.innerWidth,
+            controls: document.querySelectorAll(sel).length,
+          };
+        });
+
+        if (m.controls === 0) fail("compact " + route + ": no controls measured");
+        else if (m.small.length > 0) fail("compact " + route + ": control below the 32px floor", m.small.join(", "));
+        else if (m.overflow > 1) fail("compact " + route + ": overflows 320px", m.overflow + "px wider than the viewport");
+        else pass("compact holds at 320px — " + route, m.controls + " controls, no overflow");
+      }
+      await context.close();
+    }
+
+    /*
+     * MOTION OFF MEANS OFF — AND NEVER MEANS INVISIBLE.
+     *
+     * The failure worth guarding is not "an animation still ran". It is
+     * `reveal.tsx`'s: the entrance hides content with a class and an observer
+     * removes it, so anything that collapses the animation without also
+     * neutralising `.reveal-idle` leaves a reader with a permanently blank
+     * page. That is why the CSS sets `opacity: 1` explicitly, and why the
+     * assertion below is about painted opacity rather than about durations
+     * alone.
+     */
+    {
+      console.log("\n--- motion ---");
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+      await signIn(page);
+
+      for (const mode of ["off", "reduced"]) {
+        await page.goto(ORIGIN + "/lab", { waitUntil: "networkidle" });
+        await page.evaluate((m) => document.documentElement.setAttribute("data-motion", m), mode);
+        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
+
+        const m = await page.evaluate(() => {
+          const secs = (v) => Math.max(...String(v).split(",").map((s) => (s.trim().endsWith("ms") ? parseFloat(s) / 1000 : parseFloat(s) || 0)));
+          let longestAnim = 0;
+          let longestTrans = 0;
+          let hidden = 0;
+          let seen = 0;
+          for (const el of document.querySelectorAll("body *")) {
+            const cs = getComputedStyle(el);
+            seen++;
+            if (cs.animationName !== "none") longestAnim = Math.max(longestAnim, secs(cs.animationDuration));
+            longestTrans = Math.max(longestTrans, secs(cs.transitionDuration));
+            if (el.classList.contains("reveal-idle") && parseFloat(cs.opacity) < 0.99) hidden++;
+          }
+          return { longestAnim, longestTrans, hidden, seen };
+        });
+
+        if (m.seen === 0) fail("motion " + mode + ": nothing measured");
+        else if (m.hidden > 0) fail("motion " + mode + ": content left hidden by the entrance class", m.hidden + " elements still at reduced opacity with no observer to reveal them");
+        else if (m.longestAnim > 0.01) fail("motion " + mode + ": an animation still runs", m.longestAnim + "s");
+        else if (mode === "off" && m.longestTrans > 0.01) fail("motion off: a transition still runs", m.longestTrans + "s");
+        else pass("motion " + mode + " collapses movement and hides nothing", m.seen + " elements");
+      }
+      await context.close();
+    }
+
     await browser.close();
   } finally {
     server.kill("SIGTERM");
@@ -828,7 +999,7 @@ async function main() {
 
   console.log(
     failures === 0
-      ? "\nVISUAL INVARIANTS HOLD in both themes."
+      ? "\nVISUAL INVARIANTS HOLD in both themes, for every accent."
       : `\n${failures} VISUAL CHECK${failures === 1 ? "" : "S"} FAILED`,
   );
   process.exit(failures === 0 ? 0 : 1);

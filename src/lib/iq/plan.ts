@@ -1,5 +1,5 @@
 import type { Epistemics } from "../intel/epistemics";
-import type { BusinessIdea, FounderProfile, SelectedBusiness } from "../types";
+import type { AdviceTone, BusinessIdea, FounderProfile, ResponseStyle, SelectedBusiness } from "../types";
 import type { Reading, TopicId } from "./classify";
 import type { Retrieved } from "./retrieve";
 
@@ -48,6 +48,16 @@ export interface Facts {
    * argument only when X is something they actually wrote down.
    */
   savedIdeas: BusinessIdea[];
+  /** How much to say. Defaults to balanced when nothing has been chosen. */
+  responseStyle?: ResponseStyle;
+  /**
+   * What register to say it in. Defaults to plain.
+   *
+   * It rides on `Facts` beside `responseStyle` rather than being handed to the
+   * composer separately, because both are the same kind of thing — a reader
+   * preference that no individual writer should have to know about.
+   */
+  tone?: AdviceTone;
   reading: Reading;
   retrieved: Retrieved;
   /** Counts, so preconditions read as English rather than as chained optionals. */
@@ -747,6 +757,25 @@ export interface Plan {
  */
 export const MAX_ASPECTS = 4;
 
+/**
+ * How many sections each response style is allowed.
+ *
+ * The whole preference is one number, deliberately. The alternative — branching
+ * inside every writer on how chatty to be — would be twenty-odd places to keep
+ * in step and would make "brief" mean something slightly different in each of
+ * them. The planner already ranks aspects by weight, so taking fewer off the
+ * top is exactly "the most important things only".
+ *
+ * `brief` is two rather than one because a single section with no counterweight
+ * is how this product would start sounding confident, and the second slot is
+ * usually where the gap or the risk lands.
+ */
+export const ASPECTS_FOR: Record<ResponseStyle, number> = {
+  brief: 2,
+  balanced: MAX_ASPECTS,
+  detailed: 6,
+};
+
 export function planAnswer(f: Facts): Plan {
   const topics = f.reading.topics;
   const unserved: TopicId[] = [];
@@ -793,5 +822,5 @@ export function planAnswer(f: Facts): Plan {
     return b.aspect.weight - a.aspect.weight;
   });
 
-  return { aspects: candidates.slice(0, MAX_ASPECTS), unserved };
+  return { aspects: candidates.slice(0, ASPECTS_FOR[f.responseStyle ?? "balanced"]), unserved };
 }

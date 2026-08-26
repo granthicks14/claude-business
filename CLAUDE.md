@@ -28,22 +28,22 @@ is deliberately no `vercel.json`, no `now.json`, no committed `.vercel/`, and no
 npm run dev            # dev server
 npm run build          # production build (type-checks)
 npm run typecheck      # types only
-npm run test:accounts  # 52 account, guest-session and vault-registry tests
+npm run test:accounts  # 58 account, guest-session and vault-registry tests
 npm run test:scoring   # 57 scoring, title, diversity, seed and refusal tests
 npm run test:intel     # 78 decision-layer calibration tests
 npm run test:research  # 85 customer/market/MVP calibration tests
-npm run test:product   # 100 quality/consistency/variant/intake/sample/mode tests
+npm run test:product   # 119 quality/consistency/variant/intake/sample/mode/preference tests
 npm run test:analyze   # 65 analyser, URL-fence and industry-explorer tests
 npm run test:competition # 52 competition-reading tests
 npm run test:describe  # 56 natural-language founder profile tests
 npm run test:intent    # 59 intent-router tests: what it reads, and what it refuses
 npm run test:iq        # 37 pipeline tests: the audit that started the work
-npm run test:direction # 20 tests: an instruction is not an interest
-npm test               # all eleven
+npm run test:direction # 21 tests: an instruction is not an interest
+npm test               # all eleven — 687 checks
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
-npm run check:persist  # 40 browser checks: does the work survive every path
-npm run check:visual   # measures the look-and-feel invariants in a browser
+npm run check:persist  # 51 browser checks: does the work survive every path
+npm run check:visual   # 72 browser checks: look-and-feel, accents, density, motion
 ```
 
 ## Architecture
@@ -81,6 +81,10 @@ src/lib/explore.ts      Eighteen industries ranked against one founder.
 src/lib/legal.ts        What the app actually does with data. The policy pages
                         render this rather than restating it.
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
+src/lib/appearance.ts   Theme, accent, density, motion. Written to the browser
+                        key for pre-paint and to the account for portability.
+src/lib/business-intent.ts  Interest, preference, instruction. Only the third
+                        locks generation to a trade.
 src/lib/hostinger.ts    Website brief + the consistency lock.
 src/lib/website-plan.ts Website copy recommendations, readiness, critique.
 src/lib/opportunity.ts  "Best opportunity near me" — no profile required.
@@ -505,6 +509,114 @@ padlock** in the masthead, no confirmation, wired straight to `signOut()` →
 Two different things were one button. `lockKeepingDevice()` asks for the
 passphrase again and leaves the week alone; `lock()` also stops the browser
 remembering you. The control now has a label and asks which you meant.
+
+### The doors are on every page, not just the landing page
+
+`### The three doors` fixed the landing page. It did not fix the other
+thirty-nine routes: the masthead carried Simple/Detail, a theme toggle, an
+unlabelled padlock and a menu button, and **no way to make an account or sign
+in**. A visitor who scrolled past the hero, followed a shared link, or landed on
+`/privacy` had the same two unanswerable questions as before.
+
+`AccountControl` in `shell.tsx` is the same slot in both states. Locked or
+guest: **Create account** as the one filled button, **Sign in** beside it as an
+outline. Unlocked: an account menu labelled with the account name — founder
+profile, settings, businesses, account and security, then Lock and Sign out as
+the two distinct actions the padlock incident separated.
+
+Both forms open in a `Dialog`, never by navigation, for the reason
+`guest-banner.tsx` gives at length: a guest's work is a module variable and a
+full document load destroys it. The masthead button routes into `CreateAccount`'s
+existing `seed`, so guest work is carried in by the path `check:persist` already
+walks — nothing new to get wrong.
+
+The masthead button carries `aria-label="Create account"` because its computed
+name was otherwise "Create accountSign up", which is also what made the first
+version of the `check:persist` locator ambiguous.
+
+### Appearance is written twice, and both copies are load-bearing
+
+The vault is locked on first paint, so appearance cannot live only in
+`AppState`: every visitor would get a frame of the wrong theme before the key
+exists. It cannot live only in a browser key either, or it stops following the
+account across devices and through backup and restore.
+
+So both. `abb:appearance` is what the inline script in `layout.tsx` reads before
+paint; `AppState.settings.appearance` is the copy that travels with the account
+and **wins on unlock**, rewriting the browser key. `appearance.ts` is the single
+module that knows the precedence, so the two cannot drift.
+
+Four `data-*` attributes on `<html>` — `data-theme`, `data-accent`,
+`data-density`, `data-motion` — with the CSS beside the tokens it overrides.
+Every change is an attribute swap, so there is nothing to save and nothing to
+reload.
+
+**"System" was the actual missing state.** The old script tested
+`localStorage['abb:theme'] === 'light'` and had two states; the OS preference
+was never consulted for a returning visitor. It resolves through `matchMedia`
+now and follows changes live.
+
+**Density removes air, never targets.** `compact` tightens vertical rhythm and
+does not touch type size or the 32px minimum. That is checked rather than
+asserted: `check:visual` sweeps five routes at 320px under `data-density` and
+fails on any control under the floor or any horizontal overflow.
+
+**Motion off must never mean invisible.** `reduced` and `off` extend the
+existing `prefers-reduced-motion` block, and the part that matters is that they
+also neutralise `.reveal-idle` — the entrance hides content with a class and an
+observer removes it, so collapsing the animation without that leaves a reader
+with a permanently blank page. `check:visual` asserts painted opacity, not
+durations alone, because durations are not the failure.
+
+### The accent recolours `--signal`, and nothing else
+
+The brand stays achromatic for the reason it always was — status colour is on
+almost every screen — and `--section` already owns the 185–330 arc for "where
+you are". `--signal` is the one hue with no status meaning, used in one place at
+a time, so it is the only token that can be handed to the user without breaking
+the palette's grammar.
+
+That is also what makes it *checkable*, which was the whole argument for
+choosing it. `check:visual` sweeps seven accents × two themes against the
+contrast floor.
+
+**And for one revision it checked nothing at all.** The insertion anchor did not
+match, the `replace()` silently no-opped, and the suite printed "VISUAL
+INVARIANTS HOLD in both themes, for every accent" while sweeping zero accents —
+the same class of failure as the `rgb()` regex that made every route report "0
+text runs". The block now asserts its anchor matched, and a sweep collecting no
+text is a failure rather than a pass.
+
+### Register changes how it is said, never what is said
+
+`settings.advice.tone` shipped as three options with three specific promises
+next to them — "terms defined as they appear", "assumes the vocabulary", "leads
+with the numbers" — and **no reader anywhere in the app**. `coach.ts` passed
+`responseStyle` into the pipeline and dropped `tone` on the floor.
+
+That is the Simple/Detail failure this file already documents, except worse: an
+inert toggle disappoints, while a label making a claim the code does not honour
+is untrue. It is now applied in `compose.ts:write()` — the one chokepoint every
+section body passes through, rather than in fifty-four writers that would each
+have to remember it.
+
+- **plain** appends definitions for glossary terms the *body* used, matched
+  against `TERMS` directly rather than against `Facts.retrieved`, which is keyed
+  on the question. Somebody asking "am I making money" never types "contribution
+  margin", and that is exactly the word the answer comes back with. Longest
+  match wins and it is capped at two, because a section trailing five
+  definitions is a textbook.
+- **professional** is the bare body, so it is also the safe fallback for a
+  stored state carrying a tone this build does not know.
+- **analytical** states the `Epistemics` grade the section already carries. Not
+  duplication: the badge is a label, and "believed and untested — this is what
+  an experiment would kill" is the reason to go and test it.
+
+**The rule that keeps it honest:** no branch may add a finding, drop a caveat or
+move a number. A register that could suppress a caveat would be a way to ask the
+app to be less careful, which is not a preference this product can offer.
+`test:product` measures the three against each other rather than against
+wording.
 
 ### The engine
 

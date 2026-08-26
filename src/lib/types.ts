@@ -8,6 +8,7 @@
  */
 
 import type { BusinessIntent } from "./business-intent";
+import type { Appearance } from "./appearance";
 
 export type ID = string;
 
@@ -957,6 +958,21 @@ export type Intelligence = "engine" | "ai";
  */
 export type ExperienceMode = "beginner" | "advanced";
 
+/** How much the engine says. Maps to how many sections an answer may carry. */
+export const RESPONSE_STYLES = ["brief", "balanced", "detailed"] as const;
+export type ResponseStyle = (typeof RESPONSE_STYLES)[number];
+
+/** The register it says it in. Never changes the facts, only the framing. */
+export const ADVICE_TONES = ["plain", "professional", "analytical"] as const;
+export type AdviceTone = (typeof ADVICE_TONES)[number];
+
+export interface Advice {
+  responseStyle: ResponseStyle;
+  tone: AdviceTone;
+}
+
+export const DEFAULT_ADVICE: Advice = { responseStyle: "balanced", tone: "plain" };
+
 export interface AppState {
   version: number;
   settings: {
@@ -975,6 +991,20 @@ export interface AppState {
      * means the app's own balance. See `intel/priorities.ts`.
      */
     priorities?: { speed: number; profit: number; risk: number; scalability: number };
+    /**
+     * Theme, accent, density and motion.
+     *
+     * Optional so every state written before this existed keeps loading. Also
+     * mirrored to a small per-browser key, because it has to apply before the
+     * vault can possibly be open — see `lib/appearance.ts` for the precedence.
+     */
+    appearance?: Appearance;
+    /**
+     * How the built-in engine should talk: how much to say, and in what
+     * register. Read in one place (`iq/plan.ts` and `iq/compose.ts`) rather
+     * than branched on across the answer writers.
+     */
+    advice?: Advice;
   };
   profile: FounderProfile;
   ideas: BusinessIdea[];
