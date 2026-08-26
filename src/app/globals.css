@@ -1204,51 +1204,138 @@
 }
 
 /* ========================================================================== */
-/* PLINKO — the slot legend                                                   */
+/* THE DECK — shuffling, and one card turning over                            */
 /* ========================================================================== */
 
 /*
- * ONE COLUMN PER SLOT DOES NOT SURVIVE REAL NAMES.
+ * NO ANIMATION LIBRARY, AND NOTHING HERE DECIDES ANYTHING.
  *
- * It was tried twice. Ten columns in the page's reading width is 57px each,
- * and the catalogue contains "E-commerce & products" and "Automotive" — so the
- * labels either overflowed the page or, once `overflow-wrap: anywhere` stopped
- * that, broke mid-word into "Automoti / ve". A label that has to be
- * reassembled by the reader is not a label.
+ * A card deck is the one interaction in this product that genuinely wants
+ * motion, and it is also the one most likely to attract a dependency. It does
+ * not need one: a stack of absolutely-positioned cards, two keyframes and a
+ * 3D flip is the whole feature, and it ships no bytes to anybody who never
+ * opens the page.
  *
- * The slots carry numbers instead and this is an ordinary numbered legend, in
- * as many columns as the width can give each entry a readable measure. The
- * numbers are drawn on the board at every size, so the legend and the board
- * never need to be lined up by eye.
+ * The important property is that none of this is load-bearing. The card was
+ * chosen by `deck/deal.ts` before the first frame; these rules move pixels
+ * around while that already-decided answer is on its way to the screen. Turn
+ * every one of them off and the same business is revealed.
  */
-.plinko-legend {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.25rem 1rem;
-}
 
-@media (min-width: 640px) {
-  .plinko-legend {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1024px) {
-  .plinko-legend {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+.deck-stack {
+  position: relative;
+  /* Depth is subtle on purpose — this is a deck, not a carousel. */
+  perspective: 1200px;
+  aspect-ratio: 3 / 4;
+  /*
+   * Bounded by the viewport's height, not only its width.
+   *
+   * Sized on width alone a 3:4 card fills a phone: at 390px wide the deck came
+   * out 512px tall and pushed "Shuffle" to y=892 on an 844px screen — a page
+   * whose entire instruction is "press this", with the button off the bottom.
+   * The same mistake the board before it made, so the same fix, applied from
+   * the start rather than after three rounds of narrowing.
+   */
+  max-height: min(46vh, 420px);
 }
 
 /*
- * `anywhere`, not `break-word`.
- *
- * These are generated business names and nothing bounds the length of a single
- * word in one. `break-word` leaves an over-long token sticking out of its
- * column; `anywhere` also lets the browser count the break when it works out
- * the minimum content width, which is what actually stops the grid being
- * pushed wider than the screen. With five columns rather than ten it almost
- * never has to fire.
+ * Short and narrow screens get less again. A phone in portrait has the least
+ * height and the most chrome — a masthead above and a bottom bar below.
  */
-.plinko-legend > li {
-  overflow-wrap: anywhere;
+@media (max-width: 640px) {
+  .deck-stack {
+    max-height: min(38vh, 340px);
+  }
+}
+
+.deck-card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 200ms ease;
+  will-change: transform;
+}
+
+/* The idle stack: a few cards fanned back so it reads as more than one. */
+.deck-card[data-depth="0"] { transform: translate3d(0, 0, 0) rotate(-1.2deg); }
+.deck-card[data-depth="1"] { transform: translate3d(6px, 6px, -18px) rotate(1.4deg); opacity: 0.72; }
+.deck-card[data-depth="2"] { transform: translate3d(12px, 12px, -36px) rotate(-0.6deg); opacity: 0.46; }
+.deck-card[data-depth="3"] { transform: translate3d(18px, 18px, -54px) rotate(2deg); opacity: 0.24; }
+
+/* Shuffling: the whole stack riffles for a beat. */
+.deck-stack[data-state="shuffling"] .deck-card {
+  animation: deck-riffle 300ms ease-in-out infinite;
+}
+.deck-stack[data-state="shuffling"] .deck-card[data-depth="1"] { animation-delay: 60ms; }
+.deck-stack[data-state="shuffling"] .deck-card[data-depth="2"] { animation-delay: 120ms; }
+.deck-stack[data-state="shuffling"] .deck-card[data-depth="3"] { animation-delay: 180ms; }
+
+@keyframes deck-riffle {
+  0%   { transform: translate3d(0, 0, 0) rotate(-1.2deg); }
+  25%  { transform: translate3d(-14px, -6px, 10px) rotate(-5deg); }
+  50%  { transform: translate3d(0, -10px, 0) rotate(0deg); }
+  75%  { transform: translate3d(14px, -6px, 10px) rotate(5deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(-1.2deg); }
+}
+
+/* The chosen card comes forward and turns over. */
+.deck-stack[data-state="revealing"] .deck-card[data-depth="0"] {
+  animation: deck-turn 620ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+
+@keyframes deck-turn {
+  0%   { transform: translate3d(0, 0, 0) rotateY(0deg) scale(1); }
+  45%  { transform: translate3d(0, -14px, 40px) rotateY(90deg) scale(1.04); }
+  100% { transform: translate3d(0, 0, 0) rotateY(180deg) scale(1); }
+}
+
+.deck-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.deck-face-back {
+  transform: rotateY(180deg);
+}
+
+/*
+ * MOTION OFF MUST NOT MEAN THE CARD NEVER TURNS.
+ *
+ * The failure this guards is the one `reveal.tsx` already documents for the
+ * scroll entrance: collapse an animation that ends in a changed state, and the
+ * reader is left looking at the state it started in — here, a card that is
+ * face down for ever. So the reduced-motion rules do not merely shorten the
+ * turn, they land it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .deck-stack[data-state="shuffling"] .deck-card,
+  .deck-stack[data-state="revealing"] .deck-card[data-depth="0"] {
+    animation: none;
+  }
+  .deck-card { transition: none; }
+  .deck-stack[data-state="revealing"] .deck-card[data-depth="0"],
+  .deck-stack[data-state="revealed"] .deck-card[data-depth="0"] {
+    transform: rotateY(180deg);
+  }
+}
+
+:root[data-motion="reduced"] .deck-stack[data-state="shuffling"] .deck-card,
+:root[data-motion="off"] .deck-stack[data-state="shuffling"] .deck-card,
+:root[data-motion="reduced"] .deck-stack[data-state="revealing"] .deck-card[data-depth="0"],
+:root[data-motion="off"] .deck-stack[data-state="revealing"] .deck-card[data-depth="0"] {
+  animation: none;
+}
+
+:root[data-motion="reduced"] .deck-stack[data-state="revealing"] .deck-card[data-depth="0"],
+:root[data-motion="off"] .deck-stack[data-state="revealing"] .deck-card[data-depth="0"],
+:root[data-motion="reduced"] .deck-stack[data-state="revealed"] .deck-card[data-depth="0"],
+:root[data-motion="off"] .deck-stack[data-state="revealed"] .deck-card[data-depth="0"] {
+  transform: rotateY(180deg);
+}
+
+/* Once turned, it stays turned. */
+.deck-stack[data-state="revealed"] .deck-card[data-depth="0"] {
+  transform: rotateY(180deg);
 }

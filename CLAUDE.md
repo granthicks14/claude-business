@@ -39,14 +39,15 @@ npm run test:describe  # 56 natural-language founder profile tests
 npm run test:intent    # 59 intent-router tests: what it reads, and what it refuses
 npm run test:iq        # 37 pipeline tests: the audit that started the work
 npm run test:direction # 21 tests: an instruction is not an interest
-npm run test:plinko    # 36 tests: is the ball fair, and is the result a business
-npm test               # all twelve — 722 checks
+npm run test:random    # 32 tests: the draw is uniform by construction, not by sample
+npm run test:deck      # 32 tests: what may be dealt, and what one-in-N is over
+npm test               # all thirteen — 751 checks
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
-npm run check:persist  # 64 browser checks: does the work survive every path
+npm run check:persist  # 63 browser checks: does the work survive every path
 npm run check:visual   # 76 browser checks: look-and-feel, accents, density, motion,
                        #   horizontal overflow, and dialog geometry
-npm run check:play     # the five users, played rather than imagined
+npm run check:play     # the six users, played rather than imagined
 ```
 
 ## Architecture
@@ -86,8 +87,9 @@ src/lib/legal.ts        What the app actually does with data. The policy pages
 src/lib/prompts.ts      AI prompt builder. Pure text — no API calls, no key.
 src/lib/appearance.ts   Theme, accent, density, motion. Written to the browser
                         key for pre-paint and to the account for portability.
-src/lib/plinko/         Business Plinko. A seeded ball simulation, and boards
-                        built from the knowledge base rather than a second list.
+src/lib/random.ts       Uniform selection by rejection sampling. Exactly, not nearly.
+src/lib/deck/           The Business Deck: what may be dealt, how it is drawn,
+                        and the draw itself. All pure.
 src/lib/business-intent.ts  Interest, preference, instruction. Only the third
                         locks generation to a trade.
 src/lib/hostinger.ts    Website brief + the consistency lock.
@@ -672,97 +674,107 @@ element past the edge, which after the table was correctly wrapped was the
 table — inside its own scroller, legitimately wide. It skips scroller
 descendants now. Blaming the wrong element cost one wrong fix.
 
-### Business Plinko
+### The Business Deck
 
-`/plinko` is the door for somebody who cannot answer "what do you want to
-build?". Every other entrance asks them to supply something first — an idea, an
-industry, a sentence — which is fine for people who have one and is the exact
-obstacle that stopped everybody else. This asks for nothing: press a button and
-the app commits to a direction on your behalf. Reacting to a suggestion is a far
-easier job than producing one, and disagreeing with a result is itself
-information the founder did not have a minute earlier.
+`/deck` is the door for somebody who cannot answer "what do you want to build?".
+Every other entrance asks them to supply something first — an idea, an industry,
+a sentence — which is fine for people who have one and is the exact obstacle
+that stopped everybody else.
 
-**The ball is simulated, not chosen.** `plinko/physics.ts` integrates it step by
-step and the slot is wherever it ends up. Picking a slot and animating towards
-it would be a rigged game with honest-looking motion, and "drop the ball" would
-stop being a true description of what happened. No physics dependency — a
-rigid-body library is hundreds of kilobytes shipped to every visitor so a ball
-can fall past thirty pegs. Everything is seeded, so a drop replays exactly,
-which is what makes it testable in the node suite and lets the reduced-motion
-path reach the *same* slot rather than a parallel implementation of it.
+**It replaced a Plinko board, and the reason is worth keeping.** Plinko is
+binomial: measured over 60,000 drops the centre slots took 18.7% each and the
+outer ones 2.3%. That was made fair by *compensation* — the slots were
+reshuffled before every drop, so the bias landed on positions and industries
+came out even to within a few per cent. It worked. It was still the wrong
+architecture: fairness you have to measure is weaker than fairness that is
+arithmetic, and "the board favours its middle, so we shuffle the labels" is a
+hard sentence to reassure anybody with.
 
-**Constants were tuned against measurement.** The first guess looked right and
-left 2.4% of balls stuck on a peg until the step cap — on screen, a ball that
-hangs there for ever. Twelve gravity/restitution pairs at 6,000 drops each
-showed that a bouncier ball is a stuck ball. Stall detection covers the
-remainder, because tuning alone only reached 1 in 20,000 and that is still a
-real person watching a ball sit on a peg.
+`lib/random.ts` draws a 32-bit word from `crypto.getRandomValues` and uses
+rejection sampling — take the largest multiple of `n` that fits in 2^32, discard
+anything above it. Every surviving word maps to exactly `floor(2^32 / n)` inputs,
+so the draw is **exactly** uniform. The naive `word % n` is not: 2^32 divides
+evenly by almost no `n`, so the low indices get one extra representative each.
+At n=10 that is about six parts in a billion — far too small for any test suite
+to sample its way to noticing, and precisely the quiet preference for the first
+few options this exists to rule out.
 
-**The fairness problem is the interesting one, and it is a product problem
-rather than a physics one.** Plinko is binomial: measured over 60,000 drops the
-centre slots take 18.7% each and the outer ones 2.3%. Pin an industry to a slot
-and the tool recommends the middle one eight times more often than the edge one
-— silently, wearing the costume of randomness. So **the slots are reshuffled
-before every drop**. The bias then lands on positions, which nobody cares about,
-and industries come out between 0.93x and 1.06x of even. `FAIRNESS_NOTE` says so
-on the page, because a claim like that belongs where the reader can act on it.
+**`test:random` is shaped by that.** The assertions that carry the argument feed
+*known words* through the real function and check the acceptance boundary and
+the mapping directly. A 240,000-draw chi-square sits at the end as
+corroboration, not as the proof. Four more read the module itself, because the
+property being defended is an absence: no `Math.random`, no `sort`, no weights.
 
-Widening the board makes the bias worse — the ball has further to travel
-sideways to reach an edge — so at 148 units the outer slots took 0.33% each and
-a slot hit once in three hundred drops is decoration. Eleven rows at 120 units
-gives 8:1 with every slot reachable. More rows is dramatically worse: at fifteen
-rows four slots become unreachable, which is the binomial tail, not a bug.
+**A uniform draw guarantees nothing without knowing what it is over.**
+`deck/eligible.ts` is the gate — a title of two words that is not a slogan, a
+customer, a problem, a revenue model, a one-sentence summary, and not a
+near-duplicate. Measured: 168 candidates, 13 refused as duplicates, **155
+eligible**, every industry represented. The page says "one of 155" rather than
+"equal chance", because equal among what is the whole question.
 
-**The second board is the real engine.** `businessBoard` calls `generateIdeas`
-with the industry set, so a Plinko result is scored, argued against and turned
-into a plan by exactly the machinery every other idea goes through. A
-Plinko-specific list of business names would be a second catalogue that drifts
-from the first and produces results nothing else in the app can read.
+**Selection is pure and separate from animation.** `deck/deal.ts` has no React,
+no timers and no DOM, so the card is chosen before the first frame and nothing
+about a shuffle, a transform or a frame rate can reach the result. The tempting
+version is the one where the animation "lands on" something; it reads
+identically and is a different product.
 
-That needed a **third lock level** in `engine/ideas.ts`. `{ industryId }` alone
-returned **exactly three ideas for every one of the eighteen industries**,
-because `industryUses >= 3` — a cap that measures spread *across* markets — was
-still applying to a batch that is deliberately one market. Capping by industry
-once the founder has chosen the industry is the same category error as capping
-by problem once they have chosen the trade. The caps re-key to customer and
-model kind, and every industry now yields 8-10 distinct businesses across at
-least three customer types. `/lab`'s category browsing gets the same lift.
+**Randomness and personalisation are two products, not one.** *Surprise me* is
+uniform and reads no profile. *Pick the industry first* narrows the pool and is
+still uniform inside it. The scored path lives in `/lab` and is labelled as
+ranked. The profile still shapes what a card *says* — affordability and hours
+are scored against a real person — but never which card comes up.
 
-**Keeping a result is the shortlist, not a new store.** Favourites, history and
-comparison all already exist as `state.ideas`, `/lab?tab=shortlist` and
-`/compare`. A Plinko-specific saved list would drift from that one and would
-arrive at "compare my Plinko results" as a separate screen from "compare my
-ideas".
+### Businesses, drawn
 
-**It is public, and that is the point.** Asking somebody who cannot name a
-business to invent an unrecoverable passphrase first puts the product's largest
-commitment in front of its smallest. It qualifies under `routes.ts`'s existing
-rule rather than bending it — the game reads the knowledge base and writes
-nothing. The moment it *would* write, it asks, and the result rides into the new
-account on `CreateAccount`'s seed.
+The brief asked for photographs. Three things ruled them out and any one would
+have been enough: `img-src 'self' data: blob:` with `connect-src 'self'`, and
+`check:deploy` fails the build on any external origin; there is deliberately no
+`public/`; and a keyword image search cannot be held to "the image must match
+the business" — ask one for "meal prep" often enough and it returns a man at a
+laptop, the exact generic stock shot the same brief forbids.
 
-**Four defects that only appeared in a browser.** Slot labels drawn as SVG
-`<text>` collided into an unreadable smear and were sized in viewBox units — the
-same label 9px on a phone and 17px on a laptop, outside the type scale. One HTML
-column per slot failed too: ten columns in the reading width is 57px each, and
-the catalogue contains "E-commerce & products", so labels either overflowed the
-page or broke mid-word into "Automoti / ve". The slots carry numbers and the
-legend is an ordinary numbered list. Shortening also *invented* duplicates the
-full names did not have — "Household System Audit" beside "Household System
-Consultancy" — so colliding labels escalate through increasing specificity until
-the group is genuinely distinct, which itself took two attempts. And the board
-was near-square, so "Drop the ball" shipped below the fold at 1280x900; it is
-capped in `vh` now and the page uses the compact-header exception.
+`lib/deck/scene.ts` composes a scene instead: a **setting**, a **worker**, the
+**tool** of the trade and the **outcome**. Four slots from a small vocabulary
+give all 155 businesses their own picture, and adding a trade means adding one
+object rather than a whole drawing. Same conventions as `art.tsx` — 200x150
+viewBox, `currentColor` strokes, `--section` fills, `pathLength` for `.draw`.
 
-**The five users are a script, not a paragraph.** `check:play` walks the brief's
-own five — no idea what they want, just poking, wants a real opportunity,
-already knows the industry, on a phone — and a review like that is worth
-exactly as much as its willingness to fail. Written as prose it becomes a
-description of the feature working. Run, it caught the one thing the design had
-genuinely left out: the founder who arrives knowing they want automotive had to
-play a round of roulette to reach the automotive board, which is the app
-deciding something they had already decided. There is a select for that now, and
-the second board is identical however you reach it.
+The *choice* is pure and lives in `lib/`, so which picture a business gets is
+tested in the node suite rather than looked at. Three defects that found:
+
+- **Unbounded substring matching.** `cat` fired inside "location" and drew a
+  trip-planning business as someone with a dog. Every alternative is
+  word-bounded now — the same trap `describe.ts`'s alias matching documents.
+- **A word broad enough to swallow the catalogue.** `content` was in the camera
+  pattern and camera came out on **35%** of all businesses: one picture for a
+  third of the product, which is the generic-image failure arriving by another
+  route. 17 tools in use now, commonest 23%. Being too strict is cheap — an
+  unmatched business falls back to its industry's tool, which is at least
+  industry-correct, whereas a loose match is a picture of the wrong job.
+- **Reading the delivery mode before the tool** produced "a dog at a desk" for a
+  pet-care toolkit: technically right, since a toolkit is delivered online, and
+  nonsense. Some objects carry their own location.
+
+The worker is deliberately featureless. The person in these pictures is meant to
+be the founder reading them, and the moment a drawing decides what they look
+like it stops being them.
+
+### The reveal stops early, on purpose
+
+The brief describes a very long result page — hero, quick look, day, pricing,
+funnel, checklist, costs, score, competition, market. Almost all of that already
+exists and is already rendered in `/business`, so building it again would make
+two places that answer one question and eventually answer it differently.
+
+`deck/reveal.tsx` stops at the point somebody can decide: what it looks like,
+what it is in ten seconds, what a day involves, and where to watch somebody
+doing it. Then *Build this* opens the workspace, where the depth lives.
+`Stages` from `ui.tsx` finally has a caller — it had been exported and used by
+nothing since it was written.
+
+**Keeping a card is the shortlist**, not a new store: `state.ideas`,
+`/lab?tab=shortlist` and `/compare` already exist, and a deck-specific saved
+list would drift from them.
 
 ### The engine
 

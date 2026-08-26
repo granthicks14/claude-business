@@ -72,19 +72,21 @@ const PUBLIC_PREFIXES = [
    */
   "/share",
   /*
-   * PLINKO IS PLAYABLE WITHOUT AN ACCOUNT, AND THAT IS THE WHOLE POINT OF IT.
+   * THE DECK IS PLAYABLE WITHOUT AN ACCOUNT, AND THAT IS THE WHOLE POINT OF IT.
    *
    * It is the door for somebody who cannot answer "what do you want to build?"
    * — so asking them to invent an unrecoverable passphrase before they are
    * allowed to press one button would put the product's largest commitment in
    * front of its smallest one.
    *
-   * It qualifies under the rule above rather than bending it: the game reads
+   * It qualifies under the rule above rather than bending it: the deck reads
    * the knowledge base and writes nothing. The moment it *would* write —
    * "Build this" — is the moment it asks, and the result is carried into the
    * new account through `CreateAccount`'s seed rather than lost to the
    * decision.
    */
+  "/deck",
+  /* The board this replaced. Kept so shared links do not 404. */
   "/plinko",
 ];
 

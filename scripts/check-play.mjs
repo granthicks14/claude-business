@@ -1,5 +1,5 @@
 /**
- * The five users, played rather than imagined.
+ * The six users, played rather than imagined.
  *
  * WHY THIS IS A SCRIPT AND NOT A PARAGRAPH
  *
@@ -10,11 +10,12 @@
  * their industry had to play a round of roulette to reach it, which is the app
  * deciding something they had already decided.
  *
- * The five are the brief's own: somebody with no idea what they want, somebody
+ * The six are the brief's own: somebody with no idea what they want, somebody
  * just poking at it, somebody who wants a real opportunity, somebody who
- * arrives knowing the industry, and somebody on a phone. TEST J (reduced
- * motion) and TEST K (no overflow at phone width) ride along with the fifth,
- * because they are the same visit.
+ * arrives knowing the industry, the experienced entrepreneur who wants the
+ * fairness claim substantiated rather than asserted, and somebody on a phone.
+ * TEST J (reduced motion) and TEST K (no overflow at phone width) ride along
+ * with the last, because they are the same visit.
  *
  * Deliberately separate from `check:visual`, which measures the look, and from
  * `check:persist`, which measures whether work survives. This one measures
@@ -79,82 +80,93 @@ const b = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium" })
 let fails = 0;
 const ck = (ok, label, d = "") => { console.log((ok ? "PASS  " : "FAIL  ") + label + (d ? " — " + d : "")); if (!ok) fails++; };
 
-// USER 1 — clueless: does the page explain itself before any interaction?
+// USER 1 — no idea what they want: does the page explain itself untouched?
 {
   const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
-  await p.goto(O + "/plinko", { waitUntil: "networkidle" });
+  await p.goto(O + "/deck", { waitUntil: "networkidle" });
   const txt = await p.locator("body").innerText();
-  ck(/Drop a ball/i.test(txt), "USER 1: the page says what to do before you touch it");
-  ck(/industry/i.test(txt) && /business/i.test(txt), "USER 1: and what the two steps produce");
-  ck((await p.getByRole("button", { name: "Drop the ball" }).count()) === 1, "USER 1: exactly one obvious action");
+  ck(/shuffle/i.test(txt), "USER 1: the page says what to do before you touch it");
+  ck(/equal|equally likely/i.test(txt), "USER 1: and says the draw is even, in words");
+  ck((await p.getByRole("button", { name: /Shuffle the/i }).count()) === 1, "USER 1: exactly one obvious action");
   await p.close();
 }
 
-// USER 2 — curious: does the ball actually move?
+// USER 2 — curious: does anything actually happen?
 {
   const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
-  await p.goto(O + "/plinko", { waitUntil: "networkidle" });
-  await p.getByRole("button", { name: "Drop the ball" }).click();
-  await p.waitForTimeout(500);
-  const a = await p.evaluate(() => { const c = document.querySelector('svg circle[fill*="ink"], svg circle:last-of-type'); return c ? c.getAttribute("cy") : null; });
-  await p.waitForTimeout(600);
-  const c2 = await p.evaluate(() => { const c = document.querySelector('svg circle[fill*="ink"], svg circle:last-of-type'); return c ? c.getAttribute("cy") : null; });
-  ck(a !== null && a !== c2, "USER 2: the ball is in motion mid-drop", `${a} -> ${c2}`);
-  await p.waitForTimeout(2200);
-  ck(await p.locator("body").innerText().then(t => /You landed on/.test(t)), "USER 2: and it finishes in a couple of seconds");
+  await p.goto(O + "/deck", { waitUntil: "networkidle" });
+  const before = await p.locator(".deck-stack").getAttribute("data-state");
+  await p.getByRole("button", { name: /Shuffle the/i }).click();
+  await p.waitForTimeout(300);
+  const during = await p.locator(".deck-stack").getAttribute("data-state");
+  await p.waitForTimeout(1600);
+  const after = await p.locator(".deck-stack").getAttribute("data-state");
+  ck(before === "idle" && during !== "idle" && after === "revealed", "USER 2: the deck shuffles and settles", `${before} -> ${during} -> ${after}`);
+  ck(await p.locator("body").innerText().then((t) => /In ten seconds/i.test(t)), "USER 2: and it finishes in under two seconds");
   await p.close();
 }
 
-// USER 3 — serious: is the result specific and explained?
+// USER 3 — serious: is the result specific, and explained?
 {
   const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
-  await p.goto(O + "/plinko", { waitUntil: "networkidle" });
-  await p.getByRole("button", { name: "Skip the animation" }).click();
-  await p.waitForTimeout(350);
-  await p.getByRole("button", { name: "Go deeper" }).click();
-  await p.waitForTimeout(250);
-  await p.getByRole("button", { name: "Skip the animation" }).click();
-  await p.waitForTimeout(450);
-  const name = await p.locator('main p[aria-live="polite"]').first().innerText();
+  await p.goto(O + "/deck", { waitUntil: "networkidle" });
+  await p.getByRole("button", { name: /Shuffle the/i }).click();
+  await p.waitForTimeout(1800);
+  const name = await p.locator('main h2[aria-live="polite"]').first().innerText();
   const txt = (await p.locator("body").innerText()).toLowerCase();
-  ck(name.split(/\s+/).length >= 3, "USER 3: the result names what it sells and who buys", name);
+  ck(name.split(/\s+/).length >= 3, "USER 3: the card names what it sells and who buys", name);
   ck(txt.includes("who pays") && txt.includes("how you earn"), "USER 3: with a customer and a revenue model");
-  ck(!/^(the future of|innovative|next-gen)/i.test(name), "USER 3: and is not a slogan");
+  ck(!/^(the future of|innovative|next-gen|transforming)/i.test(name), "USER 3: and is not a slogan");
   await p.close();
 }
 
 // USER 4 — already knows the industry
 {
   const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
-  await p.goto(O + "/plinko", { waitUntil: "networkidle" });
-  const sel = p.locator("#known-industry");
-  ck(await sel.count() === 1, "USER 4: there is a way to skip the industry round");
+  await p.goto(O + "/deck", { waitUntil: "networkidle" });
+  await p.getByRole("button", { name: "Pick the industry first" }).click();
+  await p.waitForTimeout(250);
+  const sel = p.locator("#deck-industry");
+  ck((await sel.count()) === 1, "USER 4: there is a way to name the industry");
   await sel.selectOption({ label: "Automotive" });
-  await p.waitForTimeout(500);
-  const txt = await p.locator("body").innerText();
-  ck(/Step 2/i.test(txt), "USER 4: it goes straight to the businesses");
-  ck(/Automotive/i.test(txt), "USER 4: in the industry they chose");
-  await p.getByRole("button", { name: "Skip the animation" }).click();
-  await p.waitForTimeout(450);
-  const name = await p.locator('main p[aria-live="polite"]').first().innerText();
-  ck(name.length > 4, "USER 4: and a drop there works the same", name);
+  await p.waitForTimeout(300);
+  ck(/Automotive/i.test(await p.locator("body").innerText()), "USER 4: the deck says which industry it is dealing from");
+  await p.getByRole("button", { name: /Shuffle the/i }).click();
+  await p.waitForTimeout(1800);
+  const name = await p.locator('main h2[aria-live="polite"]').first().innerText();
+  ck(name.length > 4, "USER 4: and a card from it deals the same way", name);
   await p.close();
 }
 
-// USER 5 / TEST J — reduced motion still reaches a result
+// USER 5 — the experienced entrepreneur: is the fairness claim substantiated?
+{
+  const p = await b.newPage({ viewport: { width: 1280, height: 900 } });
+  await p.goto(O + "/deck", { waitUntil: "networkidle" });
+  const txt = await p.locator("body").innerText();
+  ck(/\b\d{2,}\b/.test(txt), "USER 5: the page states how many businesses the draw is over");
+  ck(/before the animation/i.test(txt), "USER 5: and that the card is chosen before anything moves");
+  ck(/crypt/i.test(txt), "USER 5: naming the source rather than asserting fairness");
+  await p.close();
+}
+
+// USER 6 / TEST J — reduced motion still deals, immediately
 {
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   const p = await ctx.newPage();
-  await p.goto(O + "/plinko", { waitUntil: "networkidle" });
-  ck((await p.getByRole("button", { name: "Skip the animation" }).count()) === 0, "TEST J: no skip button — reduced motion already skips");
-  await p.getByRole("button", { name: "Drop the ball" }).click();
-  await p.waitForTimeout(600);
-  ck(await p.locator("body").innerText().then(t => /You landed on/.test(t)), "TEST J: a drop still produces a result, immediately");
-  ck(await p.evaluate(() => document.documentElement.scrollWidth - innerWidth) <= 1, "TEST K: no horizontal overflow at 390px");
+  await p.goto(O + "/deck", { waitUntil: "networkidle" });
+  await p.getByRole("button", { name: /Shuffle the/i }).click();
+  await p.waitForTimeout(400);
+  ck(await p.locator("body").innerText().then((t) => /In ten seconds/i.test(t)), "TEST J: reduced motion reaches the result at once");
+  ck((await p.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 1, "TEST K: no horizontal overflow at 390px");
+  const turned = await p.evaluate(() => {
+    const front = document.querySelector('.deck-card[data-depth="0"]');
+    return front ? getComputedStyle(front).transform : "";
+  });
+  ck(turned !== "none" && turned !== "", "TEST J: and the card is actually turned over, not left face down", turned.slice(0, 34));
   await ctx.close();
 }
 
-console.log(fails === 0 ? "\nFIVE USERS, NO BLOCKERS" : `\n${fails} FAILED`);
+console.log(fails === 0 ? "\nSIX USERS, NO BLOCKERS" : `\n${fails} FAILED`);
 await b.close();
 server.kill("SIGTERM");
 spawnSync("pkill", ["-f", "next-server"], { stdio: "ignore" });

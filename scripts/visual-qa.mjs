@@ -59,12 +59,12 @@ const ROUTES = [
   "/tasks",
   "/lab",
   /*
-   * Plinko is swept because it is the only route with a drawn, animated
-   * component and a legend whose text comes from generated business names —
-   * so it is the route most likely to overflow a phone. It did: a button
+   * The deck is swept because it is the only route with a drawn, animated
+   * component and text taken from generated business names — so it is the
+   * route most likely to overflow a phone. Its predecessor did: a button
    * interpolating "Technology & software" measured 348px in a 320px window.
    */
-  "/plinko",
+  "/deck",
   "/business",
   "/quality",
   "/profile",
@@ -1022,7 +1022,7 @@ async function main() {
       await signIn(page);
 
       for (const mode of ["off", "reduced"]) {
-        await page.goto(ORIGIN + "/lab", { waitUntil: "networkidle" });
+        await page.goto(ORIGIN + "/deck", { waitUntil: "networkidle" });
         await page.evaluate((m) => document.documentElement.setAttribute("data-motion", m), mode);
         await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(null))));
 

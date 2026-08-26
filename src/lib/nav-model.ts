@@ -128,13 +128,13 @@ export function navSections(state: AppState): NavSection[] {
         { href: "/lab", label: "The lab" },
         { href: "/lab?tab=shortlist", label: "Saved ideas", badge: state.ideas.length || undefined },
         /*
-         * Plinko sits under Brainstorm because that is what it is: a way of
+         * The deck sits under Brainstorm because that is what it is: a way of
          * widening before narrowing, for somebody who cannot start because
          * they have no first candidate at all. It is not a section of its own
-         * — a game with its own top-level entry would read as a bigger part of
-         * the product than it is.
+         * — a deck with its own top-level entry would read as a bigger part
+         * of the product than it is.
          */
-        { href: "/plinko", label: "Can't decide? Play Plinko" },
+        { href: "/deck", label: "Can't decide? Shuffle the deck" },
         { href: "/explore", label: "Which industry?" },
         { href: "/opportunity", label: "Best opportunity near me" },
         { href: "/analyze", label: "Score a business I already run" },

@@ -230,12 +230,12 @@ function NothingToType() {
         <p className="text-sm font-medium">Let chance narrow it down.</p>
       </div>
       <p className="text-caption text-muted mt-2 leading-relaxed max-w-md">
-        Drop a ball, land on an industry, then drop again to reach a specific
-        business — explained, scored, and yours to keep or throw back.
+        Deal a business at random from every one the app knows, see what it
+        actually involves, and keep it or throw it back. All equally likely.
       </p>
       <div className="mt-3">
-        <LinkButton href="/plinko" variant="secondary" size="sm">
-          Play Business Plinko
+        <LinkButton href="/deck" variant="secondary" size="sm">
+          Shuffle the Business Deck
         </LinkButton>
       </div>
     </div>
