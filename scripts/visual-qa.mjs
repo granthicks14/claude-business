@@ -58,6 +58,13 @@ const ROUTES = [
    */
   "/tasks",
   "/lab",
+  /*
+   * Plinko is swept because it is the only route with a drawn, animated
+   * component and a legend whose text comes from generated business names —
+   * so it is the route most likely to overflow a phone. It did: a button
+   * interpolating "Technology & software" measured 348px in a 320px window.
+   */
+  "/plinko",
   "/business",
   "/quality",
   "/profile",

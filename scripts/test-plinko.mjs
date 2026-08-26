@@ -37,7 +37,7 @@ writeFileSync(
   probe,
   [
     'import { drop, DEFAULT_BOARD, pegs, rng } from "' + cwd + '/src/lib/plinko/physics.ts";',
-    'import { industryBoard, businessBoard, boardFor, slotLabel } from "' + cwd + '/src/lib/plinko/discovery.ts";',
+    'import { industryBoard, businessBoard, boardFor, slotLabel, slotLabels } from "' + cwd + '/src/lib/plinko/discovery.ts";',
     'import { INDUSTRIES } from "' + cwd + '/src/lib/engine/knowledge/industries.ts";',
     'import { emptyProfile } from "' + cwd + '/src/lib/store.ts";',
     "",
@@ -166,6 +166,23 @@ writeFileSync(
     "}",
     "",
     "/* --------------------------------------------- the label that fits ---- */",
+    "/* No two slots on one board may read the same (the brief's rule 30). */",
+    "{",
+    "  let worstBoard = null;",
+    "  let collisions = 0;",
+    "  let longest = 0;",
+    "  for (const ind of INDUSTRIES) {",
+    "    for (const seed of [1, 2, 3, 7, 11]) {",
+    "      const board = businessBoard(ind.id, p, seed);",
+    "      const labelled = slotLabels(board.map((s) => s.label));",
+    "      longest = Math.max(longest, Math.max.apply(null, labelled.map((l) => l.length)));",
+    "      const dupes = labelled.length - new Set(labelled).size;",
+    "      if (dupes > 0) { collisions += dupes; if (!worstBoard) worstBoard = { id: ind.id, seed, labelled }; }",
+    "    }",
+    "  }",
+    "  results.boardLabels = { collisions, longest, worstBoard };",
+    "}",
+    "",
     "results.labels = {",
     "  dropsTheCustomerClause: slotLabel('Highlight Reel Service for Parents of Young Athletes') === 'Highlight Reel Service',",
     "  neverEmpty: slotLabel('X') .length > 0,",
@@ -252,6 +269,14 @@ check("and does not return what was just passed on", r.replay.avoidedTheAvoided)
 check("a different drop orders them differently", r.replay.differentSeedDifferentOrder);
 
 console.log("\n--- labels ---");
+check(
+  "no board ever shows two slots that read the same",
+  r.boardLabels.collisions === 0,
+  r.boardLabels.worstBoard
+    ? `${r.boardLabels.worstBoard.id}: ${r.boardLabels.worstBoard.labelled.join(" | ")}`
+    : "90 boards checked",
+);
+check("and a disambiguated label still fits", r.boardLabels.longest <= 42, `${r.boardLabels.longest} characters at worst`);
 check("a slot label drops the customer clause", r.labels.dropsTheCustomerClause);
 check("and is never empty", r.labels.neverEmpty);
 check("and never overruns the board", r.labels.boundedLength);

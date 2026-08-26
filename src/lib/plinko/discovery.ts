@@ -149,5 +149,96 @@ export function businessBoard(
  */
 export function slotLabel(full: string): string {
   const cut = full.split(/ for /i)[0].trim();
-  return cut.length > 2 && cut.length <= 34 ? cut : full.slice(0, 34).trim();
+  /*
+   * 30, and clipped on a word boundary.
+   *
+   * The first version allowed 34 and fell back to a raw `slice`, which put
+   * "Supplier Vetting Matchmaking Servi" under a slot — a mid-word cut reads as
+   * a rendering fault rather than an abbreviation, and at that length it also
+   * pushed the phone legend 38px past the viewport.
+   */
+  return clip(cut.length > 2 ? cut : full, 30);
+}
+
+/**
+ * Labels for a whole board, which is a different problem from labelling one.
+ *
+ * SHORTENING CAN INVENT DUPLICATES THAT THE FULL NAMES DO NOT HAVE.
+ *
+ * Measured on the home-and-family board: eight genuinely distinct businesses
+ * came out as "Household System Audit" beside "Household System Consultancy",
+ * "Carer Admin Service" beside "Carer Admin Audit", "Parent Support Service"
+ * beside "Parent Support Channel". Those are different models serving
+ * different customers — the full titles say so — but on the board they read as
+ * the padding §30 rules out, and a founder deciding between two slots that
+ * look identical has been given a worse choice than they actually have.
+ *
+ * IT ESCALATES, BECAUSE ONE EXTRA CLAUSE IS NOT ALWAYS ENOUGH.
+ *
+ * The first version appended a clipped customer phrase and stopped there,
+ * which fixed most collisions and quietly created others: on the food board
+ * two different businesses both clipped to "Restriction-Friendly · Restricted
+ * Diets". So each colliding group is retried at increasing specificity and
+ * settles at the first level that actually separates it — the shortest label
+ * that is still honest about being a different business.
+ */
+export function slotLabels(names: string[]): string[] {
+  const levels = [
+    (n: string) => slotLabel(n),
+    (n: string) => withCustomer(n, 18, 3),
+    (n: string) => withCustomer(n, 30, 6),
+    (n: string) => clip(n, 42),
+  ];
+
+  const out = names.map((n) => levels[0](n));
+
+  for (let level = 1; level < levels.length; level++) {
+    const counts = new Map<string, number>();
+    for (const label of out) counts.set(label, (counts.get(label) ?? 0) + 1);
+    const colliding = new Set([...counts].filter(([, n]) => n > 1).map(([label]) => label));
+    if (colliding.size === 0) break;
+
+    for (let i = 0; i < out.length; i++) {
+      if (colliding.has(out[i])) out[i] = levels[level](names[i]);
+    }
+  }
+
+  return out;
+}
+
+/** The label plus as much of the customer clause as the given budget allows. */
+function withCustomer(full: string, chars: number, words: number): string {
+  const label = slotLabel(full);
+  const who = full.split(/ for /i).slice(1).join(" for ").trim();
+  if (!who) return label;
+  const tail = trimTrailingGlue(clip(who.split(/\s+/).slice(0, words).join(" "), chars));
+  return tail ? `${clip(label, 22)} · ${tail}` : label;
+}
+
+/** Trim to a word boundary where there is one; a mid-word cut reads as a bug. */
+function clip(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(" ");
+  return (space > max * 0.55 ? cut.slice(0, space) : cut).trimEnd();
+}
+
+/**
+ * Drop a dangling function word from the end of a clipped phrase.
+ *
+ * "Parents of" and "Athletes Seeking" are what two-word clips of "Parents of
+ * Young Athletes" and "Athletes Seeking Selection" produce, and both read as a
+ * sentence that got cut off rather than as a short label. The same rule
+ * `engine/naming.ts` follows for its customer clause: never end on a word that
+ * needs the next one.
+ */
+const GLUE = new Set([
+  "of", "for", "and", "the", "a", "an", "with", "in", "on", "to", "who", "that",
+  "seeking", "without", "at", "by",
+]);
+
+function trimTrailingGlue(text: string): string {
+  const words = text.split(/\s+/);
+  while (words.length > 1 && GLUE.has(words[words.length - 1].toLowerCase())) words.pop();
+  return words.join(" ");
 }

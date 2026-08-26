@@ -1202,3 +1202,46 @@
   opacity: 1 !important;
   transform: none !important;
 }
+
+/* ========================================================================== */
+/* PLINKO — the slot legend                                                   */
+/* ========================================================================== */
+
+/*
+ * One column per slot works on a laptop and is unreadable on a phone.
+ *
+ * At 320px with ten slots each column is about 28px, and a single word like
+ * "Catering" is wider than that at the smallest size on the scale — so the
+ * labels stopped wrapping and started pushing the page sideways. Measured: 40px
+ * of horizontal overflow, which `check:visual` now fails on.
+ *
+ * Below `sm` the labels become an ordinary two-column legend keyed to numbers
+ * drawn in the slots; from `sm` up they line up underneath the slots again.
+ * The numbers are on the board at every width so the two readings never have
+ * to be reconciled.
+ */
+.plinko-legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.25rem 0.75rem;
+}
+
+/*
+ * `anywhere`, not `break-word`.
+ *
+ * These are generated business names and nothing bounds the length of a single
+ * word in one. `overflow-wrap: break-word` leaves an over-long token sticking
+ * out of its column; `anywhere` also lets the browser count the break when it
+ * works out the minimum content width, which is what actually stops the grid
+ * from being pushed wider than the screen.
+ */
+.plinko-legend > li {
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .plinko-legend {
+    grid-template-columns: repeat(var(--plinko-slots, 10), minmax(0, 1fr));
+    gap: 1px;
+  }
+}
