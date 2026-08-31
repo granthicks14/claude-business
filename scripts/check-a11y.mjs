@@ -345,6 +345,40 @@ function staticHalf() {
       : `all ${routes.length} routes`,
   );
 
+  /*
+   * Having a title and having a *distinguishing* title are different claims,
+   * and only the second is what 2.4.2 is for. The browser sweep below compares
+   * eight rendered titles, which is a sample; this compares all of them.
+   *
+   * Duplicates are allowed in exactly one place and it is not a loophole:
+   * `/best` and `/discover` both redirect to the lab and `/onboarding` to the
+   * profile, so they name the page the reader is about to be standing on.
+   * Anything else sharing a title is two different pages a person cannot tell
+   * apart in their history, which is the defect.
+   */
+  const isRedirect = (dir) => /\bredirect\(/.test(readFileSync(join(dir, "page.tsx"), "utf8"));
+  const titleOf = (dir) => {
+    const layout = join(dir, "layout.tsx");
+    const src = existsSync(layout) ? readFileSync(layout, "utf8") : readFileSync(join(dir, "page.tsx"), "utf8");
+    return src.match(/title:\s*(?:ROUTE_TITLES\[)?["']([^"']+)["']/)?.[1] ?? null;
+  };
+  const byTitle = new Map();
+  for (const dir of routes) {
+    if (isRedirect(dir)) continue;
+    const route = dir.replace(appDir, "") || "/";
+    const title = titleOf(dir);
+    if (!title) continue;
+    byTitle.set(title, [...(byTitle.get(title) ?? []), route]);
+  }
+  const shared = [...byTitle.entries()].filter(([, rs]) => rs.length > 1);
+  check(
+    byTitle.size > 20 && shared.length === 0,
+    "and no two pages a reader can reach share one",
+    shared.length
+      ? shared.map(([t, rs]) => `"${t}": ${rs.join(" + ")}`).join("; ")
+      : `${byTitle.size} distinct titles, ${routes.length - byTitle.size} redirects excluded`,
+  );
+
   /* ------------------------------------------- ARIA keyboard contracts ---- */
 
   /*
