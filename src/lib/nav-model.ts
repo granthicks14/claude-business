@@ -186,6 +186,14 @@ export function navSections(state: AppState): NavSection[] {
             { href: b("/money"), label: "Money", group: "Set it up" },
             { href: b("/business/operations"), label: "How it runs", group: "Set it up" },
             { href: b("/business/spend"), label: "What to pay for", group: "Set it up" },
+            /*
+             * What separates a good operator from a poor one in this trade.
+             *
+             * In "Set it up" rather than "Does it hold up?" because it is not
+             * a judgement on the idea — it is how the job is done well, which
+             * is a thing to read before starting rather than a test to pass.
+             */
+            { href: b("/business/benchmark"), label: "What good looks like", group: "Set it up" },
 
             { href: b("/quality"), label: "Is it any good?", group: "Does it hold up?" },
             { href: b("/decide"), label: "Should I do this?", group: "Does it hold up?" },

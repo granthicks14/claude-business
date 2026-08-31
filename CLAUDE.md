@@ -1173,6 +1173,46 @@ stops believing the question did anything.
 Shown once, when the shortlist is empty. Re-asking somebody who already has
 ideas is the repetitive questioning this pass removed.
 
+### What good looks like in this trade
+
+The note asked for a feature that finds the best-run businesses in a field and
+says how to incorporate what they do. **The first half cannot be built honestly
+here and the second half can**, so `lib/benchmark.ts` builds the second and the
+page says which it is doing.
+
+Naming well-run companies needs a source. There is no search index, no company
+database, no reviews and no revenue data, and by rule 1 none can be acquired. A
+generated list of well-run companies would be **invented companies presented as
+research** — with real-sounding names a founder would go and look up, which is
+the worst output available. `research/` already refuses to generate a
+competitor for exactly this reason.
+
+What *is* known is how the trade works. The niche catalogue carries, per
+micro-niche, what the buyer cares about, what they object to, how the job goes
+wrong and what stops it, where customers come from, and what each risk is
+reduced by. Those are the practices that separate a good operator from a poor
+one, and they are structural rather than statistical. Then four searches, so
+the founder watches real operators rather than reading our description of them.
+`knowledgeDepth()` reports whether this is trade-specific or model-level, the
+same way `operations.ts` does. **Nothing names a company.** `test:product`
+asserts that as an absence — no company suffix, no figure that reads as market
+data, every link a search — because an absence is what rots silently.
+
+**Do not repeat somebody's writing back inside a frame of your own.** The first
+version composed each entry into an instruction: `Make ${cares} obvious before
+you are asked about it`. The catalogue's fields are already full sentences,
+often with an em-dash and a second clause, so real output read **"Make The dog
+not being frightened — this outranks price for most owners obvious"**. The
+group heading supplies the framing; the line is the catalogue's own sentence.
+This is the rule `intake.ts` documents, met from a different direction.
+
+**And the rationale belongs to the group, not the item.** Every practice
+carried its own `why` and `check` at first, identical within a group, so a
+group of three printed the same two paragraphs three times. That reads as a
+template rather than as thoroughness, and the reader stops reading the part
+that never changes. Only the two kinds whose reason genuinely varies keep a
+per-item `why`: a channel has its own reason, and a risk *is* its own reason.
+
 ### The niche catalogue
 
 "A cleaning business" isn't a business, it's a category. Post-construction

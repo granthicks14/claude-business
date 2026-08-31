@@ -36,6 +36,7 @@ import { SETUP_QUESTIONS, answersFrom } from "../src/lib/profile-setup.ts";
 import { goalOf, hoursOf, isAssumed } from "../src/lib/profile-defaults.ts";
 import { defaultPreferences, exploreIndustries } from "../src/lib/explore.ts";
 import { CAPABILITIES } from "../src/lib/engine/knowledge/skills.ts";
+import { PRACTICE_CHECK, PRACTICE_FRAMING, PRACTICE_LABEL, benchmark } from "../src/lib/benchmark.ts";
 import { eligibleBusinesses } from "../src/lib/deck/eligible.ts";
 import { explainBusiness } from "../src/lib/engine/generators/explain.ts";
 import { resolveContext } from "../src/lib/engine/context.ts";
@@ -776,6 +777,92 @@ results.navMatching = {
   };
 }
 
+/* ------------------------------ what good looks like in this trade ------ */
+
+/*
+ * The note asked for "find the best-run businesses and how to incorporate what
+ * they do". The first half cannot be built honestly here — there is no search
+ * index, no company data and no reviews, and a generated list of well-run
+ * companies would be invented companies presented as research, which is the
+ * worst output available because a founder would go and look them up.
+ *
+ * So the assertions are mostly about what is NOT there. An absence is exactly
+ * the kind of property that rots silently, which is why it is measured rather
+ * than commented.
+ */
+{
+  const p = emptyProfile();
+  const all = eligibleBusinesses(p, 7).businesses;
+
+  // The worked example matches the catalogue; a generated idea usually does not.
+  const deep = benchmark(sampleBusiness().idea);
+  const reports = all.slice(0, 40).map((i) => benchmark(i));
+
+  /*
+   * Nothing may look like a company name.
+   *
+   * Two capitalised words in a row, or a trailing Ltd/Inc/LLC/Co. Deliberately
+   * a loose net: the failure being guarded against is somebody adding a
+   * plausible-sounding example later, and a loose net catches that where an
+   * exact-name list never could.
+   */
+  const COMPANY = /\\b(Ltd|Inc|LLC|GmbH|PLC|Co\\.)\\b/;
+  const everyText = (b: ReturnType<typeof benchmark>) =>
+    [
+      ...b.practices.flatMap((x) => [x.practice, x.why ?? ""]),
+      ...b.watch.map((w) => w.label + " " + w.why),
+      b.note,
+    ].join(" ");
+
+  // No figure that reads as market data. A price or a market size in here
+  // would be exactly the unverifiable authority the whole app refuses.
+  const FIGURE = /\\$[\\d,]|\\b\\d+%|\\bmillion\\b|\\bbillion\\b/i;
+
+  results.benchmark = {
+    deepIsDeep: deep.depth.depth === "deep",
+    deepHasPractices: deep.practices.length >= 8,
+    // Every practice carries all three parts. A "best practice" with no reason
+    // is a slogan, and one with no check is something you read and agree with.
+    // The line is always there; the per-item reason only where it varies.
+    everyPracticeIsComplete: reports
+      .concat(deep)
+      .every((b) => b.practices.every((x) => x.practice.length > 10 && (x.why === undefined || x.why.length > 20))),
+    // Every kind on screen has a framing and a self-check stated once.
+    everyKindIsFramed: Object.keys(PRACTICE_LABEL).every(
+      (k) => PRACTICE_FRAMING[k].length > 40 && PRACTICE_CHECK[k].length > 30,
+    ),
+    // The repetition this replaced: no group may print one reason three times.
+    noRepeatedReasons: reports.concat(deep).every((b) => {
+      const byKind = new Map();
+      for (const x of b.practices) {
+        const seen = byKind.get(x.kind) ?? [];
+        if (x.why) seen.push(x.why);
+        byKind.set(x.kind, seen);
+      }
+      return [...byKind.values()].every((whys) => new Set(whys).size === whys.length);
+    }),
+    // A business with no catalogue match still gets something, and says so.
+    generalStillAnswers: reports.every((b) => b.practices.length >= 4),
+    generalSaysSo: reports
+      .filter((b) => b.depth.depth === "general")
+      .every((b) => b.note.indexOf("invented") >= 0 || b.note.indexOf("does not have") >= 0 || b.note.indexOf("doesn't have") >= 0),
+    // Nothing anywhere names a company.
+    namesNoCompany: reports.concat(deep).every((b) => !COMPANY.test(everyText(b))),
+    // And nothing quotes a figure that would read as market data.
+    quotesNoFigure: reports.concat(deep).every((b) => !FIGURE.test(everyText(b))),
+    // Every link is a search, never a particular page that could go stale.
+    everyLinkIsASearch: reports
+      .concat(deep)
+      .every((b) => b.watch.every((w) => /google\\.com\\/search|youtube\\.com\\/results/.test(w.url))),
+    // Deterministic: the same business gives the same answer.
+    deterministic: JSON.stringify(benchmark(sampleBusiness().idea)) === JSON.stringify(deep),
+    // Two different trades do not produce the same list.
+    distinct: new Set(reports.map((b) => b.practices.map((x) => x.practice).join("|"))).size > 1,
+    deepPracticeCount: deep.practices.length,
+    generalCount: reports.filter((b) => b.depth.depth === "general").length,
+  };
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -1086,6 +1173,21 @@ check("answering it produces a usable profile", r.setup.usableAfterAnswering, `$
 check("which still generates a full batch", r.setup.ideasAfterAnswering === 10, `${r.setup.ideasAfterAnswering}`);
 check("reopening it shows the answers already given", r.setup.restoresItsOwnAnswers);
 check("and it never asks for a name the account already has", r.setup.neverAsksTheName);
+
+console.log("\n--- what good looks like in this trade ---");
+check("a catalogue match produces trade-specific practices", r.benchmark.deepIsDeep && r.benchmark.deepHasPractices,
+  `${r.benchmark.deepPracticeCount} practices`);
+check("every practice carries a line, and a reason where the reason varies", r.benchmark.everyPracticeIsComplete);
+check("every group states once why it matters and how to test yourself", r.benchmark.everyKindIsFramed);
+check("and no group prints the same reason three times", r.benchmark.noRepeatedReasons);
+check("a business with no catalogue match still gets an answer", r.benchmark.generalStillAnswers,
+  `${r.benchmark.generalCount} of 40 fell back to the model`);
+check("and that answer says it is general rather than trade-specific", r.benchmark.generalSaysSo);
+check("nothing anywhere names a company", r.benchmark.namesNoCompany);
+check("and nothing quotes a figure that would read as market data", r.benchmark.quotesNoFigure);
+check("every link is a search, never a page that can go stale", r.benchmark.everyLinkIsASearch);
+check("the same business gives the same answer", r.benchmark.deterministic);
+check("and two different trades do not share one list", r.benchmark.distinct);
 
 console.log("\n--- say the specific thing ---");
 check(
