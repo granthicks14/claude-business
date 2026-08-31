@@ -26,6 +26,7 @@ import {
   SectionHeader,
   Select,
   Stat,
+  Tabs,
   Textarea,
   useToast,
 } from "@/components/ui";
@@ -180,32 +181,34 @@ export default function BusinessPage() {
   );
 }
 
+/**
+ * The phases, through the shared `Tabs`.
+ *
+ * This was a hand-rolled `role="tablist"` with `role="tab"` buttons and no
+ * keyboard behaviour of any kind — so when the ARIA contracts were implemented
+ * in `ui.tsx`, the change reached twenty-two call sites and missed the one page
+ * the whole workspace is built around. `Tabs`' own doc comment claimed it fixed
+ * "/tasks, /business and /lab together", which was true of two of the three.
+ *
+ * Measured before this: four tabs, all four in the tab order, arrow keys doing
+ * nothing. A `role="tab"` that ignores the arrows is worse than a plain button,
+ * because it tells a screen reader to expect them.
+ *
+ * `blurb` was a `title` attribute — a tooltip no keyboard user can open and no
+ * touch user can see. It is rendered under the strip for the selected phase
+ * instead, where everybody gets it.
+ */
 function PhaseTabs({ current, onSelect }: { current: PhaseId; onSelect: (id: PhaseId) => void }) {
+  const here = PHASES.find((p) => p.id === current);
   return (
-    <div className="rule-y my-6">
-      <div
-        role="tablist"
-        aria-label="Which part of this business"
-        className="flex gap-1 overflow-x-auto py-1 -mx-1 px-1"
-      >
-        {PHASES.map((p) => {
-          const active = p.id === current;
-          return (
-            <button
-              key={p.id}
-              role="tab"
-              aria-selected={active}
-              title={p.blurb}
-              onClick={() => onSelect(p.id)}
-              className={`shrink-0 min-h-9 px-3 rounded-md text-sm font-medium transition-colors ${
-                active ? "bg-ink text-bg" : "text-muted hover:text-fg hover:bg-surface-2"
-              }`}
-            >
-              {p.label}
-            </button>
-          );
-        })}
-      </div>
+    <div className="my-6">
+      <Tabs
+        tabs={PHASES.map((p) => ({ id: p.id, label: p.label }))}
+        active={current}
+        onChange={(id) => onSelect(id as PhaseId)}
+        idPrefix="phase"
+      />
+      {here?.blurb && <p className="text-caption text-muted mt-3">{here.blurb}</p>}
     </div>
   );
 }

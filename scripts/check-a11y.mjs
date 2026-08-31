@@ -368,23 +368,45 @@ function staticHalf() {
   walkSrc(join(process.cwd(), "src"));
 
   const PATTERNS = [
-    ['role="menu"', /role="menu"/, "ArrowDown"],
-    ['role="tablist"', /role="tablist"/, "ArrowRight"],
+    ['role="menu"', /role="menu"/, "ArrowDown", /role="menuitem"/],
+    ['role="tablist"', /role="tablist"/, "ArrowRight", /role="tab"/],
   ];
   /*
    * A file may declare the role and delegate the keys to the primitive that
-   * owns them — `app/business/page.tsx` draws its own strip using the shared
-   * `Tabs`. What matters is that the keys live with the role, so a file that
-   * imports the primitive is not asked to reimplement them.
+   * owns them, so importing that primitive excuses it from reimplementing them.
+   *
+   * BUT ONLY IF IT IS NOT ALSO WRITING THE CHILD ROLE ITSELF.
+   *
+   * The first version of this rule excused any file importing `ui`, and the
+   * comment above it named `app/business/page.tsx` as the example of correct
+   * delegation. That page was in fact writing its own `role="tablist"` and
+   * `role="tab"` buttons with no keyboard handling at all — it imports `ui` for
+   * `Card` and `Button` like nearly every page in the app does, which is why
+   * the exemption swallowed it. Measured in the browser once the keys were
+   * actually pressed: four tabs, all four in the tab order, arrows doing
+   * nothing, on the central page of the workspace.
+   *
+   * Importing a primitive is not evidence of using it. Writing the child role
+   * yourself is evidence of not using it.
    */
   const DELEGATES = /from "@\/components\/ui"/;
+  /*
+   * Comments stripped first, for the second time in this file. The comment on
+   * `business/page.tsx` explaining that it *used to* hand-roll a tablist made
+   * the scan report it as still hand-rolling one — so a correctly fixed file
+   * would have failed for ever, which is precisely what happened to the
+   * `outline-none` scan a few blocks up. A check that reads prose is reading
+   * the wrong document.
+   */
+  const codeOf = (f) => stripComments(readFileSync(f, "utf8"));
   let checkedRoles = 0;
-  for (const [label, roleRe, key] of PATTERNS) {
-    const users = componentFiles.filter((f) => roleRe.test(readFileSync(f, "utf8")));
+  for (const [label, roleRe, key, childRe] of PATTERNS) {
+    const users = componentFiles.filter((f) => roleRe.test(codeOf(f)));
     checkedRoles += users.length;
     const missing = users.filter((f) => {
-      const src = readFileSync(f, "utf8");
-      return !src.includes(key) && !DELEGATES.test(src);
+      const src = codeOf(f);
+      if (src.includes(key)) return false;
+      return childRe.test(src) || !DELEGATES.test(src);
     });
     check(
       users.length > 0 && missing.length === 0,
@@ -397,6 +419,59 @@ function staticHalf() {
     );
   }
   check(checkedRoles > 0, "the role sweep found something to check", `${checkedRoles} components`);
+
+  /* -------------------------- the focus ring does not depend on the accent - */
+
+  /*
+   * The ratios above are measured on one accent, and the reviewer's rubric asks
+   * for seven. Sweeping seven would be the obvious answer and would be measuring
+   * something that cannot vary: `:focus-visible` outlines in `var(--accent)`,
+   * and the seven `[data-accent]` blocks redefine only the `--signal` family.
+   *
+   * So the property worth holding is the *independence*, not seven copies of one
+   * number — and it is worth holding, because pointing the outline at `--signal`
+   * is a one-word change that would make the app's most important indicator vary
+   * with a user preference, in seven directions, with nothing measuring any of
+   * them. `check:visual` already sweeps seven accents for text contrast; this is
+   * the assertion that keeps that division of labour honest.
+   */
+  console.log("\n--- the focus ring is the same colour whatever the accent ---");
+  const outline = css.match(/:focus-visible\s*\{[^}]*outline:[^;]*var\(--([a-z-]+)\)/);
+  check(!!outline, "the focus outline is drawn from a token", outline ? `var(--${outline[1]})` : "not found");
+  if (outline) {
+    const token = outline[1];
+    /*
+     * The list comes from `appearance.ts`, not from a number typed here. Seven
+     * accents are offered and only six have a `[data-accent]` block — azure is
+     * the default and lives on bare `:root` — so a hardcoded seven fails on
+     * correct code, and a hardcoded six silently stops covering an accent the
+     * day somebody adds one.
+     */
+    const appearance = readFileSync(join(process.cwd(), "src", "lib", "appearance.ts"), "utf8");
+    const offered = (appearance.match(/export const ACCENTS = \[([^\]]*)\]/)?.[1] ?? "")
+      .split(",")
+      .map((s) => s.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean);
+    const blocks = new Map(
+      [...css.matchAll(/^:root\[data-accent="([a-z]+)"\]\s*\{([^}]*)\}/gm)].map((m) => [m[1], m[2]]),
+    );
+    const unstyled = offered.filter((a) => !blocks.has(a));
+    check(
+      offered.length >= 7 && unstyled.length <= 1,
+      "every accent the app offers is accounted for",
+      `${offered.length} offered, ${blocks.size} with a block, default: ${unstyled.join(", ") || "none"}`,
+    );
+    const redefines = [...blocks.entries()].filter(([, body]) =>
+      new RegExp(`--${token}\\s*:`).test(body),
+    );
+    check(
+      redefines.length === 0,
+      `no accent redefines --${token}`,
+      redefines.length
+        ? `${redefines.map(([name]) => name).join(", ")} would change the focus ring`
+        : `${blocks.size} accents leave it alone`,
+    );
+  }
 
   /* ------------------------------------ fields say what is wrong with them - */
 
@@ -986,14 +1061,137 @@ async function browserHalf(chromium) {
       revealed.found ? `${revealed.before}px to ${revealed.after}px` : "",
     );
 
+    /* ------------------------------------ the roles are driven, not read --- */
+
+    /*
+     * The static half greps for a keyboard handler beside each `role`. That
+     * catches a role declared with no handler at all, which is the defect it
+     * was written for, and it cannot tell a handler that works from one that
+     * does not — so the assertion it supports is "somebody wrote some keyboard
+     * code here", which is not the promise the role makes to a screen reader.
+     *
+     * These press the keys.
+     */
+    console.log("\n--- the menu and the tabs answer the keyboard ---");
+
+    await page.goto(ORIGIN + "/business", { waitUntil: "networkidle" });
+    await page.waitForTimeout(500);
+
+    const trigger = page.locator('[aria-haspopup="menu"]').first();
+    const menuDriven = { opened: false, moved: false, end: false, closed: false, returned: false };
+    if (await trigger.count()) {
+      await trigger.focus();
+      await page.keyboard.press("ArrowDown");
+      await page.waitForTimeout(250);
+      const afterOpen = await page.evaluate(() => ({
+        open: !!document.querySelector('[role="menu"]'),
+        onItem: document.activeElement?.getAttribute("role") === "menuitem",
+        label: (document.activeElement?.textContent || "").trim().slice(0, 30),
+      }));
+      menuDriven.opened = afterOpen.open;
+      menuDriven.moved = afterOpen.onItem;
+
+      /* End goes to the last item — the property a for-loop of ArrowDown cannot distinguish. */
+      await page.keyboard.press("End");
+      await page.waitForTimeout(150);
+      menuDriven.end = await page.evaluate(() => {
+        const items = [...document.querySelectorAll('[role="menuitem"]')];
+        return items.length > 1 && document.activeElement === items[items.length - 1];
+      });
+
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(250);
+      const afterEscape = await page.evaluate(() => ({
+        open: !!document.querySelector('[role="menu"]'),
+        onTrigger: document.activeElement?.getAttribute("aria-haspopup") === "menu",
+      }));
+      menuDriven.closed = !afterEscape.open;
+      menuDriven.returned = afterEscape.onTrigger;
+    }
+    check(menuDriven.opened, "ArrowDown on the account trigger opens the menu");
+    check(menuDriven.moved, "and lands on the first item rather than leaving focus behind");
+    check(menuDriven.end, "End reaches the last item");
+    check(menuDriven.closed, "Escape closes it");
+    check(
+      menuDriven.returned,
+      "and returns focus to the trigger",
+      menuDriven.returned ? "" : "focus was dropped on the page",
+    );
+
+    /*
+     * The tab strip. `/business` renders its phases through the shared `Tabs`,
+     * so driving it here exercises the component every caller uses.
+     */
+    /*
+     * Scoped to one strip. A page may render more than one — the roving
+     * tabindex rule is "one tab in *this* strip is tabbable", and counting
+     * across the document turns two correct strips into a failure, while
+     * indexing `[role="tab"]` across the document compares a press inside one
+     * strip against the concatenation of both.
+     */
+    const strip = page.locator('[role="tablist"]').first();
+    const tabDriven = { strips: 0, moved: -1, home: -1, selected: false, roving: -1 };
+    tabDriven.strips = await page.locator('[role="tablist"]').count();
+    if ((await strip.locator('[role="tab"]').count()) > 1) {
+      await strip.locator('[role="tab"]').nth(0).focus();
+      await page.keyboard.press("ArrowRight");
+      await page.waitForTimeout(300);
+      const indexOfActive = () =>
+        page.evaluate(() => {
+          const list = document.querySelector('[role="tablist"]');
+          return [...list.querySelectorAll('[role="tab"]')].indexOf(document.activeElement);
+        });
+      tabDriven.moved = await indexOfActive();
+      tabDriven.selected = await page.evaluate(
+        () => document.activeElement?.getAttribute("aria-selected") === "true",
+      );
+      await page.keyboard.press("Home");
+      await page.waitForTimeout(300);
+      tabDriven.home = await indexOfActive();
+      tabDriven.roving = await page.evaluate(() => {
+        const list = document.querySelector('[role="tablist"]');
+        return [...list.querySelectorAll('[role="tab"]')].filter((t) => t.tabIndex === 0).length;
+      });
+    }
+    check(tabDriven.moved === 1, "ArrowRight moves between tabs", `landed on index ${tabDriven.moved}`);
+    check(tabDriven.selected, "and the tab it moves to is the selected one");
+    check(tabDriven.home === 0, "Home returns to the first", `landed on index ${tabDriven.home}`);
+    check(
+      tabDriven.roving === 1,
+      "and only one tab in the strip is in the page's tab order",
+      `${tabDriven.roving} tabbable across ${tabDriven.strips} strip${tabDriven.strips === 1 ? "" : "s"}`,
+    );
+
     /* --------------------------------- navigation says where you went ----- */
 
+    /*
+     * Asserting the live region *exists* was the whole of this check, which is
+     * the same class of evidence as grepping for a keyboard handler: a region
+     * that never publishes anything is indistinguishable from one that does.
+     * This navigates client-side and reads what it said.
+     */
     console.log("\n--- a client-side navigation is announced ---");
-    const announced = await page.evaluate(() => {
-      const live = [...document.querySelectorAll('[aria-live="polite"], [role="status"]')];
-      return live.some((el) => el.dataset.route !== undefined);
-    });
-    check(announced, "a live region publishes the route change", announced ? "" : "nothing announces a route change");
+    const liveBefore = await page.evaluate(
+      () => document.querySelector("[data-route]")?.textContent?.trim() ?? null,
+    );
+    await page.getByRole("link", { name: "Progress", exact: true }).first().click();
+    await page.waitForTimeout(800);
+    const liveAfter = await page.evaluate(() => ({
+      text: document.querySelector("[data-route]")?.textContent?.trim() ?? null,
+      polite: document.querySelector("[data-route]")?.getAttribute("aria-live") === "polite",
+      url: location.pathname,
+    }));
+    check(liveAfter.polite, "the route announcer is a polite live region");
+    check(
+      liveAfter.url !== "/business",
+      "the navigation was client-side and went somewhere",
+      liveAfter.url,
+    );
+    check(
+      !!liveAfter.text && liveAfter.text !== liveBefore,
+      "and it published the new page rather than staying silent",
+      `"${liveBefore ?? ""}" to "${liveAfter.text ?? ""}"`,
+    );
 
     await context.close();
   } finally {

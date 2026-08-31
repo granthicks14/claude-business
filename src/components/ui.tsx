@@ -1356,8 +1356,14 @@ export function Disclosure({
  * nothing to fetch, so the manual-activation variant would cost a keypress and
  * buy nothing.
  *
- * One change here fixes `/tasks`, `/business` and `/lab` together, which is
- * the whole argument for the primitive existing.
+ * One change here fixes every caller at once, which is the whole argument for
+ * the primitive existing — and the argument only holds for callers that
+ * actually call it. This comment used to name `/tasks`, `/business` and `/lab`
+ * as the three it fixed; `/business` was drawing its own `role="tablist"` and
+ * `role="tab"` buttons with no keyboard handling, so the sentence was true of
+ * two of the three and the page it was most wrong about was the workspace's
+ * front door. It uses this now, and `check:a11y` presses the arrow keys on a
+ * real strip rather than trusting either the comment or a grep.
  */
 export function Tabs({
   tabs,
