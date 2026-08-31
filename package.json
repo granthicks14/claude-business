@@ -9,6 +9,7 @@
     "check:deploy": "node scripts/check-deploy.mjs",
     "check:access": "node scripts/check-access.mjs",
     "check:persist": "node scripts/check-persist.mjs",
+    "check:a11y": "node scripts/check-a11y.mjs",
     "check:visual": "node scripts/visual-qa.mjs",
     "test:scoring": "node scripts/test-scoring.mjs",
     "test:intel": "node scripts/test-intel.mjs",
