@@ -118,8 +118,15 @@ export interface QualityReport {
   factors: QualityFactor[];
   strengths: QualityFactor[];
   weaknesses: QualityFactor[];
-  /** The single highest-leverage improvement: biggest weighted gap with a fix. */
-  fastestImprovement: { what: string; why: string; where: string } | null;
+  /**
+   * The single highest-leverage improvement: biggest weighted gap with a fix.
+   *
+   * `dimension` rides along so a picture of the thirteen can mark the same row
+   * this sentence names. Without it the ranked view marked the *lowest* score
+   * and the sentence beside it named the *weightiest shortfall* — two true
+   * claims about two different rows, read as a contradiction.
+   */
+  fastestImprovement: { what: string; why: string; where: string; dimension: QualityDimension } | null;
   /** One paragraph, written for a person who just wants the answer. */
   summary: string;
   /** How much of this rests on recorded evidence versus structure. */
@@ -476,6 +483,7 @@ export function businessQuality(business: SelectedBusiness, profile: FounderProf
         what: target.lift!,
         why: `${QUALITY_LABEL[target.dimension]} is the weakest thing carrying real weight — it scores ${target.score}.`,
         where: WHERE[target.dimension] ?? "/decide",
+        dimension: target.dimension,
       }
     : null;
 

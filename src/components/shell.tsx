@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { Footer } from "./footer";
 import { Icon, type IconName } from "./icons";
@@ -17,7 +17,7 @@ import { actions, activeBusiness, useAppState } from "@/lib/store";
 import { isGuest, isOpen, subscribeVault } from "@/lib/vault";
 import { profileCompleteness } from "@/lib/profile-fields";
 import type { AppState, SelectedBusiness } from "@/lib/types";
-import { overflowSections, sectionFor, topSections, useNav, type NavSection } from "@/lib/nav";
+import { overflowSections, sectionFor, topSections, useNav, type NavItem, type NavSection } from "@/lib/nav";
 
 /**
  * THE FRAME: A MASTHEAD, NOT A DASHBOARD.
@@ -330,26 +330,125 @@ function Datum() {
           </span>
         )}
 
-        {/* The pages inside this section, inline. This is what the sidebar's
-            expanding sub-list did, on one line and without the column. */}
-        <nav aria-label={current.label} className="hidden md:flex items-center gap-4 ml-auto min-w-0 overflow-x-auto no-scrollbar">
-          {current.items.map((item) => {
+        <SectionNav items={current.items} label={current.label} pathname={pathname} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * THE PAGES INSIDE THIS SECTION, AND WHY THIS TOOK A REWRITE.
+ *
+ * WHAT WAS WRONG WITH IT
+ *
+ * Nineteen links, all at `text-caption` (13px) in `text-muted`, in a scroller
+ * with a hidden scrollbar and no affordance that anything was off the right
+ * edge. The current page differed from the other eighteen by colour and font
+ * weight alone. And it was `hidden md:flex`, so below 768px it did not render
+ * at all — the whole section index, absent on a phone.
+ *
+ * The note that produced this pass put it plainly: the sections at the top of
+ * the screen are hardly visible.
+ *
+ * WHAT CHANGED, AND WHY EACH PART
+ *
+ * **Groups.** The nineteen were already written in three runs separated by
+ * blank lines in `nav-model.ts` — set it up, does it hold up, make it — which
+ * communicated the structure to whoever was reading the file and to nobody
+ * looking at the screen. `NavItem.group` names them, and a mono label
+ * separates each run, so the row reads as three short lists rather than one
+ * long one.
+ *
+ * **A marker, not a shade.** The active page carries a rule in the section
+ * hue under it. Weight and colour alone are a difference you have to look for;
+ * a line under one item is one you cannot miss, and it is the same `--section`
+ * property the masthead wedge and the page illustrations already read, so the
+ * marked link and the page's colour cannot disagree.
+ *
+ * **`text-sm`.** 13px was the floor this app's own type audit was written to
+ * get away from, and this row is a primary navigation control.
+ *
+ * **It scrolls to the active item.** A scroller that opens showing item one
+ * when you are on item fifteen is a scroller that has hidden where you are.
+ *
+ * **It shows its edges.** A mask fades the last few pixels when there is more
+ * to the right, which is the only honest signal a hidden scrollbar leaves
+ * room for.
+ *
+ * **And it renders on a phone**, as its own line. The bottom bar's More sheet
+ * still exists and is still the fastest way to change section; this is how you
+ * move *within* one.
+ */
+function SectionNav({
+  items,
+  label,
+  pathname,
+}: {
+  items: NavItem[];
+  label: string;
+  pathname: string;
+}) {
+  const scroller = useRef<HTMLElement | null>(null);
+
+  /*
+   * Bring the current page into view when the route changes.
+   *
+   * `block: "nearest"` so it never scrolls the page itself — this element is
+   * inside sticky chrome, and a vertical jump on every navigation would be a
+   * far worse bug than the one being fixed.
+   */
+  useEffect(() => {
+    const el = scroller.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    el?.scrollIntoView({ inline: "center", block: "nearest" });
+  }, [pathname]);
+
+  if (items.length === 0) return null;
+
+  /* The runs, in the order the section declares them. */
+  const groups: { name: string | null; items: NavItem[] }[] = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last && last.name === (item.group ?? null)) last.items.push(item);
+    else groups.push({ name: item.group ?? null, items: [item] });
+  }
+
+  return (
+    <nav
+      ref={scroller}
+      aria-label={label}
+      className="section-nav flex items-stretch gap-5 w-full md:w-auto md:ml-auto min-w-0 overflow-x-auto no-scrollbar"
+    >
+      {groups.map((group, i) => (
+        <div key={group.name ?? `run-${i}`} className="flex items-stretch gap-4 shrink-0">
+          {group.name && (
+            <span className="eyebrow text-faint self-center whitespace-nowrap" aria-hidden="true">
+              {group.name}
+            </span>
+          )}
+          {group.items.map((item) => {
             const active = pathname === item.href.split("?")[0];
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`text-caption whitespace-nowrap min-h-9 flex items-center transition-colors
-                  ${active ? "text-text font-medium" : "text-muted hover:text-text"}`}
+                className={`text-sm whitespace-nowrap min-h-9 flex items-center border-b-2 transition-colors
+                  ${
+                    active
+                      ? "text-text font-medium border-[var(--section,var(--ink))]"
+                      : "text-muted border-transparent hover:text-text hover:border-border-strong"
+                  }`}
               >
                 {item.label}
+                {item.badge ? (
+                  <span className="ml-1.5 text-caption tabular-nums text-faint">{item.badge}</span>
+                ) : null}
               </Link>
             );
           })}
-        </nav>
-      </div>
-    </div>
+        </div>
+      ))}
+    </nav>
   );
 }
 

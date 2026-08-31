@@ -711,6 +711,27 @@
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
 
+  /*
+   * The section nav shows its own edges.
+   *
+   * It is a horizontal scroller with the scrollbar hidden, which is right for
+   * a row of nineteen links in sticky chrome and leaves nothing at all saying
+   * that anything is off the right edge. The mask fades the last few pixels
+   * so the row visibly runs out rather than stopping.
+   *
+   * `mask-image` degrades to no mask where it is unsupported — a browser that
+   * cannot fade the edge shows a fully legible row, which is the correct
+   * failure. Nothing here conveys information the links do not.
+   */
+  .section-nav {
+    -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent 100%);
+    mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 24px), transparent 100%);
+  }
+  /* No fade when there is nothing hidden: the row fits, so the edge is real. */
+  @media (min-width: 1400px) {
+    .section-nav { -webkit-mask-image: none; mask-image: none; }
+  }
+
   .animate-in {
     animation: fade-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   }

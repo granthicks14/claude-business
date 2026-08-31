@@ -28,6 +28,20 @@ export interface NavItem {
   href: string;
   label: string;
   badge?: number;
+  /**
+   * Which run of items this belongs to, for the section nav under the
+   * masthead.
+   *
+   * The nineteen business links were already written in three runs separated
+   * by blank lines — set it up, check it holds up, make it — and the blank
+   * lines said so to whoever was reading the file and to nobody looking at
+   * the screen. Naming the runs is what lets the row render them as groups
+   * rather than as nineteen equal-weight words in a scroller.
+   *
+   * Optional: a section with a handful of items does not need dividing, and
+   * an ungrouped item renders in the run before it.
+   */
+  group?: string;
 }
 
 /**
@@ -166,27 +180,27 @@ export function navSections(state: AppState): NavSection[] {
       blurb: business ? "The one you picked, and everything about it." : "Nothing picked yet — choose one in Brainstorm.",
       items: business
         ? [
-            { href: b("/business"), label: "Overview" },
-            { href: b("/business/identity"), label: "Business details" },
-            { href: b("/plan"), label: "The plan" },
-            { href: b("/money"), label: "Money" },
-            { href: b("/business/operations"), label: "How it runs" },
-            { href: b("/business/spend"), label: "What to pay for" },
+            { href: b("/business"), label: "Overview", group: "Set it up" },
+            { href: b("/business/identity"), label: "Business details", group: "Set it up" },
+            { href: b("/plan"), label: "The plan", group: "Set it up" },
+            { href: b("/money"), label: "Money", group: "Set it up" },
+            { href: b("/business/operations"), label: "How it runs", group: "Set it up" },
+            { href: b("/business/spend"), label: "What to pay for", group: "Set it up" },
 
-            { href: b("/quality"), label: "Is it any good?" },
-            { href: b("/decide"), label: "Should I do this?" },
-            { href: b("/customers"), label: "Talk to customers" },
-            { href: b("/research"), label: "What you actually know" },
-            { href: b("/validation"), label: "Evidence" },
-            { href: b("/improve"), label: "Make it better" },
+            { href: b("/quality"), label: "Is it any good?", group: "Does it hold up?" },
+            { href: b("/decide"), label: "Should I do this?", group: "Does it hold up?" },
+            { href: b("/customers"), label: "Talk to customers", group: "Does it hold up?" },
+            { href: b("/research"), label: "What you actually know", group: "Does it hold up?" },
+            { href: b("/validation"), label: "Evidence", group: "Does it hold up?" },
+            { href: b("/improve"), label: "Make it better", group: "Does it hold up?" },
 
-            { href: b("/mvp"), label: "What to build first" },
-            { href: b("/landing"), label: "Landing page" },
-            { href: b("/business/website"), label: "Website" },
-            { href: b("/business/build"), label: "Make things" },
-            { href: b("/marketing"), label: "Marketing" },
-            { href: b("/sales"), label: "Sales" },
-            { href: b("/practice"), label: "Practise the conversation" },
+            { href: b("/mvp"), label: "What to build first", group: "Make it" },
+            { href: b("/landing"), label: "Landing page", group: "Make it" },
+            { href: b("/business/website"), label: "Website", group: "Make it" },
+            { href: b("/business/build"), label: "Make things", group: "Make it" },
+            { href: b("/marketing"), label: "Marketing", group: "Make it" },
+            { href: b("/sales"), label: "Sales", group: "Make it" },
+            { href: b("/practice"), label: "Practise the conversation", group: "Make it" },
             /*
              * THE COACH HAD NO MENU PATH AT ALL ON A DESKTOP, AND IT WAS
              * FILED UNDER THE WRONG THING.
@@ -208,7 +222,7 @@ export function navSections(state: AppState): NavSection[] {
              * `AIConversation.businessId` is for, and why this href is the
              * one entry in "you" that had to be scoped.
              */
-            { href: b("/coach"), label: "Ask the coach" },
+            { href: b("/coach"), label: "Ask the coach", group: "Make it" },
           ]
         : [],
     },

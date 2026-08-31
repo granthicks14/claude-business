@@ -338,11 +338,13 @@ function Dashboard({ business }: { business: SelectedBusiness }) {
         the one sentence that matters is a picture competing with it.
       */}
       {/*
-        The survey. See `ground-profile.tsx` — every depth in it is read off
-        this business, so two businesses never draw the same picture and a
-        founder can see at a glance whether they are on rock or on fill.
+        What the business rests on, ranked weakest first. See
+        `ground-profile.tsx` — every figure in it is read off this business,
+        so two businesses never produce the same reading, and it says which
+        dimension to fix first rather than leaving that to be measured off a
+        drawing.
       */}
-      <GroundProfile quality={quality} seed={business.id} className="my-8" />
+      <GroundProfile quality={quality} className="my-8" />
 
       {/*
         The loop, drawn. Problem → offer → payment → growth was four paragraphs

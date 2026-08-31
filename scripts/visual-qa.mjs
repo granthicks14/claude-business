@@ -1059,6 +1059,110 @@ async function main() {
     }
 
 
+    /* ============================================== the section nav is legible == */
+
+    /*
+     * THE SECTION INDEX WAS THE LEAST LEGIBLE THING ON THE SCREEN.
+     *
+     * Nineteen links at `text-caption` (13px) in `text-muted`, in a scroller
+     * with a hidden scrollbar and no affordance that anything sat off the
+     * right edge — with the current page differing from the other eighteen by
+     * colour and weight alone. And it was `hidden md:flex`, so on a phone the
+     * whole section index did not render.
+     *
+     * A rule of its own rather than relying on the type-scale sweep, because
+     * 13px IS on the scale: the sweep would have passed it forever. This is
+     * about a primary navigation control specifically, and about the marker
+     * that says where you are.
+     */
+    {
+      console.log("\n--- the section nav ---");
+      const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+      const page = await context.newPage();
+      await signIn(page);
+      /*
+       * The section index only renders once a business is picked — its items
+       * are `business ? [...] : []`, which is deliberate: a section listing
+       * nineteen pages about a business nobody has chosen is furniture. So the
+       * worked example is loaded explicitly here rather than relying on
+       * `signIn` having found the button on whichever page it ended on.
+       */
+      await page.goto(ORIGIN + "/", { waitUntil: "networkidle" });
+      await page.waitForTimeout(600);
+      const openExample = page.getByRole("button", { name: /example business/i }).first();
+      if (await openExample.count().catch(() => 0)) {
+        await openExample.click().catch(() => {});
+        await page.waitForTimeout(900);
+      }
+      await page.goto(ORIGIN + "/money", { waitUntil: "networkidle" });
+      await page.waitForTimeout(900);
+
+      const nav = await page.evaluate(() => {
+        const el = document.querySelector("nav.section-nav");
+        if (!el) return null;
+        const links = [...el.querySelectorAll("a")];
+        const current = el.querySelector('[aria-current="page"]');
+        const cs = current ? getComputedStyle(current) : null;
+        return {
+          links: links.length,
+          smallest: Math.min(...links.map((a) => parseFloat(getComputedStyle(a).fontSize))),
+          groups: [...el.querySelectorAll(".eyebrow")].map((g) => g.textContent.trim()),
+          hasCurrent: !!current,
+          // A marker rather than a shade: the active item carries a visible
+          // rule, and it is in the section hue rather than in a status colour.
+          markerWidth: cs ? parseFloat(cs.borderBottomWidth) : 0,
+          markerColour: cs ? cs.borderBottomColor : "",
+          faded: getComputedStyle(el).maskImage !== "none" || getComputedStyle(el).webkitMaskImage !== "none",
+          // Where you are must be in view, not scrolled off to the right.
+          currentInView: current
+            ? current.getBoundingClientRect().left >= el.getBoundingClientRect().left - 1 &&
+              current.getBoundingClientRect().right <= el.getBoundingClientRect().right + 1
+            : false,
+        };
+      });
+
+      if (!nav) {
+        fail("section nav: it did not render on a workspace route");
+      } else {
+        if (nav.links < 10) fail("section nav: too few links to be the section index", nav.links + " links");
+        else pass("the section index renders inside the workspace", nav.links + " links");
+
+        if (nav.smallest < 14) fail("section nav: primary navigation below the type floor", nav.smallest + "px");
+        else pass("its links are at least 14px", nav.smallest + "px");
+
+        if (nav.groups.length < 3) fail("section nav: the nineteen links are not grouped", nav.groups.join(" / "));
+        else pass("and grouped into runs", nav.groups.join(" / "));
+
+        if (!nav.hasCurrent) fail("section nav: nothing is marked as the current page");
+        else if (nav.markerWidth < 1.5) fail("section nav: the current page is marked by colour alone", nav.markerWidth + "px marker");
+        else pass("the current page carries a real marker", nav.markerWidth + "px, " + nav.markerColour);
+
+        if (!nav.currentInView) fail("section nav: the current page is scrolled out of view");
+        else pass("and it is scrolled into view rather than left off the edge");
+
+        if (!nav.faded) fail("section nav: a hidden scrollbar with no edge affordance");
+        else pass("the row shows where it runs out");
+      }
+
+      // And it renders on a phone, which it previously did not at all.
+      await page.setViewportSize({ width: 320, height: 640 });
+      await page.waitForTimeout(500);
+      const onPhone = await page.evaluate(() => {
+        const el = document.querySelector("nav.section-nav");
+        if (!el) return { present: false, visible: false, overflow: 0 };
+        return {
+          present: true,
+          visible: el.getBoundingClientRect().height > 0,
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+        };
+      });
+      if (!onPhone.present || !onPhone.visible) fail("section nav: absent on a 320px screen");
+      else if (onPhone.overflow > 1) fail("section nav: it overflows the page at 320px", onPhone.overflow + "px");
+      else pass("and it renders on a phone without overflowing");
+
+      await context.close();
+    }
+
     /* ================================================= the dialog escapes == */
 
     /*

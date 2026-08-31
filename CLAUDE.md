@@ -235,6 +235,80 @@ recover chroma cost more contrast than it gained saturation.
 `check:visual` asserts a section hue and a status class never land on one
 element, which is the single thing that would make the palette meaningless.
 
+### The section index was the least legible thing on the screen
+
+`Datum`'s sub-nav was **nineteen links at `text-caption` (13px) in
+`text-muted`**, in a scroller with a hidden scrollbar and no affordance that
+anything sat off the right edge, where the current page differed from the other
+eighteen by colour and weight alone. And it was `hidden md:flex`, so **below
+768px the whole section index did not render at all**. The note that produced
+this pass put it plainly: the sections at the top of the screen are hardly
+visible.
+
+Five changes, each answering one of those:
+
+- **Groups.** The nineteen were already written in three runs separated by
+  blank lines in `nav-model.ts` — set it up, does it hold up, make it — which
+  communicated the structure to whoever was reading the file and to nobody
+  looking at the screen. `NavItem.group` names them.
+- **A marker, not a shade.** The current page carries a 2px rule in the
+  `--section` hue. Weight and colour alone are a difference you have to look
+  for. It is the same property the masthead wedge and the illustrations read,
+  so the marked link and the page's colour cannot disagree.
+- **`text-sm`.** 13px was the floor the type audit was written to escape, and
+  this is a primary navigation control.
+- **It scrolls to the active item**, with `block: "nearest"` so it never moves
+  the page — this sits inside sticky chrome and a vertical jump on every
+  navigation would be worse than the bug.
+- **It shows its edges** with a mask, and **renders on a phone** as its own
+  line.
+
+`check:visual` gets a rule of its own rather than relying on the type sweep,
+**because 13px is on the scale** — the sweep would have passed it for ever. It
+asserts the link size, the groups, a real marker, the active item being in
+view, the edge fade, and that it renders at 320px without overflowing.
+
+### The picture that read as random lines
+
+`GroundProfile` drew a geological cross-section: six bands of ink, each a
+quality dimension, each with a wavy top edge whose amplitude encoded the score.
+The metaphor was right — Groundwork is the work before you build, and a survey
+is what that work produces — and it did not survive contact with a reader.
+Measured:
+
+- Six `polyline`s at **opacity 0.22**, about 1.7:1 against the paper. This
+  file's own note about `art.tsx` — *"not a drawing but a smudge in the corner,
+  and reads as a fault rather than as art"* — was never applied here.
+- Band fills ran 0.10 → 0.375 ink in steps of **0.055**, so neighbours were
+  barely separable and the ordering they encoded was invisible.
+- The roughness carrying the score was **at most ±10px across five interior
+  points on a 260px drawing** — signal well below the noise of reading it.
+- Labels at **9px in user units** on an 800-unit viewBox, pinned 15px below
+  each band's top edge rather than centred, so on a narrow band the label sat
+  in the band below its own.
+- The only saturated colour in it was a **decorative logo triangle carrying no
+  data**, which is therefore the first thing the eye went to.
+
+It is a ranked bar per dimension now — label, bar, score, one row marked. Two
+properties were worth keeping and are kept: every figure is read off something
+recorded, and no two businesses produce the same reading.
+
+Two defects showed up in the first screenshot of the replacement and are worth
+recording because both are about rules working correctly on the wrong thing:
+
+**The base-layer measure rule capped the bars.** `main :where(p, li, dd,
+blockquote)` gets `max-width: var(--measure)`, which is right for a list of
+sentences and wrong for a row of bars — measured, they stopped at **712px on a
+1232px page**. `.measure-full` is the escape hatch the rule itself provides.
+
+**The marker and the caption named different rows.** The list flagged the
+*lowest* score ("Can it grow · weakest", 55) directly above a sentence reading
+"Do they come back is the weakest thing carrying real weight". Both were true —
+one is the lowest score, the other the weightiest shortfall — and together they
+read as a bug. `fastestImprovement` carries its `dimension` now, so the picture
+marks the row the sentence names, and the label says **"fix this first"**
+rather than "weakest", because that is the question being answered.
+
 ### The pictures were invisible
 
 `PageHero` painted every illustration at `--border-strong` — about 1.7:1 against

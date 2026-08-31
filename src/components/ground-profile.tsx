@@ -1,190 +1,167 @@
 "use client";
 
-import { QUALITY_LABEL, type QualityReport } from "@/lib/quality";
+import { Eyebrow } from "@/components/ui";
+import { QUALITY_LABEL, QUALITY_BAND_LABEL, type QualityReport } from "@/lib/quality";
 
 /**
- * THE GROUND PROFILE — the one picture this product is entitled to draw.
+ * WHAT THIS BUSINESS RESTS ON — the thirteen dimensions, ranked.
  *
- * A geological section through the ground a business is standing on. Each band
- * is one of the thirteen quality dimensions; how deep it runs is how strongly
- * that dimension is scoring. The benchmark from the logo sits on the surface,
- * because that is where a benchmark goes.
+ * WHAT IT REPLACED, AND WHY
  *
- * WHY THIS RATHER THAN AN ILLUSTRATION
+ * A geological cross-section: six bands of ink, each a quality dimension, each
+ * with a wavy top edge whose amplitude encoded the score. The metaphor was
+ * good — Groundwork is the work before you build, and a survey is what that
+ * work produces — and the drawing did not survive contact with a reader. The
+ * note that produced this pass called it "random lines", which is exactly what
+ * it was:
  *
- * The brief asked for images. The honest options were stock photography of
- * somebody who is not the user, generated art that would look exactly like the
- * thing we are trying not to look like, or a drawing that means something. This
- * means something: every line in it is read off the business in front of you,
- * two businesses never produce the same picture, and a founder can tell at a
- * glance whether they are standing on rock or on fill.
+ *  - Six `polyline`s at **opacity 0.22** — around 1.7:1 against the paper,
+ *    which is a smudge rather than a line. This repo's own note about the
+ *    other illustrations ("not a drawing but a smudge in the corner, and reads
+ *    as a fault rather than as art") was written about `art.tsx` and never
+ *    applied here.
+ *  - Band fills ran 0.10 to 0.375 ink in steps of 0.055, so neighbouring
+ *    bands were barely separable and the ordering they encoded was invisible.
+ *  - The roughness that carried the score was **at most ±10px across five
+ *    interior points on a 260px drawing** — a signal far below the noise of
+ *    reading it.
+ *  - Labels were 9px in *user units* on an 800-unit viewBox, pinned 15px below
+ *    each band's top edge rather than centred in it, so on a narrow band the
+ *    label sat in the band below its own.
+ *  - And it rendered bare: no card, no heading, no anchor for the caption.
  *
- * It is also the product's own metaphor drawn literally. Groundwork is the work
- * before you build; this is the survey that work produces.
+ * Two properties were worth keeping and are kept: **every value is read off
+ * something recorded**, and **no two businesses draw the same picture**.
+ * Nothing else was.
  *
- * HOW IT STAYS HONEST
+ * WHY BARS
  *
- * Nothing is invented. Bands come from `businessQuality`, which computes every
- * dimension from something recorded. A dimension with nothing behind it scores
- * low and draws thin, which is the truthful picture of a business nobody has
- * checked — the drawing gets *shallower* when you know less, never prettier.
+ * The question a founder has here is comparative — which of these is dragging
+ * the score, and what should I fix first. A ranked bar answers it directly;
+ * an area whose *depth* encodes a score requires the reader to measure. The
+ * design system already had the shape (`Meter`), and this is close to it with
+ * the two things `Meter` does not do: it marks the one row to fix first, and
+ * it shows the weight each dimension carries, because a low score on something
+ * that barely counts is not the thing to fix.
  *
- * Deterministic: the same business draws the same section every time, because
- * the only randomness is a hash of its own id.
+ * The decorative logo triangle that stood on the datum is gone. It carried no
+ * data and was the only saturated colour in the drawing, so it was the first
+ * thing the eye went to and it meant nothing.
  */
-
-/** A stable small integer from a string. Same business, same section. */
-function hash(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return () => {
-    h ^= h << 13;
-    h ^= h >>> 17;
-    h ^= h << 5;
-    return ((h >>> 0) % 1000) / 1000;
-  };
-}
-
-const W = 800;
-const H = 260;
-/** Where the surface sits. Everything above is air, everything below is ground. */
-const SURFACE = 74;
 
 export function GroundProfile({
   quality,
-  seed,
   className = "",
 }: {
   quality: QualityReport;
-  /** The business id. Only used to vary the strata roughness. */
-  seed: string;
   className?: string;
 }) {
-  const rand = hash(seed);
+  /*
+   * Ranked by score, weakest first.
+   *
+   * Weakest-first because the page this sits on is about deciding what to do
+   * next, and the useful end of a ranking is the end you can act on. Ties
+   * break on weight, so of two equally weak dimensions the one that counts for
+   * more is listed first.
+   */
+  const rows = [...quality.factors].sort(
+    (a, b) => a.score - b.score || b.weight - a.weight,
+  );
 
   /*
-   * Six bands, strongest at the top.
+   * The row to mark is the one the sentence underneath names.
    *
-   * Thirteen would be hairlines. The six carrying the most weight are the ones
-   * a founder would name if you asked what their business rests on, and the
-   * rest are on the page below in full.
+   * Marking the *lowest* score instead was the first version, and it produced
+   * a picture whose flagged row and whose caption pointed at two different
+   * dimensions — "Can it grow · weakest" at 55, above a line saying "Do they
+   * come back is the weakest thing carrying real weight". Both were true and
+   * together they read as a mistake. `fastestImprovement` weighs the shortfall
+   * by how much the dimension counts, which is the question a founder is
+   * actually asking, so it decides both.
    */
-  const bands = [...quality.factors]
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 6);
-
-  const total = bands.reduce((sum, b) => sum + Math.max(12, b.score), 0);
-  const usable = H - SURFACE - 8;
-
-  let y = SURFACE;
-  const drawn = bands.map((band, i) => {
-    const depth = (Math.max(12, band.score) / total) * usable;
-    const top = y;
-    y += depth;
-
-    /*
-     * The top edge of each band waves a little, the way a real section does.
-     * Amplitude falls with the score: a well-evidenced layer is level bedrock,
-     * a weak one is broken ground. That is not decoration — it is the same
-     * number said twice, which is what makes the picture readable at a glance.
-     */
-    const rough = (1 - band.score / 100) * 9 + 1;
-    const steps = 6;
-    const points: string[] = [];
-    for (let s = 0; s <= steps; s++) {
-      const x = (W / steps) * s;
-      const dy = s === 0 || s === steps ? 0 : (rand() - 0.5) * 2 * rough;
-      points.push(`${x},${(top + dy).toFixed(1)}`);
-    }
-
-    return { band, top, depth, points: points.join(" "), i };
-  });
+  const marked = quality.fastestImprovement?.dimension ?? rows[0]?.dimension;
+  const maxWeight = Math.max(...rows.map((r) => r.weight), 1);
 
   return (
     <figure className={`not-prose ${className}`}>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto block"
-        role="img"
-        aria-label={`Cross-section of this business's foundations. ${drawn
-          .map((d) => `${QUALITY_LABEL[d.band.dimension]} ${d.band.score} out of 100`)
-          .join(". ")}.`}
-      >
-        {/* Air. A plain field, so the ground reads as the subject. */}
-        <rect x="0" y="0" width={W} height={SURFACE} fill="var(--bg-subtle)" />
-
-        {drawn.map(({ band, top, depth, points, i }) => (
-          <g key={band.dimension}>
-            <polygon
-              points={`0,${(top + depth).toFixed(1)} ${points} ${W},${(top + depth).toFixed(1)}`}
-              fill="var(--ink)"
-              /* Each band a step paler than the one above: a section reads by
-                 tone, and six identical fills would be one solid block. */
-              opacity={(0.1 + i * 0.055).toFixed(3)}
-            />
-            <polyline points={points} fill="none" stroke="var(--ink)" strokeWidth="1" opacity="0.22" />
-            <text
-              x="14"
-              y={(top + Math.min(depth - 5, 15)).toFixed(1)}
-              className="fill-[var(--text-muted)]"
-              style={{ fontSize: "9px", letterSpacing: "0.11em", textTransform: "uppercase" }}
-              fontFamily="var(--font-mono)"
-            >
-              {QUALITY_LABEL[band.dimension]}
-            </text>
-            <text
-              x={W - 14}
-              y={(top + Math.min(depth - 5, 15)).toFixed(1)}
-              textAnchor="end"
-              className="fill-[var(--text-faint)]"
-              style={{ fontSize: "9px" }}
-              fontFamily="var(--font-mono)"
-            >
-              {band.score}
-            </text>
-          </g>
-        ))}
-
-        {/* The datum: the line every depth on this drawing is measured from. */}
-        <line x1="0" y1={SURFACE} x2={W} y2={SURFACE} stroke="var(--ink)" strokeWidth="1.5" />
-
-        {/* The benchmark, standing on it. The mark from the logo, at scale. */}
-        <g transform={`translate(${W / 2 - 26}, ${SURFACE - 40})`}>
-          <path d="M26 4 46 40H6z" fill="var(--signal)" />
-          <path d="M0 40h52" stroke="var(--ink)" strokeWidth="2.5" strokeLinecap="square" />
-        </g>
-
-        {/* The overall figure, set where a survey drawing puts its result. */}
-        <text
-          x={W - 14}
-          y="30"
-          textAnchor="end"
-          className="fill-[var(--text)]"
-          style={{ fontSize: "34px", letterSpacing: "-0.03em" }}
-          fontFamily="var(--font-sans)"
-          fontWeight="600"
-        >
-          {quality.score}
-        </text>
-        <text
-          x={W - 14}
-          y="46"
-          textAnchor="end"
-          className="fill-[var(--text-faint)]"
-          style={{ fontSize: "9px", letterSpacing: "0.11em" }}
-          fontFamily="var(--font-mono)"
-        >
-          QUALITY / 100
-        </text>
-      </svg>
-      <figcaption className="text-caption text-faint mt-2.5 leading-snug">
-        A section through what this business rests on. Deeper bands are better
-        evidenced; broken ground is a dimension with little behind it yet. Every
-        depth is computed from something you recorded.
+      <figcaption className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 mb-4">
+        <Eyebrow>What this rests on</Eyebrow>
+        <span className="text-caption text-faint">
+          Thirteen dimensions, weakest first. Every one is computed from
+          something recorded.
+        </span>
       </figcaption>
+
+      <div className="rule-y py-4">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="figure tabular-nums leading-none">{quality.score}</span>
+          <span className="text-body font-medium">{QUALITY_BAND_LABEL[quality.band]}</span>
+          {quality.capped && (
+            <span className="text-caption text-muted">
+              Held at {quality.score} from {quality.uncappedScore} — almost
+              nothing has been recorded against this yet.
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/*
+        `measure-full` because the base layer caps `li` at `--measure` (68ch),
+        which is right for a list of sentences and wrong for a row of bars —
+        measured, the bars stopped at 712px on a 1232px page and the ranking
+        was harder to read than it needed to be. The escape hatch is the one
+        the rule itself provides.
+      */}
+      <ul className="mt-4 space-y-2.5 measure-full">
+        {rows.map((row) => {
+          const isMarked = row.dimension === marked;
+          return (
+            <li key={row.dimension} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 items-baseline">
+              <span className={`text-sm truncate ${isMarked ? "font-medium" : ""}`}>
+                {QUALITY_LABEL[row.dimension]}
+                {isMarked && (
+                  <span className="text-caption text-muted font-normal"> · fix this first</span>
+                )}
+              </span>
+              <span className="text-sm tabular-nums text-muted">{row.score}</span>
+
+              <div
+                className="col-span-2 h-1.5 bg-surface-2 overflow-hidden"
+                role="meter"
+                aria-valuenow={row.score}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`${QUALITY_LABEL[row.dimension]}: ${row.score} out of 100`}
+              >
+                {/*
+                  The bar takes the section hue rather than a status colour.
+                  A low score early on is normal and this app's rules forbid
+                  colouring one as an alarm; the ranking already says which is
+                  worst, and saying it twice in red would read as a fault.
+                */}
+                <div
+                  className="h-full bg-[var(--section,var(--ink))]"
+                  style={{
+                    width: `${Math.max(1, row.score)}%`,
+                    /* Weight as opacity: how much this one counts toward the
+                       total. A weak dimension carrying no weight is not the
+                       thing to fix, and the bar should not pretend otherwise. */
+                    opacity: (0.35 + 0.65 * (row.weight / maxWeight)).toFixed(2),
+                  }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="text-caption text-faint mt-4 leading-relaxed max-w-prose">
+        A fainter bar carries less weight in the total — a low score on
+        something that barely counts is not the thing to fix first.{" "}
+        {quality.fastestImprovement
+          ? quality.fastestImprovement.why
+          : "Nothing here is invented: a dimension with nothing behind it scores low rather than being left out."}
+      </p>
     </figure>
   );
 }
