@@ -44,9 +44,11 @@ npm run test:deck      # 32 tests: what may be dealt, and what one-in-N is over
 npm test               # all thirteen — 751 checks
 npm run check:deploy   # 20 deployment checks, ends in a yes/no
 npm run check:access   # proves no cross-user data path exists
-npm run check:persist  # 63 browser checks: does the work survive every path
-npm run check:visual   # 76 browser checks: look-and-feel, accents, density, motion,
+npm run check:persist  # 86 browser checks: does the work survive every path
+npm run check:visual   # 87 browser checks: look-and-feel, accents, density, motion,
                        #   horizontal overflow, and dialog geometry
+npm run check:a11y     # 51 checks: contrast on controls, focus indicators, titles,
+                       #   ARIA keys driven, the skip link, and text at 200%
 npm run check:play     # the six users, played rather than imagined
 ```
 
@@ -234,6 +236,111 @@ recover chroma cost more contrast than it gained saturation.
 
 `check:visual` asserts a section hue and a status class never land on one
 element, which is the single thing that would make the palette meaningless.
+
+### The accessibility pass, and the check that should have existed first
+
+`check:visual` sweeps text contrast and only text contrast. So borders, focus
+rings and control boundaries had been **unmeasured since the design system was
+written**, and `/accessibility` published a statement claiming a visible focus
+ring — which was false on every text input in the product. `check:a11y` is the
+missing instrument, and it came first deliberately: every fix after it had
+something that failed before and passed after.
+
+What it found, all measured rather than estimated:
+
+- **Every interactive boundary was below 3:1.** `--border-strong` — inputs,
+  outline buttons, the task checkbox — measured **1.80:1** light and **1.81:1**
+  dark against a 3:1 requirement (SC 1.4.11). `--control-border` is a separate
+  token for boundaries you can operate, tuned against the lightest ground a
+  control sits on, and now runs 3.28–4.14:1 across three grounds in both
+  themes. `--border` is untouched, so rules, card edges and dividers keep the
+  hairline look — 1.4.11 is about controls, and the ink-and-signal identity is
+  mostly those hairlines.
+- **The focus indicator suppressed the one that would have passed.**
+  `inputBase` carried `focus:outline-none`, and `.focus\:outline-none:focus` is
+  specificity (0,2,0) against `:focus-visible`'s (0,1,0). So the global
+  **19.12:1** outline painted on no input in the app, and what replaced it
+  measured 1.76:1. The browser now reports 2px at **18.16:1** where it reported
+  nothing painted at all.
+- **48 of 53 routes shared one title.** A client component cannot export
+  `metadata`, so every tab, history entry and bookmark read "Groundwork — Build
+  a business worth building". SC 2.4.2 is Level A. Server `layout.tsx` siblings
+  carry it now, from `route-titles.ts`.
+- **`Field` computed a `hintId`, rendered `<p id={hintId}>` and never applied
+  it to the control.** Every hint in the app was visible and unannounced.
+- **Three ARIA roles declared a keyboard contract and implemented none of it**,
+  which is worse than using no role: it tells assistive technology to expect
+  behaviour that is absent.
+
+**A grep is not a keypress, and that distinction found the biggest defect.**
+The first version asserted `role="tablist" implements its arrow keys` by looking
+for the string "ArrowRight" in any file declaring the role, exempting files that
+import `@/components/ui` on the grounds that they delegate. `/business` imports
+`ui` — for `Card` and `Button`, like nearly every page — and was hand-rolling
+its own `role="tablist"` with no keyboard handling at all. Measured once the
+keys were actually pressed: **four tabs, all four in the tab order, arrows doing
+nothing**, on the central page of the workspace. `Tabs`' own doc comment claimed
+it fixed "/tasks, /business and /lab together"; it fixed two of the three.
+Importing a primitive is not evidence of using it, and writing the child role
+yourself is evidence of not.
+
+**`scrollIntoView` moves the keyboard, silently.** Asserting the skip link
+existed would have passed; asserting it is *first* found that on `/` the first
+Tab reached "Skip to content" and on every route carrying a section index — so
+nineteen of them — it landed **inside the index**, past the skip link, the
+wordmark, all four top-level nav links and the account control. The section
+index brought its current item into view with `el.scrollIntoView()`, which in
+Chromium also sets the sequential focus navigation starting point, with no focus
+event to notice it by. Setting `scrollLeft` centres it identically and touches
+nothing else.
+
+**200% is a different question from 320px.** Reflow narrows the viewport and
+leaves the type alone; SC 1.4.4 leaves the viewport alone and doubles the type,
+and a layout can pass one and fail the other. The check's first assertion is
+that the text *grew*, because without it the whole block passes on a stylesheet
+with the scale in pixels — nothing overflows, nothing clips, and the reason is
+that nothing changed. It found `ModelDiagram`'s three-line clamp fitting its
+note at the normal size and needing **322px of a 107px box** at 200%. The clamp
+stays and grows a "Show all" when something is actually hidden.
+
+The check compares 100% against 200% rather than reporting every clipped box,
+and that took three attempts to see. Text truncated at *every* size is a design
+decision; a sweep that reports it is a truncation check wearing a zoom label,
+satisfiable only by undoing deliberate work.
+
+**Three of the check's own bugs are recorded in it**, because each is the exact
+class of failure it exists to catch. `tokensIn(css, ".dark")` used `indexOf`,
+matched `@custom-variant dark` on line 3 and measured the **light** tokens for
+the dark column — caught because two themes had no business agreeing to two
+decimal places. The `focus:outline-none` scan matched its own explanatory
+comment, so a correctly fixed file would have failed for ever; the role scan
+then did the identical thing to `business/page.tsx`'s comment about having been
+fixed. And the focus loop read immediately after Tab, catching `Button`'s
+150ms transition mid-animation and reporting two working controls as painting
+nothing.
+
+**The statement is now checkable rather than merely true.** Every claim in
+`ACCESSIBILITY_STATEMENT.done` names the script that holds it up, and
+`check:a11y` asserts the naming — an unbacked claim cannot be added without
+typing a lie about which script covers it. Verified by restoring the old
+wording and watching it fail on exactly that line. What is believed but
+unmeasured is in `known` and says so, including that "colour is never the only
+signal" is a rule the code is written to rather than a measurement.
+
+**Four UX defects went with it**, all of them the interface contradicting what
+the app had recorded. `/profile/setup`'s Back restored a mount-time snapshot,
+so answering, saving and going back showed nothing selected — the answer *was*
+saved, and the interface said it was not, which is worse than losing it. The
+questionnaire lost its place on refresh (`?q=` now). Deleting a task was one
+click, permanent and silent on data with no server backup, while `/business`
+asks before archiving — it offers Undo now, which required the toasts to stop
+being `pointer-events-none`.
+
+**Two of the audit's own findings were false and are recorded as such**, because
+verifying beats inventing work: `/business` was said to carry 13 shallow copies
+of other routes and in fact carries nine `ShortcutCard`s linking to the real
+ones, and `LAST_REVIEWED` was called stale against a date inside the month it
+names.
 
 ### The section index was the least legible thing on the screen
 
