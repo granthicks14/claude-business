@@ -437,8 +437,18 @@ results.navScoping = {
   profileStaysBare: you.items.find((i) => i.label === "My profile")!.href === "/profile",
   labStaysBare: brainstorm.items.find((i) => i.label === "The lab")!.href === "/lab",
   savedIdeasKeepsItsOwnParam: brainstorm.items.find((i) => i.label === "Saved ideas")!.href === "/lab?tab=shortlist",
-  /* The coach is the one founder-section link that is about a business. */
-  coachIsScoped: you.items.find((i) => i.label === "Ask a question")!.href.includes("b=biz_two"),
+  /*
+   * The coach is scoped, and it lives with the business rather than with the
+   * founder.
+   *
+   * It was in "You" and was the one link there that had to carry \`?b=\`, which
+   * was the clue: a conversation belongs to a business. It also meant the
+   * coach had no menu path at all on a desktop, since "You" is excluded from
+   * the masthead. Both halves are asserted, because moving it back would
+   * restore the second failure silently.
+   */
+  coachIsScoped: (sections.find((s) => s.label === "My business")!.items.find((i) => i.label === "Ask the coach")?.href ?? "").includes("b=biz_two"),
+  coachIsNotUnderYou: !you.items.some((i) => i.href.split("?")[0] === "/coach"),
 };
 
 /* Switching the active business must move every scoped link with it. */
@@ -914,6 +924,7 @@ check("and none of them names the other one", r.navScoping.noneNamesTheOther);
 check("the profile and the lab stay founder-level", r.navScoping.profileStaysBare && r.navScoping.labStaysBare);
 check("\"saved ideas\" keeps its own tab parameter", r.navScoping.savedIdeasKeepsItsOwnParam);
 check("the coach is scoped, because a conversation belongs to a business", r.navScoping.coachIsScoped);
+check("and it is reachable from the masthead rather than filed under You", r.navScoping.coachIsNotUnderYou);
 check("switching business moves every scoped link with it", r.navSwitch.followsTheActive && r.navSwitch.noneLeftBehind);
 check("with nothing picked, no link carries a dangling parameter", r.navCold.noParamAnywhere);
 check("a workspace path still resolves to its section", r.navMatching.workspaceResolves);
@@ -971,6 +982,64 @@ function walk(dir) {
     `${sites} <AdvancedOnly> call sites`);
   check("and the detail it hides is spread across the workspace, not one page", inFiles.size >= 8,
     `${inFiles.size} files`);
+}
+
+
+/* ------------------------------- controls that were behind a dead prop -- */
+
+/*
+ * `AIPanel` rendered its `actions` slot and its Regenerate button inside
+ * `{title && (…)}`, and NOT ONE of the twelve call sites passes `title` —
+ * pages draw their own `PageHero` above the panel, which is correct. So
+ * Regenerate was unreachable on every AI panel in the product, and three call
+ * sites handed in action buttons that never appeared at all.
+ *
+ * A source-level check for the same reason `AdvancedOnly`'s is: the failure is
+ * not "the component broke", it is "the component's prop was never satisfied",
+ * which a call-site count catches and a render test would not.
+ */
+console.log("\n--- controls that were behind a prop nobody passed ---");
+{
+  let panels = 0;
+  let withTitle = 0;
+  for (const f of walk("src")) {
+    if (!f.endsWith(".tsx")) continue;
+    const src = readFileSync(f, "utf8");
+    for (const m of src.matchAll(/<AIPanel[\s\S]{0,600}?>/g)) {
+      panels++;
+      if (/\btitle=/.test(m[0])) withTitle++;
+    }
+  }
+  const page = readFileSync(join("src", "components", "page.tsx"), "utf8");
+  const start = page.indexOf("export function AIPanel");
+  const body = page.slice(start, page.indexOf("export function SourceNote", start));
+
+  check("every AI panel in the app omits the title prop", panels > 0 && withTitle === 0,
+    `${panels} call sites, ${withTitle} with a title`);
+  check("so the controls are no longer gated on it", /const regenerable = hasContent/.test(body));
+  check("and an untitled panel does not emit an empty heading", /title \? \(/.test(body));
+}
+
+/* --------------------------------- a task you added lands where you look - */
+
+/*
+ * `addToTasks` on the first-$100 plan wrote `phase: "money"` — the phase that
+ * tab filters on — so pressing "Add to my tasks" put the steps back into the
+ * generated list they were already sitting in. The only evidence anything had
+ * happened was a `pointer-events-none` toast that vanished in 3.6 seconds.
+ */
+console.log("\n--- a task you added lands where you would look for it ---");
+{
+  const tasks = readFileSync(join("src", "app", "tasks", "page.tsx"), "utf8");
+  check("the money plan adds to the founder's own list, not back into itself",
+    /phase: "custom",[\s\S]{0,400}milestone: milestone\.milestone/.test(tasks));
+  check("and so does the add-a-task dialog", (tasks.match(/phase: "custom"/g) ?? []).length >= 2,
+    `${(tasks.match(/phase: "custom"/g) ?? []).length} writers`);
+  check("there is a My tasks tab", /id: "mine", label: "My tasks"/.test(tasks));
+  check("and it comes first", tasks.indexOf('id: "mine"') < tasks.indexOf('id: "roadmap"'));
+  check("adding moves the reader to where it went", /onAdded\(\);/.test(tasks));
+  check("and the generated plan no longer swallows the founder's own tasks",
+    /t\.phase !== "money" && t\.phase !== "custom"/.test(tasks));
 }
 
 console.log("\n--- preferences ---");

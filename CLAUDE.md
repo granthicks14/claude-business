@@ -413,6 +413,76 @@ contained before anybody arrives.
 `/start` is a redirect too. Both keep their URLs: one was the landing page's
 primary call to action for a long time.
 
+### The controls were behind a prop nobody passed
+
+`AIPanel` rendered its `actions` slot and its **Regenerate** button inside
+`{title && (…)}`, and **not one of the fourteen `AIPanel` call sites in the app
+passes `title`** — every page draws its own `PageHero` above the panel, which is
+right, and which meant the header row never rendered anywhere.
+
+So Regenerate was unreachable on every AI panel in the product, and three call
+sites handed in action buttons that never appeared at all. The worst was
+`/tasks`: its **"Add task" button lives in that slot**, so a founder could not
+add a task of their own from the task page. The note that produced this pass
+said "add to task is hard to find"; it was not hard to find, it did not exist.
+
+`test:product` counts the call sites and the titles, for the same reason the
+`AdvancedOnly` floor does — the failure is not "the component broke", it is
+"the component's prop was never satisfied", which nothing renders differently
+enough to notice.
+
+The header only draws a `SectionHeader` when there is a title. That component
+emits its `h2` unconditionally, so an untitled one would be an empty heading —
+a landmark with no text for anybody navigating by heading.
+
+### My tasks, as a place
+
+A task the founder typed themselves carried `phase: "custom"`, and `PHASES`
+lists that last — so with a generated ninety-day plan above it, their own task
+sat below four phase groups and roughly twenty rows.
+
+Worse, the first-$100 plan's "Add to my tasks" wrote **`phase: "money"`**,
+which is the phase that tab *filters on*: pressing it put the steps back into
+the generated list they were already sitting in, a few hundred pixels up. The
+only evidence anything had happened was a toast — `pointer-events-none`, gone
+in 3.6 seconds, not a link.
+
+Three tabs now, and **My tasks leads**, because it is the only list on the page
+the founder wrote. Both writers — the dialog and the money plan — use `custom`,
+and adding from the money plan switches the tab, so the result of the press is
+on screen rather than described.
+
+It opens on My tasks unless a generated plan is the only thing there. The two
+cases pull opposite ways: somebody with a ninety-day plan and nothing of their
+own should land on the plan, and somebody with *nothing at all* should land
+where the "Add a task" button is.
+
+`/tasks` had **three names** — "What to do" as its `h1`, "What to do next" in
+the sidebar and "Make it" in the mobile bar. That is the disagreement
+`useSectionLabel()` exists to make impossible for page headers, arriving by the
+one route it does not cover. All three say tasks now.
+
+### The coach was filed under the wrong thing
+
+On a desktop there was **no menu path to `/coach` at all**. It sat in the "you"
+section, which is deliberately excluded from the masthead, and `AccountControl`
+did not list it — so the only ways in were five inline `DiscussWithCoach` links
+on five specific pages. Somebody who simply wanted to ask a question, and was
+not already standing on one of those five pages, had nowhere to click.
+
+It **moved** into "My business" rather than being added there, because no route
+may belong to two sections: `sectionFor` is longest-prefix-wins, so a duplicate
+resolves by list order and gives the page a hue from one section while the nav
+marks another. `test:product` asserts both halves — that it is scoped, and that
+it is no longer under "You" — because moving it back would restore the
+unreachability silently.
+
+"My business" is also where it should always have been. A conversation belongs
+to a business; that is what `AIConversation.businessId` is for, and it is why
+this was the one entry in "you" that had to carry `?b=`. The account menu lists
+it too, unconditionally, so the answer to "how do I ask a question" exists on
+every route including before a business is picked.
+
 ### The navigation, and why you only see one section
 
 The sidebar used to render thirty-six links at once. That isn't a menu, it's a

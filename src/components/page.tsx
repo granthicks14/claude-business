@@ -399,25 +399,47 @@ export function AIPanel({
 }) {
   const intelligence = useIntelligence();
 
+  /*
+   * THE CONTROLS WERE BEHIND A PROP NOBODY PASSED.
+   *
+   * `actions` and Regenerate rendered inside `{title && (…)}`, and **not one
+   * of the twelve `AIPanel` call sites in the app passes `title`** — pages
+   * draw their own `PageHero` above the panel, which is right. So Regenerate
+   * was unreachable on every AI panel in the product, and three call sites
+   * handed in action buttons that never appeared at all. `/tasks` was the
+   * worst of them: its "Add task" button lives here, so a founder could not
+   * add a task of their own from the task page.
+   *
+   * The header row now renders when there is anything to put in it. The
+   * `title` is still optional and is still omitted by everybody, because the
+   * page heading above already says what the panel is.
+   */
+  const regenerable = hasContent && !loading;
+  const controls = (
+    <>
+      {actions}
+      {regenerable && (
+        <Button size="sm" variant="ghost" onClick={onGenerate} icon={<Icon.refresh className="size-4" />}>
+          Regenerate
+        </Button>
+      )}
+    </>
+  );
+
   return (
     <section className="space-y-4">
-      {title && (
-        <SectionHeader
-          title={title}
-          description={description}
-          action={
-            hasContent && !loading ? (
-              <>
-                {actions}
-                <Button size="sm" variant="ghost" onClick={onGenerate} icon={<Icon.refresh className="size-4" />}>
-                  Regenerate
-                </Button>
-              </>
-            ) : (
-              actions
-            )
-          }
-        />
+      {/*
+        `SectionHeader` only when there is a title to put in it. It renders an
+        `h2` unconditionally, so passing it an undefined title emits an empty
+        heading — a landmark with no text for anybody navigating by heading,
+        and a rule this file is elsewhere strict about.
+      */}
+      {title ? (
+        <SectionHeader title={title} description={description} action={controls} />
+      ) : (
+        (actions || regenerable) && (
+          <div className="flex flex-wrap items-center justify-end gap-2">{controls}</div>
+        )
       )}
 
       {error && <ErrorPanel error={error} onRetry={onRetry ?? onGenerate} retrying={loading} />}

@@ -11,6 +11,7 @@ import {
   Card,
   CopyButton,
   Dialog,
+  EmptyState,
   Field,
   Input,
   Select,
@@ -67,27 +68,122 @@ export default function TasksPage() {
   );
 }
 
+type Tab = "mine" | "roadmap" | "money";
+
+/**
+ * MY TASKS, AS A PLACE RATHER THAN AS A ROW AT THE BOTTOM.
+ *
+ * A task the founder typed themselves used to render in the `custom` group,
+ * which `PHASES` lists last — so with a generated ninety-day plan above it,
+ * their own task sat below four phases and roughly twenty rows. The note that
+ * produced this pass said "Add to task is hard to find" and asked for a
+ * separate area; that is the same observation from the other end.
+ *
+ * It leads, because it is the only list on this page the founder wrote. The
+ * generated plans are suggestions and can wait one tap.
+ */
 function Tasks({ business }: { business: SelectedBusiness }) {
-  const [tab, setTab] = useState<"roadmap" | "money">("roadmap");
+  const mine = business.tasks.filter((t) => t.phase === "custom");
+  /*
+   * Opens on "My tasks" unless a generated plan is the only thing here.
+   *
+   * Two cases and they pull opposite ways. Somebody who has generated a
+   * ninety-day plan and written nothing of their own should land on the plan
+   * — an empty list is a worse first screen than a full one. But somebody who
+   * has *nothing at all* should land here, because this tab is where the
+   * "Add a task" button lives, and "add to task is hard to find" is the note
+   * that produced this whole pass.
+   */
+  const [tab, setTab] = useState<Tab>(
+    mine.length > 0 || business.tasks.length === 0 ? "mine" : "roadmap",
+  );
+  const [adding, setAdding] = useState(false);
+
+  const open = (phase: Task["phase"] | "any") =>
+    business.tasks.filter((t) => !t.done && (phase === "any" || t.phase === phase)).length || undefined;
 
   return (
     <div className="space-y-6">
       <PageHero
-        title="What to do"
+        title="My tasks"
         art={<ChecklistArt className="w-full" />}
-        description="Concrete tasks, sized to your weekly hours. Tick them off as you go — progress feeds the health score on your dashboard."
+        description="Everything you have decided to do, plus two plans the app can draft for you. Tick them off as you go — progress feeds the health score on your dashboard."
       />
 
       <Tabs
         active={tab}
-        onChange={(id) => setTab(id as typeof tab)}
+        onChange={(id) => setTab(id as Tab)}
         tabs={[
-          { id: "roadmap", label: "90-day plan", badge: business.tasks.filter((t) => t.phase !== "money" && !t.done).length || undefined },
-          { id: "money", label: "First $100", badge: business.tasks.filter((t) => t.phase === "money" && !t.done).length || undefined },
+          { id: "mine", label: "My tasks", badge: mine.filter((t) => !t.done).length || undefined },
+          {
+            id: "roadmap",
+            label: "90-day plan",
+            badge: business.tasks.filter((t) => t.phase !== "money" && t.phase !== "custom" && !t.done).length || undefined,
+          },
+          { id: "money", label: "First $100", badge: open("money") },
         ]}
       />
 
-      {tab === "roadmap" ? <RoadmapView business={business} /> : <FirstMoneyView business={business} />}
+      {tab === "mine" && (
+        <MyTasksView business={business} tasks={mine} onAdd={() => setAdding(true)} />
+      )}
+      {tab === "roadmap" && <RoadmapView business={business} />}
+      {tab === "money" && <FirstMoneyView business={business} onAdded={() => setTab("mine")} />}
+
+      <AddTaskDialog open={adding} onClose={() => setAdding(false)} businessId={business.id} />
+    </div>
+  );
+}
+
+/**
+ * The founder's own list.
+ *
+ * Deliberately not an `AIPanel`: nothing here is generated, so an empty state
+ * offering to generate something would be offering the wrong thing. The empty
+ * state offers the one action that fills this list.
+ */
+function MyTasksView({
+  business,
+  tasks,
+  onAdd,
+}: {
+  business: SelectedBusiness;
+  tasks: Task[];
+  onAdd: () => void;
+}) {
+  const done = tasks.filter((t) => t.done).length;
+
+  if (tasks.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          title="Nothing here yet"
+          description="Anything you add yourself lands here, and so does anything you pull across from the ninety-day plan or the first-$100 plan. It stays separate from the generated lists so your own decisions do not get buried in them."
+          action={
+            <Button variant="primary" onClick={onAdd} icon={<Icon.plus className="size-4" />}>
+              Add a task
+            </Button>
+          }
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <span className="text-caption text-muted tabular-nums">
+          {done}/{tasks.length} done
+        </span>
+        <Button size="sm" onClick={onAdd} icon={<Icon.plus className="size-4" />}>
+          Add task
+        </Button>
+      </div>
+      <ul className="space-y-2">
+        {tasks.map((t) => (
+          <TaskRow key={t.id} task={t} businessId={business.id} />
+        ))}
+      </ul>
     </div>
   );
 }
@@ -98,10 +194,10 @@ function RoadmapView({ business }: { business: SelectedBusiness }) {
   const profile = useAppState(effectiveProfile);
   const task = useAITask<Roadmap>("roadmap");
   const toast = useToast();
-  const [adding, setAdding] = useState(false);
   const [notes, setNotes] = useState("");
 
-  const roadmapTasks = business.tasks.filter((t) => t.phase !== "money");
+  // Neither the money plan nor the founder's own list: those have their own tabs.
+  const roadmapTasks = business.tasks.filter((t) => t.phase !== "money" && t.phase !== "custom");
 
   const run = async () => {
     const result = await task.run({ profile, business });
@@ -139,11 +235,6 @@ function RoadmapView({ business }: { business: SelectedBusiness }) {
       source={task.meta}
       generateLabel="Build my 90-day plan"
       emptyDescription={`Four phases, sized to fit ${profile.hoursPerWeek > 0 ? `${profile.hoursPerWeek} hours` : "the hours you have"} a week. Anything that could cheaply prove the idea wrong comes first — you shouldn't build before you have evidence.`}
-      actions={
-        <Button size="sm" onClick={() => setAdding(true)} icon={<Icon.plus className="size-4" />}>
-          Add task
-        </Button>
-      }
     >
       <div className="space-y-5">
         {notes && (
@@ -152,7 +243,7 @@ function RoadmapView({ business }: { business: SelectedBusiness }) {
           </Card>
         )}
 
-        {PHASES.filter((p) => p.id !== "money").map((phase) => {
+        {PHASES.filter((p) => p.id !== "money" && p.id !== "custom").map((phase) => {
           const tasks = business.tasks.filter((t) => t.phase === phase.id);
           if (!tasks.length) return null;
           const done = tasks.filter((t) => t.done).length;
@@ -184,7 +275,6 @@ function RoadmapView({ business }: { business: SelectedBusiness }) {
         })}
       </div>
 
-      <AddTaskDialog open={adding} onClose={() => setAdding(false)} businessId={business.id} />
     </AIPanel>
   );
 }
@@ -341,7 +431,7 @@ function AddTaskDialog({ open, onClose, businessId }: { open: boolean; onClose: 
 
 /* -------------------------------------------------------------------------- */
 
-function FirstMoneyView({ business }: { business: SelectedBusiness }) {
+function FirstMoneyView({ business, onAdded }: { business: SelectedBusiness; onAdded: () => void }) {
   const profile = useAppState(effectiveProfile);
   const task = useAITask<FirstMoney>("firstMoney");
   const [plan, setPlan] = useState<FirstMoney | null>(null);
@@ -354,12 +444,25 @@ function FirstMoneyView({ business }: { business: SelectedBusiness }) {
     if (result) setPlan(result);
   };
 
+  /*
+   * WHERE AN ADDED TASK GOES, AND WHY IT MOVED.
+   *
+   * This wrote `phase: "money"`, which is the phase this tab *filters on* —
+   * so pressing "Add to my tasks" put the steps back into the same generated
+   * list they were already sitting in, a few hundred pixels above. The only
+   * evidence anything had happened was a toast: `pointer-events-none`, gone
+   * in 3.6 seconds, and not a link to anywhere.
+   *
+   * They are `custom` now, which is the phase that means "the founder chose
+   * this", and the page switches to that tab so the result of the press is on
+   * screen rather than described.
+   */
   const addToTasks = (milestone: FirstMoney["milestones"][number]) => {
     const created: Task[] = milestone.steps.map((step) => ({
       id: newId("task"),
       title: step.title,
       description: step.description,
-      phase: "money",
+      phase: "custom",
       priority: "high",
       estimatedMinutes: step.estimatedMinutes,
       difficulty: "medium",
@@ -370,7 +473,8 @@ function FirstMoneyView({ business }: { business: SelectedBusiness }) {
       day: step.day,
     }));
     actions.mutateBusiness(business.id, (b) => ({ ...b, tasks: [...b.tasks, ...created] }));
-    toast(`${created.length} steps added to your tasks`, "good");
+    toast(`${created.length} steps added to My tasks`, "good");
+    onAdded();
   };
 
   return (

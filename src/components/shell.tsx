@@ -369,7 +369,16 @@ const BOTTOM_BAR: { href: string; label: string; icon: IconName; scoped?: boolea
   { href: "/", label: "Home", icon: "home" },
   { href: "/lab", label: "Ideas", icon: "spark" },
   { href: "/business", label: "Business", icon: "building", scoped: true },
-  { href: "/tasks", label: "Make it", icon: "bolt", scoped: true },
+  /*
+   * "Tasks", matching the page's own `h1` and the sidebar entry.
+   *
+   * This said "Make it" while the sidebar said "What to do next" and the page
+   * said "What to do" — three names for `/tasks`, which is exactly the
+   * disagreement `useSectionLabel()` exists to make impossible for headers.
+   * Shortened rather than set to "My tasks" because the bar allots each item
+   * a quarter of a 320px screen.
+   */
+  { href: "/tasks", label: "Tasks", icon: "bolt", scoped: true },
 ];
 
 function BottomBar({ onMore }: { onMore: () => void }) {
@@ -621,6 +630,13 @@ function AccountControl() {
                 { href: "/profile", label: "Founder profile" },
                 { href: "/settings", label: "Settings" },
                 { href: "/lab?tab=shortlist", label: "Saved ideas" },
+                /*
+                 * The coach, from anywhere, whether or not a business is
+                 * picked. Its section entry is business-scoped and only
+                 * appears once one is; this is the unconditional way in, so
+                 * "how do I ask a question" has an answer on every route.
+                 */
+                { href: "/coach", label: "Ask the coach" },
                 { href: "/account", label: "Account and security" },
               ].map((item) => (
                 <Link

@@ -379,6 +379,76 @@ async function main() {
       await mentions(stranger, "Most tools help you build faster"),
       "somebody with no account still gets the pitch, which is who it is for",
     );
+    /* ================================= tasks you can find, a coach you can reach == */
+    console.log("\n--- tasks you can find, and a coach you can reach ---");
+
+    /*
+     * `AIPanel` rendered its actions slot inside `{title && (…)}` and not one
+     * of the fourteen call sites passes a title, so "Add task" never rendered
+     * and Regenerate was unreachable on every AI panel in the product.
+     * Measured on the page where it mattered most.
+     */
+    const worker = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await worker.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
+    await createAccountOnScreen(worker, "Task Keeper");
+    await worker.waitForTimeout(800);
+    await worker.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    await worker.waitForTimeout(600);
+    const example = worker.getByRole("button", { name: /open the example business/i }).first();
+    check((await example.count()) > 0, "a new account is offered a business to work on");
+    await example.click();
+    await worker.waitForTimeout(1200);
+
+    await worker.goto(`${ORIGIN}/tasks`, { waitUntil: "networkidle" });
+    await worker.waitForTimeout(1200);
+    check(await mentions(worker, "My tasks"), "the task page is called My tasks, once");
+    const addTask = worker.getByRole("button", { name: /^add a task$|^add task$/i }).first();
+    check((await addTask.count()) > 0, "and a founder can add one of their own");
+
+    await addTask.click();
+    await worker.waitForTimeout(500);
+    const titleBox = worker.locator("#task-title");
+    check((await titleBox.count()) > 0, "the add form opens");
+    await titleBox.fill("Ring the first three leads");
+    await worker.getByRole("button", { name: /^add task$/i }).last().click();
+    await worker.waitForTimeout(700);
+    check(
+      await mentions(worker, "Ring the first three leads"),
+      "and the task is on screen straight afterwards, not only in a toast",
+    );
+
+    await worker.goto(`${ORIGIN}/tasks`, { waitUntil: "networkidle" });
+    await worker.waitForTimeout(900);
+    check(
+      await mentions(worker, "Ring the first three leads"),
+      "and it is still the first thing on the page when you come back",
+    );
+
+    /*
+     * The coach had no menu path at all on a desktop: it sat in the "you"
+     * section, which is excluded from the masthead, and the account menu did
+     * not list it. Five inline "Discuss this" links were the only way in.
+     */
+    const accountMenu = worker.getByRole("button", { name: /account menu|task keeper/i }).first();
+    if ((await accountMenu.count()) > 0) {
+      await accountMenu.click();
+      await worker.waitForTimeout(400);
+      check(
+        (await worker.getByRole("menuitem", { name: /ask the coach/i }).count()) > 0,
+        "the coach is in the account menu, from every route",
+      );
+      await worker.keyboard.press("Escape");
+    } else {
+      fail("the account menu could not be opened to check for the coach");
+    }
+
+    await worker.goto(`${ORIGIN}/business`, { waitUntil: "networkidle" });
+    await worker.waitForTimeout(900);
+    check(
+      await mentions(worker, "Ask the coach"),
+      "and it is one click away inside the business section",
+    );
+
     /* ================================================ the car detailing run == */
     console.log("\n--- telling it what to build, and being heard (the §51 run) ---");
 

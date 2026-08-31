@@ -187,6 +187,28 @@ export function navSections(state: AppState): NavSection[] {
             { href: b("/marketing"), label: "Marketing" },
             { href: b("/sales"), label: "Sales" },
             { href: b("/practice"), label: "Practise the conversation" },
+            /*
+             * THE COACH HAD NO MENU PATH AT ALL ON A DESKTOP, AND IT WAS
+             * FILED UNDER THE WRONG THING.
+             *
+             * It sat in "you", which is deliberately excluded from the
+             * masthead, and `AccountControl` did not list it — so the only
+             * routes in were five inline "Discuss this" links on five
+             * specific pages. Somebody who simply wanted to ask a question,
+             * and was not already standing on one of those five pages, had
+             * nowhere to click.
+             *
+             * Moved rather than added, because no route may belong to two
+             * sections: `sectionFor` is longest-prefix-wins, so a duplicate
+             * resolves by list order and gives the page a hue from one
+             * section while the nav marks another. `test:product` asserts it.
+             *
+             * And "business" is the section it should always have been in. A
+             * conversation belongs to a business — that is what
+             * `AIConversation.businessId` is for, and why this href is the
+             * one entry in "you" that had to be scoped.
+             */
+            { href: b("/coach"), label: "Ask the coach" },
           ]
         : [],
     },
@@ -206,7 +228,15 @@ export function navSections(state: AppState): NavSection[] {
       blurb: "What is done, what is next, and what you have changed your mind about.",
       items: business
         ? [
-            { href: b("/tasks"), label: "What to do next", badge: openTasks || undefined },
+            /*
+             * "My tasks", matching the page's own `h1`.
+             *
+             * This said "What to do next", the page said "What to do" and the
+             * mobile bar said "Make it" — three names for one route, and the
+             * rule that a page header and the navigation cannot disagree
+             * exists precisely so that does not happen.
+             */
+            { href: b("/tasks"), label: "My tasks", badge: openTasks || undefined },
             { href: b("/business/launch"), label: "Launch checklist" },
           ]
         : [],
@@ -228,12 +258,7 @@ export function navSections(state: AppState): NavSection[] {
         { href: "/profile", label: "My profile" },
         { href: "/profile/setup", label: "Answer the questions instead" },
         { href: "/describe", label: "Tell it about me in a sentence" },
-        /*
-         * The coach is about the founder, but a conversation belongs to a
-         * business — see `AIConversation.businessId`. So this one link is
-         * scoped even though its section is not.
-         */
-        { href: b("/coach"), label: "Ask a question" },
+        // The coach moved to "My business" — see the note there.
         { href: "/journal", label: "Journal" },
         { href: "/learn", label: "Learn the words" },
         { href: "/search", label: "Search everything" },
