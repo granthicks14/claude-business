@@ -562,7 +562,7 @@ function UnlockAccount({
   return (
     <Panel title={`Unlock ${account.label}`} description="Enter the passphrase you chose for this account.">
       <form onSubmit={submit} className="space-y-3">
-        <Field label="Passphrase">
+        <Field label="Passphrase" error={error || undefined} required>
           <Input
             type="password"
             autoFocus
@@ -575,11 +575,18 @@ function UnlockAccount({
 
         <RememberChoice value={stay} onChange={setStay} />
 
-        {error && (
-          <p role="alert" className="text-sm text-bad leading-relaxed">
-            {error}
-          </p>
-        )}
+        {/*
+          A live region, but with no text of its own.
+
+          The message is rendered by the `Field` above, where it is wired to
+          the input with `aria-invalid` and `aria-describedby`. Printing it
+          twice would show it twice; announcing nothing would mean a wrong
+          passphrase is silent until the field is re-entered. So the alert
+          exists and refers to the message rather than repeating it.
+        */}
+        <p role="alert" className="sr-only">
+          {error ? `${error}` : ""}
+        </p>
 
         <div className="flex flex-wrap gap-2">
           <Button type="submit" variant="primary" loading={busy} disabled={!passphrase}>
@@ -712,7 +719,11 @@ export function CreateAccount({
       )}
 
       <form onSubmit={submit} className="space-y-3">
-        <Field label="Account name" hint="Shown on this device's sign-in screen. It doesn't have to be your real name.">
+        <Field
+          label="Account name"
+          hint="Shown on this device's sign-in screen. It doesn't have to be your real name."
+          required
+        >
           <Input
             autoFocus
             value={label}
@@ -722,7 +733,24 @@ export function CreateAccount({
           />
         </Field>
 
-        <Field label="Passphrase" hint={`At least ${MIN_PASSPHRASE} characters. Three or four unrelated words works well.`}>
+        {/*
+          `weak` and `mismatch` were loose paragraphs after the field: visible,
+          and attached to nothing. A screen reader announced an ordinary
+          textbox and the reason it would not be accepted was somewhere else in
+          the reading order. As `error` they carry `aria-invalid` and an
+          `aria-describedby` pointing at the message.
+
+          Described rather than alerted, deliberately. These change on every
+          keystroke while a passphrase is too short, and `role="alert"` on a
+          message that fires per character is unusable. A submit failure below
+          is a different thing — something just happened — and keeps its alert.
+        */}
+        <Field
+          label="Passphrase"
+          hint={`At least ${MIN_PASSPHRASE} characters. Three or four unrelated words works well.`}
+          error={weak || undefined}
+          required
+        >
           <Input
             type="password"
             autoComplete="new-password"
@@ -731,9 +759,12 @@ export function CreateAccount({
             placeholder="Something only you would think of"
           />
         </Field>
-        {weak && <p className="text-xs text-warn leading-relaxed -mt-1">{weak}</p>}
 
-        <Field label="Passphrase again">
+        <Field
+          label="Passphrase again"
+          error={mismatch ? "These don't match yet." : undefined}
+          required
+        >
           <Input
             type="password"
             autoComplete="new-password"
@@ -742,7 +773,6 @@ export function CreateAccount({
             placeholder="Type it once more"
           />
         </Field>
-        {mismatch && <p className="text-xs text-bad leading-relaxed -mt-1">These don&apos;t match yet.</p>}
 
         {legacy != null && (
           <label className="flex gap-2.5 items-start rounded-lg border border-accent-border bg-accent-soft p-3 cursor-pointer">

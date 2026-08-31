@@ -16,6 +16,7 @@ import { withBusiness } from "@/lib/business-param";
 import { actions, activeBusiness, useAppState } from "@/lib/store";
 import { isGuest, isOpen, subscribeVault } from "@/lib/vault";
 import { profileCompleteness } from "@/lib/profile-fields";
+import { ROUTE_TITLES } from "@/lib/route-titles";
 import type { AppState, SelectedBusiness } from "@/lib/types";
 import { overflowSections, sectionFor, topSections, useNav, type NavItem, type NavSection } from "@/lib/nav";
 
@@ -105,6 +106,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
         >
           Skip to content
         </a>
+
+        <RouteAnnouncer />
 
         {/*
           `data-section` carries the section's hue to every descendant.
@@ -452,6 +455,51 @@ function SectionNav({
   );
 }
 
+/**
+ * SAYING WHERE YOU JUST WENT.
+ *
+ * Every navigation in this app is client-side, so the document is never
+ * replaced and a screen reader gets no signal at all that the page changed —
+ * the user activates a link and the announcement is silence. On a
+ * server-rendered site the browser does this for free; in a single-page app it
+ * has to be done deliberately.
+ *
+ * The text is the section label and the route title, taken from the same two
+ * sources the masthead and the browser tab already use, for the reason
+ * `useSectionLabel()` exists: two descriptions of where the user is, written
+ * separately, eventually disagree, and the one that disagrees is always the
+ * one nobody is looking at.
+ *
+ * `data-route` marks it so `check:a11y` can find this specific live region
+ * rather than any polite one — several exist for other purposes.
+ *
+ * Not announced on first paint. A live region that fires on load competes with
+ * the page's own heading being read, and the first load is the one navigation
+ * the browser already handles.
+ */
+function RouteAnnouncer() {
+  const pathname = usePathname() ?? "/";
+  const sections = useNav();
+  const [message, setMessage] = useState("");
+  const first = useRef(true);
+
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const section = sectionFor(sections, pathname);
+    const title = ROUTE_TITLES[pathname];
+    setMessage([title, section?.label].filter(Boolean).join(", ") || pathname);
+  }, [pathname, sections]);
+
+  return (
+    <div className="sr-only" role="status" aria-live="polite" data-route="">
+      {message}
+    </div>
+  );
+}
+
 /* -------------------------------------------------------------- bottom bar */
 
 /**
@@ -646,6 +694,56 @@ function AccountControl() {
   const [locking, setLocking] = useState(false);
   const account = open && !guest ? currentAccount() : null;
 
+  /*
+   * THE MENU KEEPS ITS KEYBOARD CONTRACT.
+   *
+   * This carried `role="menu"` and `role="menuitem"` with no arrow keys, no
+   * Escape and no focus management — so a screen reader announced a menu, told
+   * the user arrows would move through it, and nothing happened. A keyboard
+   * user could not dismiss it at all without tabbing through every item.
+   *
+   * Declaring a role is a promise about behaviour. The ARIA menu pattern is
+   * arrows to move, Home/End to jump, Escape to close returning focus to the
+   * trigger, and focus moved into the menu when it opens — all of it below.
+   */
+  const menu = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+
+  const items = () =>
+    Array.from(menu.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);
+
+  const closeMenu = (returnFocus = true) => {
+    setMenuOpen(false);
+    // Focus goes back where it came from, or it lands on `document.body` and
+    // the next Tab restarts from the top of the page.
+    if (returnFocus) requestAnimationFrame(() => trigger.current?.focus());
+  };
+
+  // Focus the first item on open, which is what makes arrows meaningful.
+  useEffect(() => {
+    if (!menuOpen) return;
+    requestAnimationFrame(() => items()[0]?.focus());
+  }, [menuOpen]);
+
+  const onMenuKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const list = items();
+    if (list.length === 0) return;
+    const here = list.indexOf(document.activeElement as HTMLElement);
+    const go = (i: number) => {
+      e.preventDefault();
+      list[((i % list.length) + list.length) % list.length]?.focus();
+    };
+    if (e.key === "ArrowDown") go(here + 1);
+    else if (e.key === "ArrowUp") go(here - 1);
+    else if (e.key === "Home") go(0);
+    else if (e.key === "End") go(list.length - 1);
+    else if (e.key === "Escape") {
+      e.preventDefault();
+      closeMenu();
+    }
+    else if (e.key === "Tab") closeMenu(false);
+  };
+
   if (!open || guest) {
     return (
       <>
@@ -696,7 +794,17 @@ function AccountControl() {
     <>
       <div className="relative">
         <button
+          ref={trigger}
           onClick={() => setMenuOpen((v) => !v)}
+          onKeyDown={(e) => {
+            // Down-arrow opens and lands on the first item, which is what the
+            // pattern expects and what makes the menu reachable without a
+            // mouse from the very first keystroke.
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              setMenuOpen(true);
+            }
+          }}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           aria-label={`Account: ${account?.label ?? "signed in"}`}
@@ -712,15 +820,26 @@ function AccountControl() {
 
         {menuOpen && (
           <>
-            {/* A click anywhere else closes it, which is what a menu does. */}
-            <button
+            {/*
+              A click anywhere else closes it, which is what a menu does.
+
+              A plain `div`, not a `button`. It was a focusable button carrying
+              `aria-hidden="true"` — an element hidden from assistive
+              technology while still being reachable programmatically, which is
+              the contradiction `aria-hidden-focus` exists to flag. Nothing
+              about catching a click needs a button: this has no keyboard
+              behaviour of its own and Escape is the keyboard equivalent.
+            */}
+            <div
               aria-hidden="true"
-              tabIndex={-1}
-              onClick={() => setMenuOpen(false)}
+              onClick={() => closeMenu(false)}
               className="fixed inset-0 z-40 cursor-default"
             />
             <div
+              ref={menu}
               role="menu"
+              aria-label="Account"
+              onKeyDown={onMenuKeyDown}
               className="absolute right-0 top-full mt-1.5 z-50 min-w-56 rounded-lg border border-border bg-surface shadow-lg py-1.5"
             >
               <p className="px-3 py-1.5 text-caption text-faint">Signed in as {account?.label}</p>
@@ -742,7 +861,8 @@ function AccountControl() {
                   key={item.href}
                   href={item.href}
                   role="menuitem"
-                  onClick={() => setMenuOpen(false)}
+                  tabIndex={-1}
+                  onClick={() => closeMenu(false)}
                   className="block px-3 py-2 text-sm hover:bg-surface-2 transition-colors"
                 >
                   {item.label}
@@ -751,8 +871,9 @@ function AccountControl() {
               <div className="rule my-1.5" />
               <button
                 role="menuitem"
+                tabIndex={-1}
                 onClick={() => {
-                  setMenuOpen(false);
+                  closeMenu(false);
                   setLocking(true);
                 }}
                 className="block w-full text-left px-3 py-2 text-sm hover:bg-surface-2 transition-colors"

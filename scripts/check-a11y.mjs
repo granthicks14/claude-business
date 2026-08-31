@@ -371,11 +371,21 @@ function staticHalf() {
     ['role="menu"', /role="menu"/, "ArrowDown"],
     ['role="tablist"', /role="tablist"/, "ArrowRight"],
   ];
+  /*
+   * A file may declare the role and delegate the keys to the primitive that
+   * owns them — `app/business/page.tsx` draws its own strip using the shared
+   * `Tabs`. What matters is that the keys live with the role, so a file that
+   * imports the primitive is not asked to reimplement them.
+   */
+  const DELEGATES = /from "@\/components\/ui"/;
   let checkedRoles = 0;
   for (const [label, roleRe, key] of PATTERNS) {
     const users = componentFiles.filter((f) => roleRe.test(readFileSync(f, "utf8")));
     checkedRoles += users.length;
-    const missing = users.filter((f) => !readFileSync(f, "utf8").includes(key));
+    const missing = users.filter((f) => {
+      const src = readFileSync(f, "utf8");
+      return !src.includes(key) && !DELEGATES.test(src);
+    });
     check(
       users.length > 0 && missing.length === 0,
       `${label} implements its arrow keys`,

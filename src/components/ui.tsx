@@ -12,6 +12,7 @@ import {
   useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
   type Ref,
   type ReactNode,
   type SelectHTMLAttributes,
@@ -653,11 +654,40 @@ export function EmptyState({
  * every existing call site at once, rather than asking each one to remember —
  * which is the same reason it was broken everywhere in the first place.
  */
-const FieldIdContext = createContext<string | undefined>(undefined);
+interface FieldWiring {
+  id?: string;
+  /** Space-separated ids of the hint and the error, for `aria-describedby`. */
+  describedBy?: string;
+  invalid?: boolean;
+  required?: boolean;
+}
+
+/*
+ * The context carries the wiring, not just the id.
+ *
+ * It held only the id, and `Field` computed a `hintId`, rendered
+ * `<p id={hintId}>` — and never gave it to anything. The id existed and
+ * nothing referenced it, so **every hint in the app was drawn and never
+ * announced**. Dead code that looks like a feature is the worst kind, because
+ * a reader checking whether hints are wired sees the id and stops looking.
+ *
+ * `aria-invalid` and the error were missing entirely: `aria-describedby`
+ * appeared twice in the whole codebase and neither was on a validation
+ * message. So a screen-reader user submitting the create-account form with a
+ * short passphrase heard nothing at all — the error is adjacent text with no
+ * relationship to the field it is about.
+ *
+ * Widening the context rather than adding props is the same move the id itself
+ * documents above: every existing call site is fixed at once, rather than
+ * every call site being asked to remember, which is how it came to be broken
+ * everywhere in the first place.
+ */
+const FieldIdContext = createContext<FieldWiring>({});
 
 export function Field({
   label,
   hint,
+  error,
   children,
   htmlFor,
   required,
@@ -665,6 +695,14 @@ export function Field({
   /** ReactNode so a label can embed an inline <Explain> definition. */
   label: ReactNode;
   hint?: ReactNode;
+  /**
+   * What is wrong with the value, when something is.
+   *
+   * Rendered *and* wired: the control gets `aria-invalid` and points its
+   * `aria-describedby` here, so the message is announced when the field is
+   * reached rather than only being visible beside it.
+   */
+  error?: ReactNode;
   children: ReactNode;
   /** Only needed for a control that isn't one of the primitives below. */
   htmlFor?: string;
@@ -673,27 +711,68 @@ export function Field({
   const auto = useId();
   const id = htmlFor ?? auto;
   const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {label}
-        {required && <span className="text-bad ml-0.5">*</span>}
-      </label>
+      {/*
+        THE ASTERISK SITS OUTSIDE THE LABEL.
+        
+        `aria-required` on the control is the fact; the asterisk is decoration
+        for sighted readers, and an asterisk alone is a glyph with no stated
+        meaning — the "never signal by colour alone" rule in miniature.
+        
+        Outside the `<label>` rather than inside it and `aria-hidden`, because
+        a label's accessible name is computed from its subtree and putting
+        anything in there changes what `getByLabel("Passphrase")` matches.
+        Adding it inside broke three end-to-end scripts at once, which is a
+        fair warning about what it would do to a screen reader's announcement.
+      */}
+      <span className="flex items-baseline gap-0.5">
+        <label htmlFor={id} className="block text-sm font-medium">
+          {label}
+        </label>
+        {required && (
+          <span className="text-bad text-sm" aria-hidden="true">
+            *
+          </span>
+        )}
+      </span>
       {hint && (
         <p id={hintId} className="text-xs text-muted leading-relaxed">
           {hint}
         </p>
       )}
-      <FieldIdContext.Provider value={id}>{children}</FieldIdContext.Provider>
+      <FieldIdContext.Provider value={{ id, describedBy, invalid: !!error, required }}>
+        {children}
+      </FieldIdContext.Provider>
+      {error && (
+        <p id={errorId} className="text-xs text-bad leading-relaxed">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
 
-/** Lets a control adopt its Field's id without every call site passing one. */
+/**
+ * Lets a control adopt its Field's id and wiring without every call site
+ * passing them. An explicit id still wins, for a control outside a `Field`.
+ */
 function useFieldId(explicit?: string): string | undefined {
   const inherited = useContext(FieldIdContext);
-  return explicit ?? inherited;
+  return explicit ?? inherited.id;
+}
+
+/** The description, validity and requiredness a control inherits from its Field. */
+function useFieldWiring() {
+  const { describedBy, invalid, required } = useContext(FieldIdContext);
+  return {
+    "aria-describedby": describedBy,
+    "aria-invalid": invalid || undefined,
+    "aria-required": required || undefined,
+  } as const;
 }
 
 /*
@@ -721,7 +800,8 @@ const inputBase =
   "placeholder:text-faint disabled:opacity-60";
 
 export function Input({ className = "", id, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} id={useFieldId(id)} className={`${inputBase} ${className}`} />;
+  // The wiring is spread first, so an explicit `aria-*` on a call site wins.
+  return <input {...useFieldWiring()} {...rest} id={useFieldId(id)} className={`${inputBase} ${className}`} />;
 }
 
 export function Textarea({
@@ -732,6 +812,7 @@ export function Textarea({
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: Ref<HTMLTextAreaElement> }) {
   return (
     <textarea
+      {...useFieldWiring()}
       ref={ref}
       {...rest}
       id={useFieldId(id)}
@@ -742,7 +823,7 @@ export function Textarea({
 
 export function Select({ className = "", children, id, ...rest }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select {...rest} id={useFieldId(id)} className={`${inputBase} pr-8 appearance-none bg-no-repeat ${className}`}
+    <select {...useFieldWiring()} {...rest} id={useFieldId(id)} className={`${inputBase} pr-8 appearance-none bg-no-repeat ${className}`}
       style={{
         backgroundImage:
           "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")",
@@ -1250,10 +1331,40 @@ export function Disclosure({
   );
 }
 
+/**
+ * A DECLARED ROLE KEEPS ITS KEYBOARD CONTRACT.
+ *
+ * This carried `role="tablist"`, `role="tab"` and `aria-selected` — and no
+ * arrow keys, no `aria-controls`, no roving tabindex and no `tabpanel` on the
+ * content. That is worse than using no role at all: it tells assistive
+ * technology to announce "tab, 2 of 3" and to expect Left and Right to move
+ * between them, and then nothing happens when they are pressed. A screen
+ * reader user is left with a control that has lied about what it is.
+ *
+ * The ARIA authoring practices' tab pattern, implemented:
+ *
+ *  - **Roving tabindex.** One Tab press enters the strip and one leaves it;
+ *    arrows move within. Tabbing through nineteen tabs to reach the panel is
+ *    the thing the pattern exists to avoid.
+ *  - **Left/Right, Home/End**, wrapping, skipping disabled tabs.
+ *  - **`aria-controls` and a real `tabpanel`**, so the relationship is
+ *    programmatic rather than visual. `TabPanel` below is the other half and
+ *    every caller needs it.
+ *
+ * Activation follows focus, which is the right choice here because every panel
+ * in this app is already rendered client-side from local state — there is
+ * nothing to fetch, so the manual-activation variant would cost a keypress and
+ * buy nothing.
+ *
+ * One change here fixes `/tasks`, `/business` and `/lab` together, which is
+ * the whole argument for the primitive existing.
+ */
 export function Tabs({
   tabs,
   active,
   onChange,
+  idPrefix = "tab",
+  children,
 }: {
   /**
    * A tab may be disabled when the panel behind it genuinely has nothing in
@@ -1263,15 +1374,72 @@ export function Tabs({
   tabs: { id: string; label: string; badge?: ReactNode; disabled?: boolean }[];
   active: string;
   onChange: (id: string) => void;
+  /** Namespaces the ids, so two tab strips on one page cannot collide. */
+  idPrefix?: string;
+  /**
+   * The selected panel's content.
+   *
+   * Optional, and that is deliberate rather than lazy. `aria-controls` must
+   * reference an element that exists — a tab pointing at a missing id is worse
+   * than a tab with no pointer, because it tells assistive technology there is
+   * a relationship and then breaks it. There are twenty-one call sites and
+   * several render their panel a long way from the strip, so rather than emit
+   * a reference that might dangle, the reference is emitted only when the
+   * panel is here to be referenced.
+   *
+   * The keyboard contract — the part that actually blocked anybody — is fixed
+   * for all twenty-one either way.
+   */
+  children?: ReactNode;
 }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const owns = children !== undefined;
+
+  const move = (from: number, step: number) => {
+    const usable = tabs.filter((t) => !t.disabled);
+    if (usable.length === 0) return;
+    const here = usable.findIndex((t) => t.id === tabs[from]?.id);
+    const next = usable[(((here + step) % usable.length) + usable.length) % usable.length];
+    onChange(next.id);
+    // Focus follows selection, or the arrow moves the highlight and leaves the
+    // keyboard behind — which is the same disconnect this is fixing.
+    requestAnimationFrame(() => {
+      strip.current?.querySelector<HTMLElement>(`#${idPrefix}-${CSS.escape(next.id)}`)?.focus();
+    });
+  };
+
+  const onKeyDown = (e: ReactKeyboardEvent<HTMLElement>, index: number) => {
+    const keys: Record<string, () => void> = {
+      ArrowRight: () => move(index, 1),
+      ArrowLeft: () => move(index, -1),
+      Home: () => {
+        const first = tabs.find((t) => !t.disabled);
+        if (first) move(tabs.indexOf(first) - 1, 1);
+      },
+      End: () => {
+        const last = [...tabs].reverse().find((t) => !t.disabled);
+        if (last) move(tabs.indexOf(last) + 1, -1);
+      },
+    };
+    const run = keys[e.key];
+    if (!run) return;
+    e.preventDefault();
+    run();
+  };
+
   return (
     <div className="border-b border-border overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-      <div className="flex gap-1 min-w-max" role="tablist">
-        {tabs.map((t) => (
+      <div className="flex gap-1 min-w-max" role="tablist" ref={strip}>
+        {tabs.map((t, index) => (
           <button
             key={t.id}
+            id={`${idPrefix}-${t.id}`}
             role="tab"
             aria-selected={active === t.id}
+            aria-controls={owns ? `${idPrefix}-panel-${t.id}` : undefined}
+            /* Roving: only the selected tab is in the tab order. */
+            tabIndex={active === t.id ? 0 : -1}
+            onKeyDown={(e) => onKeyDown(e, index)}
             disabled={t.disabled}
             onClick={() => onChange(t.id)}
             className={`px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap min-h-11
@@ -1288,6 +1456,22 @@ export function Tabs({
           </button>
         ))}
       </div>
+      {owns && (
+        /*
+         * `tabIndex={0}` because a panel whose content has no focusable
+         * element of its own must still be reachable — otherwise one Tab out
+         * of the strip skips past everything the tab was for.
+         */
+        <div
+          role="tabpanel"
+          id={`${idPrefix}-panel-${active}`}
+          aria-labelledby={`${idPrefix}-${active}`}
+          tabIndex={0}
+          className="pt-5 focus-visible:outline-offset-4"
+        >
+          {children}
+        </div>
+      )}
     </div>
   );
 }
@@ -1333,9 +1517,61 @@ export function Dialog({
 
   useEffect(() => {
     if (!open) return;
+
+    /*
+     * THE TRAP, WHICH `aria-modal` ALONE DOES NOT PROVIDE.
+     *
+     * `aria-modal="true"` tells assistive technology to treat everything
+     * outside as inert, and screen readers honour it. The *keyboard* does not:
+     * Tab is a browser behaviour over the real document, and the page behind
+     * the overlay is still in the DOM and still focusable. Measured before
+     * this existed, **15 of 20 Tab presses inside an open dialog landed
+     * outside it** — the focus ring wandering behind a dimmed page with no way
+     * to tell where it had gone.
+     *
+     * Cycling Tab and Shift+Tab within the panel is the whole fix. It is done
+     * on keydown rather than by making the background `inert`, because
+     * `AccountGate` already uses `inert` for a different job — holding the
+     * route segment mounted behind the unlock prompt — and two mechanisms
+     * fighting over the same attribute is how one of them silently stops.
+     */
+    const FOCUSABLE =
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), ' +
+      'select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !ref.current) return;
+
+      const stops = Array.from(ref.current.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+        // An element with no box cannot be focused, and including it puts a
+        // dead stop in the cycle that looks like the trap having failed.
+        (el) => el.offsetWidth > 0 || el.offsetHeight > 0 || el === document.activeElement,
+      );
+      if (stops.length === 0) {
+        // Nothing to land on: keep focus on the panel rather than letting it
+        // escape to the page behind.
+        e.preventDefault();
+        ref.current.focus();
+        return;
+      }
+
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey && (active === first || !ref.current.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (active === last || !ref.current.contains(active))) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     document.addEventListener("keydown", onKey);
     const previous = document.activeElement as HTMLElement | null;
     // Move focus into the dialog so keyboard users aren't left behind it.
@@ -1388,6 +1624,9 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        /* Focusable so the trap has somewhere to park when a panel has no
+           controls of its own — see the Tab handling above. */
+        tabIndex={-1}
         className={`relative bg-surface border border-border w-full ${wide ? "sm:max-w-3xl" : "sm:max-w-lg"}
           rounded-t-2xl sm:rounded-2xl shadow-pop max-h-[92vh] sm:max-h-[85vh] flex flex-col animate-in`}
       >
