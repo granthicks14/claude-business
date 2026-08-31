@@ -413,6 +413,52 @@ function staticHalf() {
     "the field primitives set aria-describedby and aria-invalid",
     "so a hint or an error is announced rather than only drawn",
   );
+
+  /* ------------------------------- the statement describes this product ---- */
+
+  /*
+   * `/accessibility` is the page a reader consults to decide whether they can
+   * use this at all, and it had been claiming a visible focus ring that painted
+   * on no text control in the app, and 200% zoom that nothing had ever opened.
+   * Neither was dishonest when written and both had quietly stopped being true,
+   * which is the whole failure mode: a policy page has no way of noticing.
+   *
+   * So each claim now names the script that holds it up, and this asserts the
+   * naming — that every line in `done` points at a check, and that the checks it
+   * points at exist. It cannot verify that the named check tests the claim; it
+   * can make an unbacked claim impossible to add without someone typing a lie
+   * about which script covers it, which is a much harder thing to do by
+   * accident. The gaps live in `known`, and that list must not be empty: a
+   * statement with nothing unfinished in it is not a statement anybody should
+   * believe.
+   */
+  console.log("\n--- the accessibility statement describes this product ---");
+  const legal = readFileSync(join(process.cwd(), "src", "lib", "legal.ts"), "utf8");
+  const block = (name) => {
+    const start = legal.indexOf(`${name}: [`);
+    if (start < 0) return [];
+    const end = legal.indexOf("\n  ],", start);
+    return legal
+      .slice(start, end)
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('"'));
+  };
+  const done = block("done");
+  const known = block("known");
+  const unbacked = done.filter((claim) => !/check:(a11y|visual|persist)/.test(claim));
+  check(done.length > 0 && known.length > 0, "the statement has claims and gaps", `${done.length} claims, ${known.length} gaps`);
+  check(
+    unbacked.length === 0,
+    "every claim names the check that holds it up",
+    unbacked.length ? unbacked[0].slice(0, 80) : `${done.length} claims`,
+  );
+  const named = new Set([...legal.matchAll(/check:(a11y|visual|persist)/g)].map((m) => m[1]));
+  const missing = [...named].filter(
+    (n) => !existsSync(join(process.cwd(), "scripts", `check-${n === "a11y" ? "a11y" : n}.mjs`)) &&
+      !existsSync(join(process.cwd(), "scripts", `${n === "visual" ? "visual-qa" : `check-${n}`}.mjs`)),
+  );
+  check(missing.length === 0, "and the checks it names exist", missing.length ? missing.join(", ") : [...named].join(", "));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -709,6 +755,236 @@ async function browserHalf(chromium) {
     }
     check(named > 5, "the name sweep found controls to check", `${named} named`);
     check(unnamed.length === 0, "no unnamed control", unnamed.slice(0, 5).join(", "));
+
+    /* ------------------------------------------- the way past the nav ----- */
+
+    /*
+     * `/accessibility` claims a skip link. It exists, and nothing has ever
+     * checked that it is *first* — which is the only property that makes it
+     * worth having. A skip link three stops into the masthead is a link, not a
+     * skip. It is also `sr-only` until focused, so this asserts it becomes
+     * visible: an invisible skip link helps a screen-reader user and abandons
+     * the sighted keyboard user it is equally for.
+     */
+    console.log("\n--- the skip link is first, visible, and lands somewhere ---");
+    /*
+     * A fresh tab, and that is load-bearing. Chromium keeps a sequential focus
+     * navigation starting point, and the blocks above press Tab 25 times and
+     * click inside a dialog — so reusing the page measured "the first Tab of
+     * this session", not "the first Tab of a visit", and reported the skip link
+     * as unreachable when it is the first element in the document. The claim
+     * being checked is about somebody arriving, so the check arrives too.
+     */
+    /*
+     * Three routes, because the defect this found was route-dependent: `/` was
+     * correct throughout and every route carrying a section index was not.
+     * Checking the landing page alone would have reported a healthy skip link
+     * while nineteen workspace routes had an unreachable one.
+     */
+    const SKIP_ROUTES = ["/", "/business", "/tasks"];
+    const skips = [];
+    for (const route of SKIP_ROUTES) {
+      const first = await context.newPage();
+      await first.goto(ORIGIN + route, { waitUntil: "networkidle" });
+      await first.waitForTimeout(500);
+      await first.keyboard.press("Tab");
+      await first.waitForTimeout(250);
+      skips.push({
+        route,
+        ...(await first.evaluate(() => {
+          const el = document.activeElement;
+          const box = el.getBoundingClientRect();
+          const href = el.getAttribute?.("href") || "";
+          const target = href.startsWith("#") ? document.getElementById(href.slice(1)) : null;
+          return {
+            text: (el.textContent || "").trim(),
+            href,
+            visible: box.width > 1 && box.height > 1,
+            landing: target ? target.tagName.toLowerCase() : null,
+          };
+        })),
+      });
+      await first.close();
+    }
+    const wrong = skips.filter((s) => !/skip/i.test(s.text));
+    check(
+      wrong.length === 0,
+      "the first stop is the skip link, on every route",
+      wrong.length
+        ? wrong.map((s) => `${s.route} reached "${s.text}"`).join(", ")
+        : `${skips.length} routes`,
+    );
+    check(
+      skips.every((s) => s.visible),
+      "and it is visible once focused",
+      skips.every((s) => s.visible) ? "shown, not clipped" : "still clipped",
+    );
+    check(
+      skips.every((s) => s.landing === "main"),
+      "and it points at the main landmark",
+      `${skips[0].href} is a <${skips[0].landing}>`,
+    );
+
+    /* ------------------------------------- text at twice the size --------- */
+
+    /*
+     * `/accessibility` has claimed "works at 200% zoom" for as long as the
+     * statement has existed and nothing ever measured it. It is measured here
+     * rather than deleted, because the claim is about SC 1.4.4 Resize Text and
+     * that is the one thing the 320px sweep in `check:visual` does *not* cover:
+     * reflow narrows the viewport and leaves the type alone, while this leaves
+     * the viewport alone and doubles the type. A layout can pass one and fail
+     * the other, and the failure mode here — a fixed-height box clipping the
+     * words inside it — is invisible at every other size.
+     *
+     * The first assertion is that the text actually grew. Without it the whole
+     * block would pass on a stylesheet with the scale hard-coded in pixels,
+     * which is exactly the defect it exists to catch: nothing would overflow,
+     * nothing would clip, and the reason would be that nothing had changed.
+     */
+    console.log("\n--- text at 200% ---");
+    const ZOOM_ROUTES = ["/", "/business", "/tasks", "/profile/setup", "/settings"];
+    let grew = 0;
+    const overflowing = [];
+    const clipped = [];
+    for (const route of ZOOM_ROUTES) {
+      await page.goto(ORIGIN + route, { waitUntil: "networkidle" });
+      await page.waitForTimeout(300);
+      /*
+       * The two passes are two round trips on purpose. Enlarging the type is
+       * something the page is allowed to *respond* to — `ModelDiagram` grows a
+       * "Show all" control the moment its note stops fitting — and measuring in
+       * the same tick as the resize reads the DOM before React has rendered the
+       * answer, then reports the missing control as a defect. That cost one
+       * wrong fix in this file already.
+       */
+      const scan = () =>
+        page.evaluate(() => {
+          /*
+           * Text cut off by its own container, keyed so the two passes can be
+           * compared. Only elements holding text directly are considered, and
+           * only vertical clipping past a rounding error — a horizontal
+           * scroller is a legitimate answer to wide content and this project
+           * already wraps its tables in one.
+           */
+          const found = {};
+          const all = [...document.querySelectorAll("main *")];
+          all.forEach((el, i) => {
+            if (!el.textContent?.trim()) return;
+            const hasOwnText = [...el.childNodes].some(
+              (n) => n.nodeType === 3 && n.textContent.trim().length > 0,
+            );
+            if (!hasOwnText) return;
+            const s = getComputedStyle(el);
+            if (s.overflowY !== "hidden" && s.overflow !== "hidden") return;
+            /*
+             * `.sr-only` is a 1px clipped box and is *always* smaller than its
+             * text — that is what it is for. Reporting it would be the check
+             * finding its own mechanism, which is the class of false positive
+             * this file has already produced twice.
+             */
+            if (el.clientHeight <= 1 || el.clientWidth <= 1) return;
+            /*
+             * Text behind a disclosure is not lost, it is folded. 1.4.4 is
+             * about content that becomes *unreachable* when the reader enlarges
+             * the type, so a control in the same block that expands it is a
+             * real answer — and it has to be a real control: a `[aria-expanded]`
+             * button cannot be faked by a class name, and the one on `/business`
+             * is driven and re-measured further down rather than trusted.
+             */
+            if (el.parentElement?.querySelector("[aria-expanded]")) return;
+            if (el.scrollHeight > el.clientHeight + 4) {
+              found[`${i}:${el.tagName.toLowerCase()}`] =
+                `${el.tagName.toLowerCase()}.${(el.className || "").toString().split(" ")[0]}` +
+                ` [${el.clientHeight}px shows ${el.scrollHeight}px: "${el.textContent.trim().slice(0, 40)}"]`;
+            }
+          });
+
+          const sample = document.querySelector("main p, main li, main");
+          const doc = document.documentElement;
+          return {
+            size: parseFloat(getComputedStyle(sample).fontSize),
+            over: doc.scrollWidth - doc.clientWidth,
+            found,
+          };
+        });
+
+      const at100 = await scan();
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "32px"; // 200% of the 16px default
+      });
+      await page.waitForTimeout(400);
+      const at200 = await scan();
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = "";
+      });
+
+      /*
+       * The diff is the whole point. Text truncated at every size is a design
+       * decision — `ModelDiagram` clamps a note to three lines on purpose and
+       * says why — and reporting it here would make this a truncation sweep
+       * wearing a zoom label, satisfiable only by undoing deliberate work. What
+       * SC 1.4.4 is actually about is content that *disappears because the
+       * reader made the text bigger*, and that is only visible as a difference
+       * between the two passes.
+       */
+      const cut = Object.keys(at200.found)
+        .filter((k) => !(k in at100.found))
+        .map((k) => at200.found[k]);
+
+      if (at200.size > at100.size * 1.8) grew++;
+      if (at200.over > 1) overflowing.push(`${route} +${at200.over}px`);
+      if (cut.length) clipped.push(`${route}: ${cut.slice(0, 4).join(", ")}`);
+    }
+    check(
+      grew === ZOOM_ROUTES.length,
+      "the type scale follows the reader's text size",
+      `${grew} of ${ZOOM_ROUTES.length} routes doubled`,
+    );
+    check(overflowing.length === 0, "nothing scrolls sideways at 200%", overflowing.join(", "));
+    check(
+      clipped.length === 0,
+      "no text disappears that was readable at 100%",
+      clipped.join(" | "),
+    );
+
+    /*
+     * And the escape hatch is driven rather than assumed. The scan above lets a
+     * `[aria-expanded]` control excuse a clipped paragraph; without this, that
+     * exemption would be satisfiable by any button with the attribute on it.
+     */
+    await page.goto(ORIGIN + "/business", { waitUntil: "networkidle" });
+    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "32px";
+    });
+    await page.waitForTimeout(200);
+    const revealed = await page.evaluate(async () => {
+      const toggle = [...document.querySelectorAll("button[aria-expanded]")].find(
+        (b) => /show all/i.test(b.textContent || ""),
+      );
+      if (!toggle) return { found: false };
+      /*
+       * The note is the toggle's immediate previous sibling, not the first `<p>`
+       * in the cell — that one is the eyebrow label, which never clips, so
+       * querying for it measured 79px before and 79px after and reported the
+       * working control as broken.
+       */
+      const para = toggle.previousElementSibling;
+      if (!para || para.tagName !== "P") return { found: false };
+      const before = para.clientHeight;
+      toggle.click();
+      await new Promise((r) => setTimeout(r, 250));
+      const after = para.clientHeight;
+      document.documentElement.style.fontSize = "";
+      return { found: true, before, after, full: after >= para.scrollHeight - 4 };
+    });
+    check(revealed.found, "the folded note offers a control at 200%", revealed.found ? "" : "no Show all button");
+    check(
+      revealed.found && revealed.after > revealed.before && revealed.full,
+      "and pressing it shows the whole sentence",
+      revealed.found ? `${revealed.before}px to ${revealed.after}px` : "",
+    );
 
     /* --------------------------------- navigation says where you went ----- */
 

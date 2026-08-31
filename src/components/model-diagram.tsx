@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import { ideaSummary } from "@/lib/idea-summary";
 import { currency } from "@/lib/finance";
 import type { BusinessIdea } from "@/lib/types";
@@ -69,21 +71,75 @@ export function ModelDiagram({ idea, price }: { idea: BusinessIdea; price?: numb
               <p className="eyebrow text-faint">{s.label}</p>
             </div>
             <p className="text-sm mt-2 leading-snug measure-full">{s.value}</p>
-            {/*
-              Clamped, and the reason is the grid. One cell's note ran to six
-              lines while its neighbours ran to one, so three of the four
-              columns were mostly empty space and the sequence stopped reading
-              as a sequence. Three lines is enough to say what the step is
-              about; the full text lives further down the page anyway.
-            */}
-            {s.note && (
-              <p className="text-caption text-muted mt-1.5 leading-snug measure-full line-clamp-3">
-                {s.note}
-              </p>
-            )}
+            {s.note && <StepNote text={s.note} />}
           </li>
         ))}
       </ol>
     </section>
+  );
+}
+
+/**
+ * A step's note, clamped to three lines — with a way to read the rest.
+ *
+ * WHY IT IS CLAMPED
+ *
+ * The grid. One cell's note ran to six lines while its neighbours ran to one,
+ * so three of the four columns were mostly empty space and the sequence stopped
+ * reading as a sequence.
+ *
+ * WHY IT IS NO LONGER *ONLY* CLAMPED
+ *
+ * `line-clamp` counts lines, not characters, so how much it hides depends on
+ * how big the reader's text is. Measured by `check:a11y` at 200%: a note that
+ * fitted in its three lines at the default size needed **322px of a 107px box**
+ * — two thirds of the sentence gone, and gone *because the reader made the text
+ * bigger*. That is WCAG 1.4.4 Resize Text, and it is the one failure mode
+ * invisible at every size the app is usually looked at.
+ *
+ * The toggle appears only when something is actually hidden, measured from the
+ * element rather than guessed from the string's length — a character threshold
+ * is a proxy for line count and breaks at exactly the text size that caused
+ * the problem.
+ */
+function StepNote({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [clipped, setClipped] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  /*
+   * Measured only while closed: opening removes the clamp, so `scrollHeight`
+   * and `clientHeight` agree and the check would conclude nothing was ever
+   * hidden — taking the "Show less" control away mid-read.
+   */
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || open) return;
+    const measure = () => setClipped(el.scrollHeight > el.clientHeight + 2);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, open]);
+
+  return (
+    <>
+      <p
+        ref={ref}
+        className={`text-caption text-muted mt-1.5 leading-snug measure-full ${open ? "" : "line-clamp-3"}`}
+      >
+        {text}
+      </p>
+      {clipped && (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="text-caption text-signal underline underline-offset-4 min-h-8 text-left"
+        >
+          {open ? "Show less" : "Show all"}
+        </button>
+      )}
+    </>
   );
 }

@@ -396,13 +396,33 @@ function SectionNav({
   /*
    * Bring the current page into view when the route changes.
    *
-   * `block: "nearest"` so it never scrolls the page itself — this element is
-   * inside sticky chrome, and a vertical jump on every navigation would be a
-   * far worse bug than the one being fixed.
+   * THE SCROLLER IS MOVED, NOT THE ELEMENT, AND THAT IS THE WHOLE POINT.
+   *
+   * This was `el.scrollIntoView({ inline: "center", block: "nearest" })`, which
+   * centres it correctly and also **sets the sequential focus navigation
+   * starting point to the element it scrolled to**. Chromium does that for a
+   * programmatic scroll, silently, with no focus event to notice it by.
+   *
+   * Measured with `check:a11y`: on `/` the first Tab reached "Skip to content";
+   * on `/business` and `/tasks` — on every route carrying a section index, so
+   * nineteen of them — the first Tab landed *inside the index*, past the skip
+   * link, the wordmark, all four top-level nav links and the account control.
+   * The skip link was in the document, focusable, and unreachable by the one
+   * keystroke it exists to answer.
+   *
+   * Setting `scrollLeft` does the same centring and touches nothing else. The
+   * offset is computed from bounding boxes rather than `offsetLeft` so it does
+   * not depend on which ancestor happens to be the offset parent, and only the
+   * horizontal axis is moved — this element sits inside sticky chrome, and a
+   * vertical jump on every navigation would be a worse bug than either.
    */
   useEffect(() => {
-    const el = scroller.current?.querySelector<HTMLElement>('[aria-current="page"]');
-    el?.scrollIntoView({ inline: "center", block: "nearest" });
+    const box = scroller.current;
+    const el = box?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!box || !el) return;
+    const boxRect = box.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    box.scrollLeft += elRect.left - boxRect.left - (boxRect.width - elRect.width) / 2;
   }, [pathname]);
 
   if (items.length === 0) return null;

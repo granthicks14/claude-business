@@ -160,22 +160,46 @@ export const OUTPUT_DISCLAIMERS: { title: string; body: string }[] = [
   },
 ];
 
-/** The accessibility position, and the parts that are genuinely unfinished. */
+/**
+ * The accessibility position, and the parts that are genuinely unfinished.
+ *
+ * EVERY CLAIM HERE IS SOMETHING A SCRIPT MEASURES.
+ *
+ * This list previously said "a visible focus ring" and "works at 200% zoom".
+ * Both were written in good faith and neither was true: `focus:outline-none` in
+ * the input base beat the global `:focus-visible` rule on specificity, so the
+ * ring painted on no text control in the product, and nothing had ever opened
+ * the app at 200% to look. That is the project's own rule — *never publish a
+ * policy that describes a different product* — broken on the page whose subject
+ * is whether the product can be trusted.
+ *
+ * So the rule for this list is now narrower than "true": **a claim stays only
+ * if a named script fails when it stops being true.** Each line names the check
+ * that holds it up. Anything believed but unmeasured is in `known` instead,
+ * described as unmeasured rather than quietly dropped — a reader deciding
+ * whether they can use this needs the gaps more than the wins.
+ */
 export const ACCESSIBILITY_STATEMENT = {
   target: "WCAG 2.2 AA",
   done: [
-    "Every page is reachable and operable by keyboard, with a visible focus ring and a skip link to the main content.",
-    "Form controls are programmatically labelled, so a screen reader announces what each field is for.",
-    "Buttons, tabs and navigation links are at least 24px tall, and most are 32px or larger. Links inside a sentence follow the line height of the text around them, which WCAG 2.2 allows for inline targets — they are never the only way to reach anything.",
-    "Colour is never the only signal — anything shown by colour is also stated in words.",
-    "The whole interface reflows to 390px with no horizontal scrolling, and works at 200% zoom.",
-    "All motion is decorative and is switched off entirely by the system 'reduce motion' setting.",
-    "Light and dark themes both meet contrast requirements for body text.",
+    "The first thing the Tab key reaches on any page is a skip link to the main content, and it becomes visible when it is focused. (check:a11y presses Tab on a freshly opened page and reads what got focus.)",
+    "Every control that takes focus paints an outline you can see against whatever it is sitting on — measured, in both themes, against the 3:1 minimum. The weakest one in the app currently measures 17.6:1. (check:a11y)",
+    "The edge of every input, outlined button and checkbox also meets that 3:1 minimum in both themes. Hairlines between blocks are lighter on purpose: they are decoration, and the standard asks about controls. (check:a11y)",
+    "Each page has its own title, so browser tabs, history and bookmarks tell one page from another, and a screen reader announces where you have landed. (check:a11y checks all 53 routes for a title of their own, and that no two match.)",
+    "Menus, tab strips and dialogs do what their role promises: arrow keys move between items, Escape closes and returns focus, and the keyboard cannot wander out of an open dialog behind it. (check:a11y drives the keys and counts the escapes.)",
+    "Form controls are programmatically labelled, and a field's hint or error is attached to the control rather than only drawn next to it. (check:a11y sweeps the pages that carry forms.)",
+    "Buttons, tabs and navigation links are at least 32px tall, including at the smallest supported width and in the compact density. Links inside a sentence follow the line height of the text around them, which WCAG 2.2 allows for inline targets — they are never the only way to reach anything. (check:visual)",
+    "The whole interface reflows to 320px with no horizontal scrolling. (check:visual)",
+    "Text set to twice its size stays readable: nothing starts scrolling sideways, and nothing that was readable at the normal size disappears. Where a long note is folded to keep a row tidy, there is a control to unfold it. (check:a11y sets the page's text to 200% and compares.)",
+    "All motion is decorative and is switched off entirely by the system 'reduce motion' setting — checked by what is actually painted, not by what the stylesheet says. (check:visual)",
+    "Light and dark themes both meet contrast requirements for body text, at every accent colour the app offers. (check:visual)",
   ],
   known: [
-    "The interface has been tested by automated checks and by keyboard, but not with every screen reader and assistive technology combination in use.",
+    "The interface has been tested by automated checks and by keyboard, but not with every screen reader and assistive technology combination in use. Nothing here is a substitute for that.",
+    "Colour is never intended to be the only signal — anything shown by colour is meant to be stated in words too — but only the navigation's current-page marker is checked automatically. The rest is a rule the code is written to, not a measurement.",
     "Some dense comparison tables scroll horizontally inside their own container on a small screen. The content is reachable, but it is not as comfortable as the rest of the app.",
     "Charts and score rings convey their value in adjacent text, but they are not individually described as images.",
+    "The checks run against a sample of routes rather than all of them for anything that needs a browser, because opening 53 pages twice in two themes is slower than a check people will actually run.",
   ],
 };
 
