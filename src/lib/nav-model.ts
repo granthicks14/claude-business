@@ -226,6 +226,7 @@ export function navSections(state: AppState): NavSection[] {
       blurb: "What the scoring knows about you. Everything else is computed from this.",
       items: [
         { href: "/profile", label: "My profile" },
+        { href: "/profile/setup", label: "Answer the questions instead" },
         { href: "/describe", label: "Tell it about me in a sentence" },
         /*
          * The coach is about the founder, but a conversation belongs to a

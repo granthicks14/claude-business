@@ -326,7 +326,7 @@ Price the packages against what this customer can actually pay, and keep fulfilm
 
 Build a 90-day roadmap: week 1 (validation and setup), days 8-30 (launch and first customers), days 31-60 (optimisation), days 61-90 (scaling).
 
-The total time must fit ${req.profile.hoursPerWeek} hours per week. Every task needs an expected outcome that tells them whether it worked. Front-load anything that could prove the idea wrong cheaply — do not schedule building before evidence.`,
+${req.profile.hoursPerWeek > 0 ? `The total time must fit ${req.profile.hoursPerWeek} hours per week.` : "Their available hours are NOT STATED — do not assume a number; say how long each phase takes instead."} Every task needs an expected outcome that tells them whether it worked. Front-load anything that could prove the idea wrong cheaply — do not schedule building before evidence.`,
     }),
   },
 

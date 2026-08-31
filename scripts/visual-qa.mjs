@@ -68,6 +68,13 @@ const ROUTES = [
   "/business",
   "/quality",
   "/profile",
+  /*
+   * The questionnaire is swept because it renders one of the two widest
+   * things in the product: twenty capability chips and eighteen industry
+   * chips in a wrapping row, laid over a page with a progress rule. A chip
+   * row is the shape most likely to run past a 320px edge.
+   */
+  "/profile/setup",
   "/account",
   "/explore",
   /*

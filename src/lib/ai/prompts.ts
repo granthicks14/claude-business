@@ -114,11 +114,22 @@ export function renderProfile(p: FounderProfile): string {
     `Transportation: ${p.hasTransportation ? "yes" : "no"}`,
     text("Location", p.location),
     text("Local market notes", p.localMarketNotes),
-    `Hours available per week: ${p.hoursPerWeek} (hard limit)`,
+    /*
+     * An unanswered figure must not become a hard limit in a prompt.
+     *
+     * "Hours available per week: 0 (hard limit)" is an instruction to plan a
+     * business nobody can work on, and the honesty rules already forbid
+     * filling a gap with a plausible fact — so the gap is stated instead.
+     */
+    p.hoursPerWeek > 0
+      ? `Hours available per week: ${p.hoursPerWeek} (hard limit)`
+      : "Hours available per week: NOT STATED — do not assume; say what each plan would need",
     text("Preferred working schedule", p.schedule),
     `Commitment: ${p.commitment === "side" ? "side hustle" : p.commitment === "fulltime" ? "full-time business" : "undecided"}`,
     text("Wants first dollar within", p.firstDollarTarget),
-    `First income goal: $${p.incomeGoal}/month`,
+    p.incomeGoal > 0
+      ? `First income goal: $${p.incomeGoal}/month`
+      : "First income goal: NOT STATED — do not invent one",
     text("Short-term goal", p.shortTermGoal),
     text("Long-term goal", p.longTermGoal),
     text("Desired lifestyle", p.lifestyle),

@@ -126,16 +126,20 @@ export const FIELD_GROUPS: { id: ProfileField["group"]; title: string; blurb: st
 const list = (v: string[]) => (v.length ? v.join(", ") : "Not set");
 
 export const PROFILE_FIELDS: ProfileField[] = [
-  {
-    id: "name",
-    importance: "optional",
-    label: "Your name",
-    affects: "Only how the app addresses you. Nothing is scored on it.",
-    kind: "text",
-    group: "about",
-    read: (p) => p.name || "Not set",
-    isEmpty: (p) => !p.name.trim(),
-  },
+  /*
+   * NO "YOUR NAME" ROW, DELIBERATELY.
+   *
+   * The account already has a label — it is typed at the moment the vault is
+   * created, on the one screen everybody passes through exactly once — so the
+   * grid asking for a name again is the app failing to notice what it knows,
+   * on the very first row of the very first section. It also read as a
+   * required-looking field that changes nothing: its own `affects` said "Only
+   * how the app addresses you. Nothing is scored on it."
+   *
+   * `FounderProfile.name` stays and is still written — `/describe` reads it
+   * out of "I'm Sam and I want to..." — and the home page prefers it over the
+   * account label when it is there. The field is simply no longer *asked for*.
+   */
   {
     id: "age",
     importance: "recommended",

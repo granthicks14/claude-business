@@ -2,6 +2,7 @@ import { BUSINESS_MODELS } from "./engine/knowledge/models";
 import { INDUSTRIES } from "./engine/knowledge/industries";
 import type { BusinessModel, Industry } from "./engine/types";
 import type { FounderProfile } from "./types";
+import { withAssumptions } from "./profile-defaults";
 
 /**
  * "I want to start a business but I don't know what kind."
@@ -68,12 +69,13 @@ export interface ExplorePreferences {
   localDemand: number;
 }
 
-export function defaultPreferences(profile: FounderProfile): ExplorePreferences {
+export function defaultPreferences(input: FounderProfile): ExplorePreferences {
   /*
    * Seeded from the profile rather than starting flat, because a founder who
    * already said they have £200 and need money in thirty days has answered the
    * first two sliders — asking again would be the app forgetting.
    */
+  const profile = withAssumptions(input);
   return {
     lowStartupCost: profile.startingBudget < 250 ? 90 : profile.startingBudget < 1500 ? 65 : 35,
     fastRevenue: /30|thirty|asap|immediately|week/i.test(profile.firstDollarTarget ?? "") ? 85 : 55,
@@ -132,7 +134,19 @@ function bestModelFor(profile: FounderProfile, industry: Industry, prefs: Explor
   return scored[0].m;
 }
 
-export function exploreIndustries(profile: FounderProfile, prefs: ExplorePreferences): IndustryFit[] {
+export function exploreIndustries(input: FounderProfile, prefs: ExplorePreferences): IndustryFit[] {
+  /*
+   * The assumed hours and goal, not the unanswered zeros.
+   *
+   * `bestModelFor` filters on `m.minHoursPerWeek > profile.hoursPerWeek`, so a
+   * founder who has not said how much time they have would match no model at
+   * all and every one of the eighteen industries would come back with no
+   * suggestion — measured at 38/100 across the board against 64 for the same
+   * profile with the old seeded defaults. The explorer is the page for someone
+   * who has told the app nothing yet, so refusing to rank for exactly that
+   * person is the one failure it cannot have.
+   */
+  const profile = withAssumptions(input);
   const results = INDUSTRIES.map((industry) => {
     const aff = affinity(profile, industry);
     const model = bestModelFor(profile, industry, prefs);

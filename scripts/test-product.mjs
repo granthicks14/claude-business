@@ -31,6 +31,11 @@ import { snapshotEvidence, deriveLedger } from "../src/lib/intel/assumptions.ts"
 import { finalDecision } from "../src/lib/intel/decision.ts";
 import { analyseInterviews } from "../src/lib/customers/interviews.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
+import { PROFILE_FIELDS, hasUsableProfile, profileCompleteness } from "../src/lib/profile-fields.ts";
+import { SETUP_QUESTIONS, answersFrom } from "../src/lib/profile-setup.ts";
+import { goalOf, hoursOf, isAssumed } from "../src/lib/profile-defaults.ts";
+import { defaultPreferences, exploreIndustries } from "../src/lib/explore.ts";
+import { CAPABILITIES } from "../src/lib/engine/knowledge/skills.ts";
 import { eligibleBusinesses } from "../src/lib/deck/eligible.ts";
 import { explainBusiness } from "../src/lib/engine/generators/explain.ts";
 import { resolveContext } from "../src/lib/engine/context.ts";
@@ -664,6 +669,103 @@ results.navMatching = {
   };
 }
 
+/* -------------------------------- a fresh profile reads as empty -------- */
+
+/*
+ * \`emptyProfile()\` SEEDED FIVE ANSWERS NOBODY GAVE.
+ *
+ * 10 hours a week, a $1,000 income goal, a first dollar in 30 days. The
+ * \`isEmpty\` tests are \`=== 0\`, so a seeded 10 rendered as an *answer* with no
+ * "Not set" badge, and an untouched profile reported 26% complete with two
+ * required fields missing rather than four — a personalised ranking against a
+ * person who did not exist.
+ *
+ * Measured both ways: that the blanks are blank, and that the arithmetic
+ * underneath still works, since "nothing downstream changes" is the whole
+ * condition on making them blank.
+ */
+{
+  const blank = emptyProfile();
+  const seeded = { ...blank, hoursPerWeek: 10, incomeGoal: 1000, firstDollarTarget: "30 days" };
+  const c = profileCompleteness(blank);
+
+  const blankExplore = exploreIndustries(blank, defaultPreferences(blank));
+  const seededExplore = exploreIndustries(seeded, defaultPreferences(seeded));
+
+  results.emptyProfile = {
+    hours: blank.hoursPerWeek,
+    goal: blank.incomeGoal,
+    firstDollar: blank.firstDollarTarget,
+    percent: c.percent,
+    requiredMissing: c.requiredMissing,
+    usable: hasUsableProfile(blank),
+    // Every required field reports itself empty, which is what the badge reads.
+    everyRequiredIsEmpty: PROFILE_FIELDS.filter((f) => f.importance === "required").every((f) => f.isEmpty(blank)),
+    // The assumptions still produce identical rankings for the deep paths.
+    exploreUnchanged:
+      blankExplore.length === seededExplore.length &&
+      blankExplore.every((row, i) => row.industry.id === seededExplore[i].industry.id && row.score === seededExplore[i].score),
+    // And ideas still come back at full count for somebody who said nothing.
+    ideasForABlankProfile: generateIdeas(blank, { angle: "balanced", count: 10, seed: 3 }).length,
+    // The assumption is named, and says it is one.
+    assumedHours: hoursOf(blank),
+    assumedGoal: goalOf(blank),
+    knowsItIsAssuming: isAssumed(blank, "hours") && isAssumed(blank, "goal"),
+    knowsWhenItIsNot: !isAssumed({ ...blank, hoursPerWeek: 4 }, "hours"),
+  };
+}
+
+/* ------------------------------- the questionnaire that went missing ---- */
+
+/*
+ * \`engine/actions.ts\` promised "Six short questions" and routed to a
+ * nineteen-row field grid. The questionnaire is data now, so what it covers
+ * can be asserted rather than looked at.
+ */
+{
+  const blank = emptyProfile();
+  const required = PROFILE_FIELDS.filter((f) => f.importance === "required").map((f) => f.id);
+  const covered = new Set(SETUP_QUESTIONS.flatMap((q) => q.fields));
+
+  /*
+   * Answer everything with a middle option rather than the first.
+   *
+   * The first option of every numeric question is its floor — no money, a
+   * couple of hours, $300 a month — and answering all three that way is a
+   * real founder but a poor probe: it measures the engine's behaviour at the
+   * bottom of every scale at once rather than whether answering works.
+   */
+  let filled = blank;
+  for (const q of SETUP_QUESTIONS) {
+    const mid = q.options[Math.min(2, q.options.length - 1)];
+    filled = { ...filled, ...q.apply([mid.id], filled) };
+  }
+  const after = profileCompleteness(filled);
+
+  // Restoring answers must never rewrite them just by rendering the page.
+  const restored = answersFrom(filled);
+
+  results.setup = {
+    questions: SETUP_QUESTIONS.length,
+    requiredFirst: SETUP_QUESTIONS.findIndex((q) => q.importance !== "required") ===
+      SETUP_QUESTIONS.filter((q) => q.importance === "required").length,
+    everyRequiredFieldIsAsked: required.every((id) => covered.has(id)),
+    everyQuestionHasOptions: SETUP_QUESTIONS.every((q) => q.options.length >= 2),
+    everyOptionIsUnique: SETUP_QUESTIONS.every((q) => new Set(q.options.map((o) => o.id)).size === q.options.length),
+    // Skills come from CAPABILITIES so the matcher indexes what is tapped.
+    skillsAreCapabilities: (SETUP_QUESTIONS.find((q) => q.id === "skills")?.options ?? []).every((o) =>
+      CAPABILITIES.some((c) => c.id === o.id),
+    ),
+    usableAfterAnswering: hasUsableProfile(filled),
+    percentAfterAnswering: after.percent,
+    // A profile answered through the questionnaire generates a full batch.
+    ideasAfterAnswering: generateIdeas(filled, { angle: "balanced", count: 10, seed: 5 }).length,
+    restoresItsOwnAnswers: restored.skills.length > 0 && restored.hours.length === 1,
+    // The name is not asked for anywhere — the account already has one.
+    neverAsksTheName: !covered.has("name") && !PROFILE_FIELDS.some((f) => f.id === "name"),
+  };
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -891,6 +993,30 @@ check("plain English defines the terms it used", r.tone.plainDefines);
 check("analytical states how sure the section is", r.tone.analyticalGrades);
 check("three registers, three genuinely different answers", r.tone.threeDistinctLengths);
 check("and the default is plain English", r.tone.defaultIsPlain);
+
+console.log("\n--- a fresh profile reads as empty ---");
+check("hours, goal and first-dollar start unanswered", r.emptyProfile.hours === 0 && r.emptyProfile.goal === 0 && r.emptyProfile.firstDollar === "",
+  `${r.emptyProfile.hours}h, $${r.emptyProfile.goal}, "${r.emptyProfile.firstDollar}"`);
+check("every required field reports itself empty", r.emptyProfile.everyRequiredIsEmpty);
+check("all four required fields are counted as missing", r.emptyProfile.requiredMissing === 4, `${r.emptyProfile.requiredMissing}`);
+check("and the profile is not usable yet", r.emptyProfile.usable === false, `${r.emptyProfile.percent}% complete`);
+check("the industry ranking is identical to the old seeded defaults", r.emptyProfile.exploreUnchanged);
+check("and a blank profile still gets a full batch of ideas", r.emptyProfile.ideasForABlankProfile === 10, `${r.emptyProfile.ideasForABlankProfile}`);
+check("the assumed figures are the ones the engine already fell back to", r.emptyProfile.assumedHours === 10 && r.emptyProfile.assumedGoal === 1000,
+  `${r.emptyProfile.assumedHours}h, $${r.emptyProfile.assumedGoal}`);
+check("and a figure the app assumed can say so", r.emptyProfile.knowsItIsAssuming && r.emptyProfile.knowsWhenItIsNot);
+
+console.log("\n--- the questionnaire, reachable ---");
+check("there is a questionnaire at all", r.setup.questions >= 8, `${r.setup.questions} questions`);
+check("every required profile field is asked for", r.setup.everyRequiredFieldIsAsked);
+check("and the required ones come first", r.setup.requiredFirst);
+check("every question is answered by tapping, never by typing", r.setup.everyQuestionHasOptions);
+check("no question offers the same option twice", r.setup.everyOptionIsUnique);
+check("the skill options are the ones the matcher indexes", r.setup.skillsAreCapabilities);
+check("answering it produces a usable profile", r.setup.usableAfterAnswering, `${r.setup.percentAfterAnswering}% complete`);
+check("which still generates a full batch", r.setup.ideasAfterAnswering === 10, `${r.setup.ideasAfterAnswering}`);
+check("reopening it shows the answers already given", r.setup.restoresItsOwnAnswers);
+check("and it never asks for a name the account already has", r.setup.neverAsksTheName);
 
 console.log("\n--- say the specific thing ---");
 check(

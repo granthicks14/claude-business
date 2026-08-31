@@ -138,7 +138,7 @@ function RoadmapView({ business }: { business: SelectedBusiness }) {
       error={task.error}
       source={task.meta}
       generateLabel="Build my 90-day plan"
-      emptyDescription={`Four phases, sized to fit ${profile.hoursPerWeek} hours a week. Anything that could cheaply prove the idea wrong comes first — you shouldn't build before you have evidence.`}
+      emptyDescription={`Four phases, sized to fit ${profile.hoursPerWeek > 0 ? `${profile.hoursPerWeek} hours` : "the hours you have"} a week. Anything that could cheaply prove the idea wrong comes first — you shouldn't build before you have evidence.`}
       actions={
         <Button size="sm" onClick={() => setAdding(true)} icon={<Icon.plus className="size-4" />}>
           Add task

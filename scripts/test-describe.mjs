@@ -209,7 +209,16 @@ check("hours a week", r.time.perWeek === 10);
 check("a range takes the middle", r.time.range >= 12 && r.time.range <= 13, `${r.time.range}`);
 check("hours a day is converted, not taken literally", r.time.perDay === 21, `${r.time.perDay}/week`);
 check("evenings are converted", r.time.evenings === 10, `${r.time.evenings}/week`);
-check("an impossible week is refused", r.time.absurdIgnored === 10, `${r.time.absurdIgnored}`);
+/*
+ * Refused means "not written", not "written as ten".
+ *
+ * This asserted `=== 10`, which was `emptyProfile()`'s seeded default rather
+ * than anything `describeToProfile` decided — so it was really measuring the
+ * seed. Once the seeding went (a profile nobody filled in was reporting 26%
+ * complete against a person who did not exist), the correct claim is the one
+ * that was always meant: the absurd figure leaves the field unanswered.
+ */
+check("an impossible week is refused", r.time.absurdIgnored === 0, `${r.time.absurdIgnored}`);
 
 console.log("\n--- age ---");
 check("a teenager gets their exact year", r.age.teen === "16");

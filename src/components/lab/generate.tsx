@@ -355,7 +355,7 @@ function BuildNow() {
 
         <div className="grid gap-3 sm:grid-cols-2 mb-4">
           <Summary label="Budget" value={`$${profile.startingBudget.toLocaleString()}`} />
-          <Summary label="Time" value={`${profile.hoursPerWeek} hrs/week`} />
+          <Summary label="Time" value={profile.hoursPerWeek > 0 ? `${profile.hoursPerWeek} hrs/week` : "Not set"} />
           <Summary label="Equipment" value={profile.equipment.length ? profile.equipment.join(", ") : "None listed"} />
           <Summary label="Audience" value={profile.followers ? `~${profile.followers.toLocaleString()} followers` : profile.audience || "None listed"} />
         </div>

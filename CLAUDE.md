@@ -1451,6 +1451,98 @@ at the section rather than repeating the page's own `h1` immediately above it.
 Under `sm` it collapses to one "← parent" link, because on a phone the question
 is "how do I get out of here", which one link answers better than three.
 
+### A fresh profile answered five questions nobody was asked
+
+`emptyProfile()` seeded `hoursPerWeek: 10`, `incomeGoal: 1000`,
+`firstDollarTarget: "30 days"`, `risk: "medium"` and `payoffStyle: "balanced"`.
+The first three have `isEmpty` tests of `=== 0` and `!trim()`, so a seeded 10
+was not zero and rendered as an **answer** — no "Not set" badge, no prompt, no
+way to tell it apart from something the founder typed. An untouched profile
+reported **26% complete with two required fields missing** rather than four.
+
+That is not cosmetic. Hours and income goal are two of the four inputs the
+whole scoring layer turns on, so a profile nobody had filled in produced a
+confident personalised ranking against a person who did not exist — the same
+defect the evidence cap exists to prevent one layer up.
+
+The strongest evidence that seeding was never needed is that **the fallbacks
+already existed**: `match.ts` reads `profile.hoursPerWeek || 10` and
+`profile.incomeGoal || 1000`, which are the seeded values exactly.
+`profile-defaults.ts` is where they live now, named as assumptions, with
+`isAssumed()` so a figure the app supplied can say so on screen — the money
+page does.
+
+`withAssumptions()` is for the arithmetic underneath and deliberately **not**
+what pages read. A page describing the founder — the profile editor, the
+completeness prompt, "what we know about you" — must see the blank, or the app
+claims to know something nobody told it.
+
+Two places genuinely broke on the zero and were fixed rather than papered over.
+`explore.ts` filters models on `m.minHoursPerWeek > profile.hoursPerWeek`, so a
+founder who had not stated their hours matched **no model in any of the
+eighteen industries** — measured at 38/100 across the board against 64 for the
+same profile with the old seeds, on the page that exists precisely for somebody
+who has said nothing. And `ai/prompts.ts` was emitting *"Hours available per
+week: 0 (hard limit)"*, which instructs a provider to plan a business nobody
+can work on; it states the gap now, as the honesty rules require.
+
+**`startingBudget` is the one field this could not fix, and it says so.** Zero
+hours and a zero income goal are not answers anybody gives, so zero is a safe
+sentinel for them. Zero budget *is* an answer, and a common one, so a founder
+who taps "Nothing yet" still sees the budget row read "Not set". Fixing it
+means making the field nullable and touching every reader; the note is in
+`profile-setup.ts` rather than in a commit message. The arithmetic is
+unaffected — the engine already treats a zero budget as "no money" everywhere.
+
+`test:describe` had one assertion coupled to the seed: "an impossible week is
+refused" checked `=== 10`, which was `emptyProfile()`'s default rather than
+anything the parser decided. It checks zero now, which is the claim that was
+always meant.
+
+### The questionnaire the app kept promising
+
+`engine/actions.ts` has offered **"Six short questions"** for months and its
+"Take me there" routed to `/profile` — a nineteen-row grid of text boxes,
+number spinners and tag inputs. Nobody chose that inconsistency: `/onboarding`
+*was* the questionnaire and was retired into `/profile` in an earlier pass
+because the two were 1,210 lines of the same twenty-six fields implemented
+twice. The copy pointing at it was never updated.
+
+The half lost in that merge is the half that matters to somebody arriving with
+nothing: **being asked one thing at a time, with the answers already written
+down.** "Skills" as an empty text box is a far harder question than a list of
+twenty things to tap.
+
+`lib/profile-setup.ts` holds twelve questions as data and `/profile/setup`
+renders them. Required first, skip on every step, saved as you go, and the
+progress line says how many are left *before the scoring means something*
+rather than how many are left in total — because `RequireProfile` was removed
+for replacing a page with "First, tell us about you", and a questionnaire you
+cannot leave is that mistake with a nicer interface.
+
+**The vocabularies are borrowed, not invented.** Skill options are
+`CAPABILITIES` and interest options are `INDUSTRIES` — the two lists the engine
+actually matches against. A hand-written list of "common skills" would drift
+from `detectCapabilities` within a release and a founder would tap an option
+that matched nothing.
+
+It is a separate route rather than a mode of `/profile` because `/profile`
+earns its shape from a different job: it is anchor-addressable
+(`/profile#skills`) and every score factor deep-links into it. Folding a linear
+tap-through in would land those deep links inside a wizard step.
+
+**And it stopped asking for the name.** The account label is typed at vault
+creation, on the one screen everybody passes through exactly once, so a "Your
+name" row was the app failing to notice what it knows — on the first row of the
+first section, for a field whose own `affects` read "Nothing is scored on it."
+The home page greeting derives from `currentAccount()?.label` now, still
+preferring `profile.name` where `/describe` parsed one out of a founder's own
+sentence.
+
+`check:visual` swept the new route and refused it: **21 fully-round elements
+against a limit of six**, because the chips were drawn as pills. The rule is
+right and the chips were wrong.
+
 ### One founder profile, not two
 
 `/settings` carried a second full profile editor — the same twenty-six fields,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { goalOf, isAssumed } from "@/lib/profile-defaults";
 
 import { DiscussWithCoach } from "@/components/discuss";
 import { Icon } from "@/components/icons";
@@ -213,7 +214,16 @@ function Levers() {
 function Simulator({ business }: { business: SelectedBusiness }) {
   const profile = useAppState(effectiveProfile);
   const inputs = business.money;
-  const result = useMemo(() => runMoneyModel(inputs, profile.incomeGoal), [inputs, profile.incomeGoal]);
+  /*
+   * The goal to aim the arithmetic at, and whether the founder chose it.
+   *
+   * An unanswered income goal is zero, and "To hit $0/mo: 0 customers" is not
+   * a finding. The assumption is used and labelled rather than hidden — a
+   * figure the app supplied has to be able to say so.
+   */
+  const goal = goalOf(profile);
+  const goalAssumed = isAssumed(profile, "goal");
+  const result = useMemo(() => runMoneyModel(inputs, goal), [inputs, goal]);
 
   const set = (patch: Partial<MoneyModelInputs>) => {
     actions.updateBusiness(business.id, { money: { ...inputs, ...patch } });
@@ -349,12 +359,14 @@ function Simulator({ business }: { business: SelectedBusiness }) {
         </Card>
         <Card className="p-5">
           <Stat
-            label={`To hit ${currency(profile.incomeGoal)}/mo`}
+            label={`To hit ${currency(goal)}/mo`}
             value={result.customersForGoal !== null ? `${result.customersForGoal} customers` : "—"}
             hint={
-              result.trafficForGoal
-                ? `≈ ${result.trafficForGoal.toLocaleString()} visitors at ${business.money.conversionRate}%`
-                : "Set a conversion rate to see traffic needed"
+              goalAssumed
+                ? "You haven't set an income goal, so this assumes $1,000 a month. Set yours in your profile."
+                : result.trafficForGoal
+                  ? `≈ ${result.trafficForGoal.toLocaleString()} visitors at ${business.money.conversionRate}%`
+                  : "Set a conversion rate to see traffic needed"
             }
           />
         </Card>

@@ -97,8 +97,8 @@ export function RequireProfile({ children }: { children: ReactNode }) {
             The app doesn&apos;t know your skills, hours or budget yet, so anything
             scored against <em>you</em> is showing a neutral 50 rather than a real
             number. The ideas themselves are real.{" "}
-            <Link href="/profile" className="text-section underline underline-offset-2 font-medium">
-              Tell it about you
+            <Link href="/profile/setup" className="text-section underline underline-offset-2 font-medium">
+              Answer twelve quick questions
             </Link>{" "}
             and every score recalculates. Nothing you&apos;ve done is lost.
           </p>

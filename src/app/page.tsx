@@ -15,7 +15,7 @@ import { Badge, Button, Dialog, Eyebrow, Hi, LinkButton, Section, Split } from "
 import { JourneySpine, ProfilePrompt } from "@/components/journey";
 import { withBusiness } from "@/lib/business-param";
 import { actions, activeBusiness, markReadyEmpty, useAppState, useStoreReady } from "@/lib/store";
-import { startGuest } from "@/lib/vault";
+import { currentAccount, startGuest } from "@/lib/vault";
 import { sampleBusiness } from "@/lib/sample";
 import { useAIStatus } from "@/lib/useAI";
 
@@ -275,6 +275,21 @@ export default function HomePage() {
    */
   const open = useAppOpen();
 
+  /*
+   * Who to greet, and why the account label is the fallback.
+   *
+   * The profile grid used to open with "Your name" — a row asking for
+   * something typed into the vault at account creation, on the one screen
+   * everybody passes through exactly once. Reading it from the account
+   * instead makes the greeting derived rather than copied, so it cannot
+   * disagree with the name in the masthead menu.
+   *
+   * `state.profile.name` still wins where it exists, because `/describe`
+   * parses it out of a founder's own sentence and that is a better name than
+   * a vault label somebody typed as "work laptop".
+   */
+  const greeting = state.profile.name.trim() || (open ? (currentAccount()?.label ?? "") : "");
+
   if (ready && open) {
     return (
       <div className="space-y-10">
@@ -292,7 +307,7 @@ export default function HomePage() {
             {new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
           </Eyebrow>
           <h1 className="text-display measure-full">
-            {state.profile.name ? `Morning, ${state.profile.name}.` : "Welcome back."}
+            {greeting ? `Morning, ${greeting}.` : "Welcome back."}
           </h1>
           {business && (
             <p className="text-body-lg text-muted mt-4 leading-relaxed">

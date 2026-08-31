@@ -52,7 +52,9 @@ const SCENARIOS: Scenario[] = [
   {
     id: "time-twenty",
     label: "What if I had 20 hours a week?",
-    relevant: (p) => p.hoursPerWeek < 20,
+    // A "what if" against an unanswered figure is not a scenario, it is a
+    // question the profile should have asked. Zero means unanswered.
+    relevant: (p) => p.hoursPerWeek > 0 && p.hoursPerWeek < 20,
     apply: (p) => ({ ...p, hoursPerWeek: 20 }),
     explain: (p) => `Instead of ${p.hoursPerWeek}.`,
   },
@@ -80,7 +82,7 @@ const SCENARIOS: Scenario[] = [
   {
     id: "goal-5k",
     label: "What if I wanted $5,000 a month?",
-    relevant: (p) => p.incomeGoal < 5000,
+    relevant: (p) => p.incomeGoal > 0 && p.incomeGoal < 5000,
     apply: (p) => ({ ...p, incomeGoal: 5000, wantsScalable: true }),
     explain: (p) => `Instead of ${currency(p.incomeGoal)}.`,
   },

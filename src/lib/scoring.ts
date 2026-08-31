@@ -81,7 +81,9 @@ export function weightsFor(profile: FounderProfile): Record<ScoreDimension, numb
     w.profitPotential += 0.3;
     w.competition -= 0.2;
   }
-  if (profile.hoursPerWeek <= 8) w.startupAccessibility += 0.3;
+  // `> 0 &&` because zero hours means unanswered, not "no time at all" — and
+  // without it an untouched profile silently gets the very-low-hours weighting.
+  if (profile.hoursPerWeek > 0 && profile.hoursPerWeek <= 8) w.startupAccessibility += 0.3;
   if (profile.startingBudget <= 100) w.startupAccessibility += 0.5;
   for (const k of SCORE_DIMENSIONS) w[k] = Math.max(0.2, w[k]);
   return w;

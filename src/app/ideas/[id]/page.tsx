@@ -657,7 +657,7 @@ function BuildThisButton({ idea, onBuild }: { idea: BusinessIdea; onBuild: () =>
           <Button variant="primary" onClick={onBuild}>
             Start it anyway
           </Button>
-          <LinkButton href="/profile" variant="secondary">
+          <LinkButton href="/profile/setup" variant="secondary">
             Fix my profile first
           </LinkButton>
           <Button variant="ghost" onClick={() => setConfirming(false)}>

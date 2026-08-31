@@ -314,6 +314,64 @@ async function main() {
       "and still is not, after visiting the profile page",
     );
 
+    /* ============================== a fresh profile, and the questionnaire == */
+    console.log("\n--- a fresh profile reads as empty, and can be filled by tapping ---");
+
+    /*
+     * `emptyProfile()` seeded 10 hours, a $1,000 goal and a 30-day first
+     * dollar, and because the `isEmpty` tests are `=== 0`, a seeded 10
+     * rendered as an answer with no "Not set" badge. Measured in the browser
+     * rather than in the node suite because the badge is the thing the founder
+     * in the notes actually saw.
+     */
+    await fresh.goto(`${ORIGIN}/profile`, { waitUntil: "networkidle" });
+    await fresh.waitForTimeout(900);
+    const profileText = await fresh.locator("body").innerText();
+    check(
+      !/10 hours\/week/.test(profileText),
+      "an untouched profile does not claim 10 hours a week",
+    );
+    check(
+      !/\$1,000\/month/.test(profileText),
+      "and does not claim a $1,000 income goal",
+    );
+    check(
+      (profileText.match(/Not set/g) ?? []).length >= 4,
+      "at least the four required fields read as not set",
+      `${(profileText.match(/Not set/g) ?? []).length} "Not set"`,
+    );
+    check(
+      !/Your name/.test(profileText),
+      "and it does not ask for a name the account already has",
+    );
+
+    await fresh.goto(`${ORIGIN}/profile/setup`, { waitUntil: "networkidle" });
+    await fresh.waitForTimeout(900);
+    check(
+      await mentions(fresh, "What can you already do?"),
+      "the questionnaire exists and opens on a real question",
+    );
+    /*
+     * Answer the first question by tapping, then continue. Two taps is the
+     * whole claim: no text box, no number spinner.
+     */
+    const skill = fresh.getByRole("button", { name: "Hands-on work", exact: true });
+    check((await skill.count()) > 0, "its answers are options to tap, not fields to type in");
+    await skill.click();
+    await fresh.getByRole("button", { name: /save and continue/i }).click();
+    await fresh.waitForTimeout(700);
+    check(
+      await mentions(fresh, "How much could you put in to start?"),
+      "answering moves to the next question",
+    );
+
+    await fresh.goto(`${ORIGIN}/profile`, { waitUntil: "networkidle" });
+    await fresh.waitForTimeout(900);
+    check(
+      await mentions(fresh, "hands-on work"),
+      "and the answer is on the profile afterwards",
+    );
+
     const stranger = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
     await stranger.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
     await stranger.waitForTimeout(800);

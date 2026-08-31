@@ -86,11 +86,21 @@ export function emptyProfile(): FounderProfile {
     hasTransportation: false,
     location: "",
     localMarketNotes: "",
-    hoursPerWeek: 10,
+    /*
+     * Zero and "" mean unanswered, not "ten hours" and "thirty days".
+     *
+     * These five fields were seeded with plausible answers nobody gave, and
+     * because `isEmpty` tests `=== 0`, a seeded 10 rendered as an answer with
+     * no "Not set" badge. An untouched profile reported 26% complete with two
+     * required fields missing rather than four — and the whole scoring layer
+     * ranked ideas against a person who did not exist. `profile-defaults.ts`
+     * holds the working values now, where they can be labelled as assumptions.
+     */
+    hoursPerWeek: 0,
     schedule: "",
     commitment: "side",
-    firstDollarTarget: "30 days",
-    incomeGoal: 1000,
+    firstDollarTarget: "",
+    incomeGoal: 0,
     shortTermGoal: "",
     longTermGoal: "",
     lifestyle: "",

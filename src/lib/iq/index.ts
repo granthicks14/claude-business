@@ -2,6 +2,7 @@ import type { AdviceTone, BusinessIdea, FounderProfile, ResponseStyle, SelectedB
 import { classify, TOPIC_LABEL, type Reading, type TopicId } from "./classify";
 import { retrieve, type Retrieved } from "./retrieve";
 import { planAnswer, type Facts, type Plan } from "./plan";
+import { withAssumptions } from "../profile-defaults";
 
 export * from "./classify";
 export * from "./retrieve";
@@ -89,7 +90,16 @@ export function understand(
 ): Understanding {
   const reading = classify(question);
   const retrieved = retrieve(question);
-  const facts = { ...factsFrom(business, profile, savedIdeas, reading, retrieved), responseStyle, tone };
+  /*
+   * The assumed hours and goal, not the unanswered zeros.
+   *
+   * Five writers divide by the founder's hours to work out capacity, and
+   * `emptyProfile()` stopped seeding them once "26% complete on a profile
+   * nobody filled in" was fixed. Zero hours means a capacity of zero and
+   * sections reading "At 0 hours a week you can deliver about 1 job a month".
+   * The assumption is applied once, here, rather than in each writer.
+   */
+  const facts = { ...factsFrom(business, withAssumptions(profile), savedIdeas, reading, retrieved), responseStyle, tone };
   const plan = planAnswer(facts);
 
   /*

@@ -141,12 +141,20 @@ const RULES: Rule[] = [
           id: "finish-profile",
           title: "Finish your profile",
           detail:
-            "Six short questions. Everything the app recommends is scored against your answers, so with them missing you'd be getting generic advice rather than advice for you.",
+            "Twelve questions, every one answered by tapping. The first four are the ones the scoring cannot work without, so you can stop after them and still get real numbers.",
           why: "Recommendations that ignore your budget, hours and skills aren't recommendations — they're a list. Two minutes here changes everything after it.",
           minutes: 3,
           cost: "Free",
           difficulty: "easy",
-          href: "/profile",
+          /*
+            * The questionnaire, not the field grid.
+            *
+            * This detail has promised "short questions" since it was written
+            * and pointed at a nineteen-row form of text boxes and number
+            * spinners — the page for changing one answer, and the wrong page
+            * for somebody who has answered none.
+            */
+          href: "/profile/setup",
           stage: "idea",
         },
 

@@ -395,6 +395,14 @@ function ProfileSignpost() {
           Open my profile
         </LinkButton>
         {completeness.next && <LinkButton href={`/profile#${completeness.next.id}`}>Go straight to it</LinkButton>}
+        {/*
+          Two routes to one record, offered by what the reader is trying to do:
+          change an answer, or answer everything. A profile with required gaps
+          left is the second case, so the questionnaire is offered then.
+        */}
+        {completeness.requiredMissing > 0 && (
+          <LinkButton href="/profile/setup">Answer the questions instead</LinkButton>
+        )}
       </div>
     </Card>
   );
