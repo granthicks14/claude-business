@@ -46,6 +46,34 @@
   --border-strong: oklch(81% 0.006 250);
 
   /*
+   * THE EDGE OF SOMETHING YOU CAN OPERATE.
+   *
+   * WCAG 2.2 SC 1.4.11 requires 3:1 for the visual boundary that identifies a
+   * user interface component — the edge of an input, the outline of a button,
+   * the box of a checkbox. Measured, `--border-strong` drew every one of those
+   * in this app at **1.80:1** against `--surface` and **1.71:1** against
+   * `--bg`. Nothing had ever checked it: `check:visual` sweeps the contrast of
+   * *text* and only text.
+   *
+   * A SEPARATE TOKEN RATHER THAN RAISING `--border`.
+   *
+   * 1.4.11 exempts decoration, and this design system is built on hairlines —
+   * `.rule`, card edges, the dividers in a menu. Raising every border in the
+   * app to 3:1 would pass the rule and destroy the thing the rule was never
+   * about. So the split is the fix: an operable edge is a different object
+   * from a drawn line, and only the first has to be seen.
+   *
+   * TUNED AGAINST THE LIGHTEST GROUND, NOT THE PAGE.
+   *
+   * A control sits on `--surface`, `--bg` and `--surface-2`, and white is the
+   * worst of the three. 64% measured 3.03:1 — passing, and one nudge of any
+   * ground away from failing. 62% gives **3.28:1** on white with the same
+   * headroom `--text-faint` documents for the same reason.
+   */
+  --control-border: oklch(62% 0.010 265);
+  --control-border-hover: oklch(45% 0.012 265);
+
+  /*
    * INK — the brand.
    *
    * Not a hue. The identity is ink on paper with one signal colour, and the
@@ -199,6 +227,15 @@
   --border-strong: oklch(38% 0.012 265);
 
   /*
+   * The operable edge, going the other way: on ink stock a control boundary
+   * has to be *lighter* than its ground. `--surface-2` is the palest of the
+   * four dark grounds and therefore the one to tune against. 52% measured
+   * 2.99:1 — a hair under. 56% gives **3.53:1**.
+   */
+  --control-border: oklch(56% 0.012 265);
+  --control-border-hover: oklch(70% 0.010 265);
+
+  /*
    * Ink inverts: on a dark ground the brand becomes the paper. A primary
    * button is a pale slab, which is the same gesture — the highest-contrast
    * thing on the page is the thing you are meant to press.
@@ -350,6 +387,9 @@
   --color-surface-2: var(--surface-2);
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+  /* The operable edge. See the token for why it is not `--border-strong`. */
+  --color-control: var(--control-border);
+  --color-control-hover: var(--control-border-hover);
   --color-text: var(--text);
   --color-muted: var(--text-muted);
   --color-faint: var(--text-faint);

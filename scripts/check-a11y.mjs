@@ -137,8 +137,25 @@ function contrast(a, b) {
  * file means this check is measuring what actually ships.
  */
 function tokensIn(css, selector) {
-  const start = css.indexOf(selector);
-  if (start === -1) return null;
+  /*
+   * ANCHORED TO THE START OF A LINE, AND THAT IS NOT FUSSINESS.
+   *
+   * This used `css.indexOf(selector)`. The first literal ".dark" in
+   * `globals.css` is on line 3, inside
+   * `@custom-variant dark (&:where(.dark, .dark *))` — so the scan began at
+   * character 54 and took the next `{` it found, which is `:root {`. The dark
+   * theme was measured by reading the light tokens, and both columns printed
+   * byte-identical ratios while claiming to cover both themes.
+   *
+   * Caught because the two columns came out identical to two decimal places,
+   * which they had no reason to be. This is the third instance of the failure
+   * mode this file's header is about, and the first one committed by this file
+   * itself — kept in writing for that reason.
+   */
+  const anchor = new RegExp(`^${selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\{`, "m");
+  const found = anchor.exec(css);
+  if (!found) return null;
+  const start = found.index;
   const open = css.indexOf("{", start);
   if (open === -1) return null;
 
@@ -253,13 +270,37 @@ function staticHalf() {
    * is what is banned.
    */
   console.log("\n--- nothing suppresses the focus outline ---");
-  const ui = readFileSync(join(process.cwd(), "src", "components", "ui.tsx"), "utf8");
-  const suppressors = [...ui.matchAll(/(focus:outline-none)/g)].length;
+
+  /*
+   * COMMENTS ARE STRIPPED FIRST, BECAUSE THE FIRST VERSION FLAGGED ITS OWN FIX.
+   *
+   * `ui.tsx` now carries a paragraph explaining why `focus:outline-none` was
+   * removed — and a raw scan matched that paragraph and reported the defect as
+   * still present. A check that cannot tell an occurrence from an explanation
+   * of an occurrence will fail forever on a correctly fixed file, which is the
+   * same uselessness as passing forever on a broken one.
+   *
+   * Both forms are hunted. `outline-none` unprefixed is worse than
+   * `focus:outline-none`: it removes the indicator in every state rather than
+   * only on focus, and `TagInput` had one.
+   */
+  const stripComments = (src) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  const controlFiles = ["src/components/ui.tsx", "src/components/shell.tsx"];
+  let suppressors = [];
+  for (const rel of controlFiles) {
+    const src = stripComments(readFileSync(join(process.cwd(), rel), "utf8"));
+    for (const m of src.matchAll(/(?:^|[\s"'`])((?:focus:|focus-visible:)?outline-none)/g)) {
+      suppressors.push(`${rel}: ${m[1]}`);
+    }
+  }
   check(
-    suppressors === 0,
+    suppressors.length === 0,
     "no shared control class removes the focus outline",
-    `${suppressors} × focus:outline-none in ui.tsx` +
-      (suppressors ? " — .focus\\:outline-none:focus (0,2,0) beats :focus-visible (0,1,0)" : ""),
+    suppressors.length
+      ? `${suppressors.join(", ")} — .focus\\:outline-none:focus (0,2,0) beats :focus-visible (0,1,0)`
+      : `${controlFiles.length} shared component files clean`,
   );
 
   /* ------------------------------------------------ a title per route ----- */
@@ -356,8 +397,9 @@ function staticHalf() {
    * consuming it is.
    */
   console.log("\n--- a field's hint and error reach the control ---");
+  const uiSrc = readFileSync(join(process.cwd(), "src", "components", "ui.tsx"), "utf8");
   check(
-    /aria-describedby/.test(ui) && /aria-invalid/.test(ui),
+    /aria-describedby/.test(uiSrc) && /aria-invalid/.test(uiSrc),
     "the field primitives set aria-describedby and aria-invalid",
     "so a hint or an error is announced rather than only drawn",
   );
@@ -459,12 +501,23 @@ const FOCUS_PROBE = () => {
   const cs = getComputedStyle(el);
   const outlineWidth = parseFloat(cs.outlineWidth) || 0;
   const outline = cs.outlineStyle !== "none" && outlineWidth > 0 ? toRGB(cs.outlineColor) : null;
-  const describe = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}`;
+  // Class fragment included: "button" alone cannot be located in a codebase
+  // with several hundred of them, and a finding you cannot locate is noise.
+  const cls =
+    typeof el.className === "string" && el.className
+      ? "." + el.className.trim().split(/\s+/).slice(0, 3).join(".")
+      : "";
+  const label = (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 34);
+  const describe = `${el.tagName.toLowerCase()}${el.id ? `#${el.id}` : ""}${cls}${label ? ` "${label}"` : ""}`.slice(0, 140);
   return {
     describe,
     outlineWidth,
     outline: outline ? outline.rgb : null,
     ground: groundOf(el),
+    // Raw, so "paints nothing" says what it actually measured rather than
+    // leaving the reader to reproduce the state to find out.
+    raw: `${cs.outlineStyle}/${cs.outlineWidth}/${cs.outlineColor}`,
+    focusVisible: el.matches(":focus-visible"),
   };
 };
 
@@ -506,11 +559,22 @@ async function browserHalf(chromium) {
     let weakest = { ratio: Infinity, describe: "" };
     for (let i = 0; i < 25; i++) {
       await page.keyboard.press("Tab");
+      /*
+       * SETTLE BEFORE MEASURING, OR THE TRANSITION IS WHAT GETS MEASURED.
+       *
+       * `Button` carries `transition-all duration-150`, which includes
+       * `outline-width` — so a focused button's outline grows from 0 to 2px
+       * over 150ms. Reading immediately after Tab caught two of them at
+       * `solid/0px/currentColor` and reported "paints nothing", which was a
+       * race in this loop rather than a defect in the page. 250ms clears the
+       * declared duration with room to spare.
+       */
+      await page.waitForTimeout(250);
       const m = await page.evaluate(FOCUS_PROBE);
       if (!m) continue;
       probed++;
       if (!m.outline || m.outlineWidth < 1) {
-        bare.push(m.describe);
+        bare.push(`${m.describe} [${m.raw}${m.focusVisible ? "" : ", not :focus-visible"}]`);
         weakest = { ratio: 0, describe: `${m.describe} (no outline)` };
         continue;
       }

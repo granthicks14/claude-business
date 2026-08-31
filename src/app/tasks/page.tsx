@@ -304,7 +304,7 @@ function TaskRow({ task, businessId }: { task: Task; businessId: string }) {
           aria-checked={task.done}
           aria-label={`Mark "${task.title}" as ${task.done ? "not done" : "done"}`}
           className={`mt-0.5 size-5 rounded border grid place-items-center shrink-0 transition-colors
-            ${task.done ? "bg-accent border-accent" : "border-border-strong hover:border-accent hover:bg-accent-soft"}`}
+            ${task.done ? "bg-accent border-accent" : "border-control hover:border-accent hover:bg-accent-soft"}`}
         >
           {task.done && (
             <svg viewBox="0 0 12 12" className="size-3 text-white dark:text-[oklch(15%_0.02_265)]" aria-hidden="true">

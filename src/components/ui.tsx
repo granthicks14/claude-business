@@ -69,10 +69,15 @@ const VARIANTS: Record<Variant, string> = {
     "bg-ink text-bg hover:bg-ink-hover font-semibold " +
     "disabled:bg-surface-2 disabled:text-muted disabled:border disabled:border-border " +
     "shadow-none focus-visible:outline-offset-[3px]",
+  /*
+   * `border-control`, not `border-border-strong`: an outline button IS its
+   * outline — remove the edge and there is no button — so 1.4.11 applies to it
+   * squarely. It measured 1.80:1.
+   */
   secondary:
-    "bg-surface text-text border border-border-strong hover:border-ink hover:bg-surface-2",
+    "bg-surface text-text border border-control hover:border-ink hover:bg-surface-2",
   ghost: "text-muted hover:text-text hover:bg-surface-2",
-  subtle: "bg-surface text-text border border-border-strong hover:border-ink hover:bg-surface-2",
+  subtle: "bg-surface text-text border border-control hover:border-ink hover:bg-surface-2",
   danger: "bg-transparent text-bad border border-bad/45 hover:bg-bad-soft hover:border-bad",
 };
 
@@ -691,9 +696,28 @@ function useFieldId(explicit?: string): string | undefined {
   return explicit ?? inherited;
 }
 
+/*
+ * THE SHARED FIELD CLASS, AND THE TWO THINGS THAT WERE WRONG WITH IT.
+ *
+ * **`border-border-strong` measured 1.80:1** against `--surface`, where SC
+ * 1.4.11 needs 3:1 for the boundary that identifies a control. `border-control`
+ * is the token that exists for exactly this; see `globals.css`.
+ *
+ * **`focus:outline-none` was throwing away a 19.12:1 focus ring.** The global
+ * rule is `:focus-visible { outline: 2px solid var(--accent) }` — specificity
+ * (0,1,0). Tailwind emits `.focus\:outline-none:focus`, which is (0,2,0) and
+ * therefore wins, on every `:focus` including every `:focus-visible`. So the
+ * app's own excellent focus indicator never painted on a single input in the
+ * product, and what replaced it — `ring-accent/25`, ink at a quarter alpha —
+ * measured 1.76:1. `check:a11y` drives a real keyboard into a real input and
+ * reported "no outline painted at all".
+ *
+ * The ring stays as a second, non-load-bearing cue. The outline is the one
+ * that has to be there, so nothing is allowed to suppress it.
+ */
 const inputBase =
-  "w-full bg-surface border border-border-strong rounded-lg px-3 py-2.5 text-sm transition-colors " +
-  "hover:border-accent-border focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25 " +
+  "w-full bg-surface border border-control rounded-lg px-3 py-2.5 text-sm transition-colors " +
+  "hover:border-control-hover focus:border-accent focus:ring-2 focus:ring-accent/25 " +
   "placeholder:text-faint disabled:opacity-60";
 
 export function Input({ className = "", id, ...rest }: InputHTMLAttributes<HTMLInputElement>) {
@@ -857,7 +881,15 @@ export function TagInput({
           }}
           onBlur={() => draft.trim() && commit(draft)}
           placeholder={value.length ? "" : placeholder}
-          className="flex-1 min-w-28 bg-transparent outline-none text-sm py-0.5"
+          /*
+            No `outline-none`. This is a bare-looking field inside a bordered
+            wrapper, and hiding its outline made the tag input the one control
+            in the app a keyboard user could land on with no indication at all.
+            `focus-visible:` styling on the wrapper would be the tidier answer
+            and needs `:has()`; the outline on the field itself is what a
+            browser gives for free and it is not worth losing to be neat.
+          */
+          className="flex-1 min-w-28 bg-transparent text-sm py-0.5 rounded-sm"
         />
       </div>
       {unused.length > 0 && (
