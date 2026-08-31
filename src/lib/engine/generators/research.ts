@@ -128,7 +128,7 @@ export function buildCompetitors(ctx: IdeaContext): { competitors: Omit<Competit
     competitors: [
       {
         name: "Doing nothing (your biggest competitor)",
-        whatTheySell: `Nothing. ${titleCase(segment.label)} continue to ${problem.alternative} because it's free and requires no decision today.`,
+        whatTheySell: `Nothing. ${titleCase(segment.label)} carry on with ${problem.alternative} because it's free and requires no decision today.`,
         pricing: "Free, apparently — the real cost is hidden and spread out, which is exactly why it wins",
         audience: "Everyone in your market who hasn't acted yet, which is most of them",
         strengths: ["Costs nothing today", "Requires no trust in a stranger", "No risk of being sold to", "Familiar"],

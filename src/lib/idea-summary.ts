@@ -1,6 +1,6 @@
 import { BUSINESS_MODELS } from "./engine/knowledge/models";
 import { INDUSTRIES } from "./engine/knowledge/industries";
-import { topicForProblem } from "./engine/topics";
+import { specialise, topicForProblem } from "./engine/topics";
 import type { BusinessIdea, IdeaSignature } from "./types";
 
 /**
@@ -68,6 +68,22 @@ const KIND_LABEL: Record<string, string> = {
 
 /** Words that mean "a customer" without saying which one. */
 const VAGUE = /^(businesses?|people|customers?|clients?|users?|everyone|anyone)$/i;
+
+/**
+ * The other half of the same guard, and the half that was missing.
+ *
+ * `VAGUE` protected `whoPays` and nothing else, so the app refused to answer
+ * "who buys this" with the word "businesses" while cheerfully answering "what
+ * do you do" with "you make something once" — which is the worse of the two,
+ * because it is the answer the founder repeats to the first person who asks
+ * what their business is.
+ *
+ * `topics.specialise` rewrites these at generation time, so a freshly
+ * generated idea never reaches here carrying one. This catches the two cases
+ * it cannot: an idea stored before that existed, and the fallbacks below that
+ * read `model.mechanism` raw rather than going through the generator at all.
+ */
+const UNSPECIFIC = /\b(something|some thing|a thing|various)\b/i;
 
 function firstSentence(text: string): string {
   const trimmed = text.trim();
@@ -151,9 +167,21 @@ export function ideaSummary(idea: BusinessIdea): IdeaSummary {
   const model = idea.engine ? BUSINESS_MODELS.find((m) => m.id === idea.engine!.modelId) : undefined;
   const earn = readHowYouEarn(idea);
 
+  /*
+   * The trade, where the idea knows it.
+   *
+   * Only ideas carrying an `engine` block can be resolved to a topic; one from
+   * the intake, the analyser or a provider cannot, and `specific()` below then
+   * has nothing to substitute and leaves the text alone. That is the right
+   * failure — a guess at the trade would be worse than the vague phrase.
+   */
+  const topic = idea.engine ? topicForProblem(idea.engine.problemId, idea.category) : "";
+  const specific = (text: string): string =>
+    topic && UNSPECIFIC.test(text) ? specialise(text, topic) : text;
+
   return {
-    what: firstSentence(idea.oneLiner) || idea.oneLiner,
-    how: afterFirstSentence(idea.oneLiner) || model?.mechanism || idea.offering,
+    what: specific(firstSentence(idea.oneLiner) || idea.oneLiner),
+    how: specific(afterFirstSentence(idea.oneLiner) || model?.mechanism || idea.offering),
     whoPays: readWhoPays(idea),
     howYouEarn: earn.text,
     recurring: earn.recurring,

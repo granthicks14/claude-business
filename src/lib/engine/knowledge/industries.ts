@@ -341,7 +341,11 @@ export const INDUSTRIES: Industry[] = [
     assets: ["a product people already ask you for", "sourcing knowledge", "photography"],
     segments: [
       { id: "hobby-sellers", label: "hobby sellers going semi-professional", short: "hobby sellers", description: "makers selling occasionally who want it to be a real income", urgency: 74, payingPower: 56, reachable: 82, business: true, findWhere: ["Etsy seller groups", "craft fairs", "maker communities"] },
-      { id: "niche-buyers", label: "buyers of something oddly specific", short: "niche buyers", description: "people with a niche requirement mass-market products ignore", urgency: 80, payingPower: 70, reachable: 66, findWhere: ["niche forums", "Facebook groups", "hobby subreddits"] },
+      // "buyers of something oddly specific" was the label until the vagueness
+      // sweep read it back: a segment label is printed as "who pays", so a
+      // label that will not name the buyer is the one place the app cannot
+      // afford one. The description already knew the answer.
+      { id: "niche-buyers", label: "buyers the mass market ignores", short: "niche buyers", description: "people with a niche requirement mass-market products ignore", urgency: 80, payingPower: 70, reachable: 66, findWhere: ["niche forums", "Facebook groups", "hobby subreddits"] },
       { id: "small-brands", label: "small brands with bad listings", short: "small brands", description: "sellers losing sales to photography and copy rather than product", urgency: 72, payingPower: 70, reachable: 70, business: true, findWhere: ["marketplace seller forums", "trade shows", "LinkedIn"] },
       { id: "gift-buyers", label: "people buying gifts under pressure", short: "gift buyers", description: "buyers with a deadline who want something that doesn't look generic", urgency: 78, payingPower: 72, reachable: 74, findWhere: ["Pinterest", "Instagram", "gift guides", "local markets"] },
     ],

@@ -858,6 +858,85 @@ Hire". The construction was wrong, not the word, so `looksAutoNamed` matches the
 shape instead, and that same function is what lets `migrate` re-title stored
 ideas without ever overwriting a name the founder typed themselves.
 
+### "What you actually do" could not say what you do
+
+The section with that exact heading was the one place in the app structurally
+incapable of naming the trade. `offering` (`engine/ideas.ts`) and
+`whatYouActuallyDo` (`generators/explain.ts`) were the same expression —
+`model.deliverables` printed raw — and that is a static 22-row table keyed on
+the **business model alone**. The industry, segment, problem and the concrete
+noun phrase in `PROBLEM_TOPICS` were all in scope at both call sites and
+neither read any of them.
+
+So every done-for-you business in the catalogue, dog grooming or CAD drafting,
+emitted the identical *"An agreed scope with a clear finish line; The finished
+work; A short handover"*, and it reached generated website copy as **"I an
+agreed scope with a clear finish line"**.
+
+`topics.specialise()` writes the topic into the deliverable, and both call
+sites go through it. It took four passes, and the shape of each one is the
+point:
+
+- **Passes 1–3 grepped for filler** — "the finished work", "you make something
+  once", "a structured inspection" — and cleared it. `oneLiner` reads
+  "{Topic} for {customer}. In practice, {mechanism}.", so the first sentence
+  was already specific and the second was undoing it one layer up; the third
+  pass is `model.mechanism` for that reason.
+- **Pass 4 came from counting distinct strings instead**, which found what
+  grepping never could: *"A working setup, configured properly"* contains no
+  filler word, is perfectly concrete, and shipped **byte-identical on six
+  businesses across six industries**. A phrase can name something and still say
+  nothing about *this* business.
+
+Measured across the 151 eligible businesses: filler on a product-describing
+surface went to **zero**, distinct offerings from 80 to **124**, and the worst
+repeat from 32 to 2. The two-way repeats that remain are same-trade,
+different-customer — the same package sold to fleets and to dealerships is one
+offering and two customers — which is why `test:product` asserts **no repeat
+across two industries** rather than no repeat at all.
+
+`idea-summary.ts` had the app's only vagueness guard and applied it to
+`whoPays` and nothing else. So the app refused to answer "who buys this" with
+the word "businesses" while cheerfully answering "what do you do" with "you
+make something once" — the worse of the two, because it is the answer the
+founder repeats to the first person who asks. It now specialises `what` and
+`how` as well, which also covers ideas stored before any of this existed.
+
+One segment label was itself the defect: **"buyers of something oddly
+specific"**. A label is printed as "who pays", so it is the one string that
+cannot be allowed to decline to name the buyer.
+
+### An alternative is either an action or a thing, never both
+
+`problem.alternative` — what the customer falls back on today — is the most
+quoted field in the generator: nineteen call sites across the plan, growth,
+research, execution and explainer writers. It comes in two grammatical shapes,
+60 to 30 across the catalogue:
+
+```
+"adapting things themselves"      an action  (gerund phrase)
+"a gift card"                     a thing    (noun phrase)
+```
+
+Each writer was written for whichever shape its author had in front of them, so
+half of them produced wreckage on the other half of the data. Real output:
+**"Today they panic-buying something worn once"**, **"They currently a gift
+card"**, **"their only option is to adapting things themselves"**.
+
+Normalising the *data* was the wrong fix — rewriting sixty gerunds as nouns
+flattens "asking a neighbour and feeling guilty" into something that no longer
+says what is bad about it, and that vividness is why the field exists. So the
+**frame** adapts: `engine/alternative.ts` is pure, and `doingToday()` returns
+"are …" for an action and "fall back on …" for a thing.
+
+`isAction` reads the **first word only**, deliberately. "a relative doing it
+badly" and "the car sitting under a cover" both contain a gerund and are both
+plainly things; matching anywhere in the string classifies half the nouns as
+actions. `test:product` throws all 90 alternatives at it and holds both cases.
+
+Frames that were already correct for both shapes — "the alternative is X",
+"instead of X" — are left alone rather than wrapped in a no-op helper.
+
 ### Interests rank markets; they never gate them — and never fill them
 
 Beyond the `strength > 0` fix below, `generateIdeas` caps by model **kind** and

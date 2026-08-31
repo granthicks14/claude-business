@@ -1,6 +1,7 @@
 import type { Level, SelectedBusiness } from "../../types";
 import { computeHealth } from "../../health";
 import { list, money, openingPrice, titleCase, type IdeaContext } from "../context";
+import { doingToday } from "../alternative";
 
 /**
  * Execution generators — roadmap, first-money plan, experiments and health.
@@ -286,7 +287,7 @@ export function buildFirstMoney(ctx: IdeaContext, idea: { name: string }) {
     scripts: [
       {
         label: "First cold message",
-        text: `Hi [name] — I noticed [something specific and true about them].\n\nI ${model.mechanism.replace(/^you /, "")} for ${segment.label}. Most people I speak to are ${problem.alternative}.\n\nIs that something you deal with? Happy to explain what I'd do, no obligation either way.`,
+        text: `Hi [name] — I noticed [something specific and true about them].\n\nI ${model.mechanism.replace(/^you /, "")} for ${segment.label}. Most people I speak to ${doingToday(problem.alternative)}.\n\nIs that something you deal with? Happy to explain what I'd do, no obligation either way.`,
       },
       {
         label: "Follow-up (once, after four days)",

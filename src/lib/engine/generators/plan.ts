@@ -10,6 +10,7 @@ import type {
   WebsiteSpec,
 } from "../../types";
 import { list, money, openingPrice, titleCase, type IdeaContext } from "../context";
+import { doingToday } from "../alternative";
 
 /**
  * Plan generators.
@@ -46,7 +47,7 @@ export function buildPlan(ctx: IdeaContext, idea: { name: string; startupCost: n
 
     solution: `${titleCase(model.mechanism)}. In practice that means: ${list(model.deliverables.map((d) => d.toLowerCase()))}. The point of difference is not the work itself but that it happens ${problem.pain >= 78 ? "at all, reliably" : "without the customer having to manage it"}.`,
 
-    uniqueValueProposition: `For ${segment.label} who ${problem.alternative}, ${idea.name} ${model.mechanism.replace(/^you /, "")} — so they stop ${problem.label.toLowerCase().replace(/^(not |no )/, "")}. Unlike the alternatives, it is priced openly and delivered to a fixed standard.`,
+    uniqueValueProposition: `For ${segment.label} who ${doingToday(problem.alternative)}, ${idea.name} ${model.mechanism.replace(/^you /, "")} — so they stop ${problem.label.toLowerCase().replace(/^(not |no )/, "")}. Unlike the alternatives, it is priced openly and delivered to a fixed standard.`,
 
     businessModel: `${model.label}. ${titleCase(model.revenueModel)}. ${model.pricing.recurring ? "Because payments recur, the work compounds: every client retained is revenue you don't have to win again next month." : "Because payments are one-off, every month starts from zero until repeat and referral business builds — plan acquisition accordingly."}`,
 
@@ -173,7 +174,7 @@ export function buildOffer(ctx: IdeaContext, notes: string): Omit<Offer, "genera
         : `If the first ${model.delivery.unitNoun} doesn't meet what we agreed, I'll redo it once at no cost.`,
     guaranteeNotes: `Only offer this if you can genuinely afford to honour it${model.requiresInventory ? " — with physical goods, a full refund also means losing the stock, so define what has to come back" : ""}. Put the conditions in writing, and check what consumer law where you live already entitles them to; you cannot offer less than that.`,
     positioning: `Not the cheapest and not a big established provider — the specific one. ${titleCase(segment.label)} should read your offer and think "this is for me", which nothing generic achieves.`,
-    valueProposition: `${titleCase(segment.label)} currently ${problem.alternative}. For ${money(openingPriceValue)}, that stops.`,
+    valueProposition: `${titleCase(segment.label)} currently ${doingToday(problem.alternative)}. For ${money(openingPriceValue)}, that stops.`,
     callToAction: model.requiresClientCalls
       ? `"If that sounds useful, reply and I'll send two times this week — a 15-minute call, no pitch."`
       : `"If that's what you need, here's the link — ${money(openingPriceValue)}, delivered within ${Math.max(2, Math.round(model.delivery.hoursPerUnit))} days."`,
@@ -199,7 +200,7 @@ export function buildPersonas(ctx: IdeaContext): { personas: Omit<Persona, "id">
       ],
       problems: [
         problem.statement,
-        `They currently ${problem.alternative}`,
+        `They currently ${doingToday(problem.alternative)}`,
         s.reachable < 70 ? "They're hard to reach, which means acquisition will take longer than you expect" : "They ask for recommendations openly, which is your way in",
       ],
       buyingMotivations: [
@@ -266,7 +267,7 @@ export function buildBrand(ctx: IdeaContext, direction: string, seed: number): O
     names,
     taglines: [
       `${titleCase(ctx.problem.label.toLowerCase())}, handled.`,
-      `For ${segment.label} who'd rather not ${ctx.problem.alternative.split(",")[0]}.`,
+      `For ${segment.label} tired of ${ctx.problem.alternative.split(",")[0]}.`,
       `${titleCase(topic)} you don't have to think about.`,
       `The ${model.delivery.unitNoun} that actually turns up.`,
       `Specific help for ${segment.label}.`,

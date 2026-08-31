@@ -1,6 +1,7 @@
 import type { ContentBatch, MarketingPlan, SalesPlaybook } from "../../types";
 import { CHANNELS, channelById } from "../knowledge/channels";
 import { list, money, openingPrice, titleCase, type IdeaContext } from "../context";
+import { doingToday } from "../alternative";
 
 /**
  * Growth generators — marketing, content and sales.
@@ -274,7 +275,7 @@ export function buildSales(ctx: IdeaContext): Omit<SalesPlaybook, "generatedAt">
     coldEmails: [
       {
         subject: `Quick question about ${problem.label.toLowerCase()}`,
-        body: `Hi [name],\n\nI noticed [something specific and true].\n\nI ${model.mechanism.replace(/^you /, "")} for ${segment.label} — usually when they're ${problem.alternative}.\n\nIs that something you're dealing with at the moment? Happy to explain what I'd do, and equally happy if it's a no.\n\n[Your name]`,
+        body: `Hi [name],\n\nI noticed [something specific and true].\n\nI ${model.mechanism.replace(/^you /, "")} for ${segment.label} — usually when they ${doingToday(problem.alternative)}.\n\nIs that something you're dealing with at the moment? Happy to explain what I'd do, and equally happy if it's a no.\n\n[Your name]`,
         whyItWorks: "Short enough to read on a phone, references something real about them, asks one question, and makes saying no easy — which is what makes people answer.",
       },
       {

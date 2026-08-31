@@ -31,6 +31,12 @@ import { snapshotEvidence, deriveLedger } from "../src/lib/intel/assumptions.ts"
 import { finalDecision } from "../src/lib/intel/decision.ts";
 import { analyseInterviews } from "../src/lib/customers/interviews.ts";
 import { generateIdeas } from "../src/lib/engine/index.ts";
+import { eligibleBusinesses } from "../src/lib/deck/eligible.ts";
+import { explainBusiness } from "../src/lib/engine/generators/explain.ts";
+import { resolveContext } from "../src/lib/engine/context.ts";
+import { ideaSummary } from "../src/lib/idea-summary.ts";
+import { doingToday, isAction } from "../src/lib/engine/alternative.ts";
+import { INDUSTRIES } from "../src/lib/engine/knowledge/industries.ts";
 import { actions, effectiveProfile, emptyProfile, emptyState, hydrateFrom, snapshot } from "../src/lib/store.ts";
 import { looksAutoNamed } from "../src/lib/engine/naming.ts";
 import { crumbsFor, navSections, overflowSections, sectionFor, topSections } from "../src/lib/nav-model.ts";
@@ -570,6 +576,94 @@ results.navMatching = {
   };
 }
 
+/* --------------------------------------- say the specific thing --------- */
+
+/*
+ * THE SECTION HEADED "WHAT YOU ACTUALLY DO" COULD NOT SAY WHAT YOU DO.
+ *
+ * \`offering\` and \`whatYouActuallyDo\` were both \`model.deliverables\` printed
+ * raw — a 22-row table keyed on the business *model* alone. So every
+ * done-for-you business in the catalogue, dog grooming or CAD drafting, said
+ * the identical "An agreed scope with a clear finish line; The finished work;
+ * A short handover", and it reached generated website copy as "I an agreed
+ * scope with a clear finish line".
+ *
+ * Two measurements, because the defect has two faces and either alone can be
+ * gamed. A filler count catches the phrases that name nothing; a distinctness
+ * count catches the phrases that are perfectly concrete and still say nothing
+ * about *this* business — "A working setup, configured properly" contains no
+ * filler word to grep for and shipped byte-identical on six businesses across
+ * six industries.
+ */
+{
+  const p = emptyProfile();
+  const all = eligibleBusinesses(p, 7).businesses;
+  const FILLER = /\\b(something|some thing|a thing|various)\\b/i;
+
+  let fillerHits = 0;
+  const byOffering = new Map<string, Set<string>>();
+
+  for (const cand of all) {
+    const s = ideaSummary(cand);
+    const ex = explainBusiness(resolveContext(cand, p), cand);
+    const surfaces = [
+      cand.oneLiner,
+      cand.offering,
+      s.what,
+      s.how,
+      ex.whatYouActuallyDo.join(" "),
+      ex.sixtySeconds.what,
+      ex.sixtySeconds.how,
+    ];
+    if (surfaces.some((t) => FILLER.test(t))) fillerHits++;
+
+    const seen = byOffering.get(cand.offering) ?? new Set<string>();
+    seen.add(cand.engine?.industryId ?? "?");
+    byOffering.set(cand.offering, seen);
+  }
+
+  /*
+   * Two businesses in the same trade legitimately deliver the same thing — the
+   * same detailing package sold to fleets and to dealerships is one offering
+   * and two customers. The same offering across two *industries* is always the
+   * model table leaking through, which is the thing being measured.
+   */
+  const crossIndustry = [...byOffering.values()].filter((inds) => inds.size > 1).length;
+
+  results.wording = {
+    businesses: all.length,
+    fillerHits,
+    distinctOfferings: byOffering.size,
+    crossIndustryRepeats: crossIndustry,
+  };
+}
+
+/* ------------------------------- what they do instead, grammatically ---- */
+
+/*
+ * \`problem.alternative\` comes in two shapes — "adapting things themselves" and
+ * "a gift card" — and nineteen writers splice it into prose. Measured before
+ * the frames adapted: "Today they panic-buying something worn once".
+ */
+{
+  const alternatives: string[] = [];
+  for (const ind of INDUSTRIES) for (const prob of ind.problems) alternatives.push(prob.alternative);
+
+  const acts = alternatives.filter(isAction);
+  const things = alternatives.filter((a) => !isAction(a));
+  results.alternatives = {
+    total: alternatives.length,
+    actions: acts.length,
+    things: things.length,
+    // A predicate after "they". An action reads "are …"; a thing needs a verb.
+    everyActionIsContinuous: acts.every((a) => doingToday(a) === "are " + a),
+    everyThingGetsAVerb: things.every((a) => /^fall back on /.test(doingToday(a))),
+    // The trap the naive version falls into: a gerund anywhere in the phrase.
+    nounsWithGerundsInside:
+      !isAction("a relative doing it badly") && !isAction("the car sitting under a cover"),
+  };
+}
+
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -797,6 +891,35 @@ check("plain English defines the terms it used", r.tone.plainDefines);
 check("analytical states how sure the section is", r.tone.analyticalGrades);
 check("three registers, three genuinely different answers", r.tone.threeDistinctLengths);
 check("and the default is plain English", r.tone.defaultIsPlain);
+
+console.log("\n--- say the specific thing ---");
+check(
+  "no business in the catalogue names its deliverable with a filler word",
+  // Zero, and it is allowed to be zero because the surfaces measured are the
+  // ones describing the *product*. "Something" survives elsewhere in hand
+  // written prose about the customer — "adults learning something for
+  // pleasure", "only think about it when something breaks" — where it is
+  // correct English and rewriting it would make the copy worse.
+  r.wording.fillerHits === 0,
+  `${r.wording.fillerHits} of ${r.wording.businesses} businesses`,
+);
+check(
+  "two businesses in different industries never deliver the same thing",
+  r.wording.crossIndustryRepeats === 0,
+  `${r.wording.crossIndustryRepeats} cross-industry repeats`,
+);
+check(
+  "and offerings are distinct across most of the catalogue",
+  r.wording.distinctOfferings >= r.wording.businesses * 0.75,
+  `${r.wording.distinctOfferings} distinct of ${r.wording.businesses}`,
+);
+
+console.log("\n--- what they do instead, grammatically ---");
+check("the catalogue really does carry both shapes", r.alternatives.actions > 0 && r.alternatives.things > 0,
+  `${r.alternatives.actions} actions, ${r.alternatives.things} things, ${r.alternatives.total} total`);
+check("an action reads as something they are doing", r.alternatives.everyActionIsContinuous);
+check("a thing gets a verb rather than being one", r.alternatives.everyThingGetsAVerb);
+check("a gerund inside a noun phrase is still a noun phrase", r.alternatives.nounsWithGerundsInside);
 
 console.log(failures === 0 ? "\nALL PRODUCT TESTS PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

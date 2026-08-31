@@ -1,5 +1,7 @@
 import type { BusinessIdea } from "../../types";
 import { list, money, openingPrice, titleCase, type IdeaContext } from "../context";
+import { specialise, specialiseAll, topicForProblem } from "../topics";
+import { doingToday } from "../alternative";
 
 /**
  * The plain-English explainer.
@@ -85,8 +87,17 @@ export interface Explainer {
  * kind because the mechanism — not the industry — is what people fail to grasp.
  */
 function plainMechanism(ctx: IdeaContext): string {
-  const { model, segment } = ctx;
+  const { model, segment, problem, industry } = ctx;
   const who = segment.label;
+  /*
+   * The subject, not just the customer.
+   *
+   * Every branch here named `who` and several named nothing else, so "You teach
+   * {who} something they want to learn" was as close as the app got to saying
+   * what the business teaches. `education`, `content`, `digital-product` and
+   * `events` were the worst — two of them interpolated nothing at all.
+   */
+  const topic = topicForProblem(problem.id, industry.label);
   switch (model.kind) {
     case "service":
     case "local-service":
@@ -98,13 +109,13 @@ function plainMechanism(ctx: IdeaContext): string {
     case "consulting":
       return `${titleCase(who)} pay you for your judgement — you look at their situation and tell them what to do.`;
     case "education":
-      return `You teach ${who} something they want to learn, and they pay for the teaching.`;
+      return `You teach ${who} ${topic}, and they pay for the teaching.`;
     case "content":
-      return `You make things people want to watch or read. The audience is free; the money comes later from sponsors, affiliate commission or your own products.`;
+      return `You make ${topic} content ${who} want to watch or read. The audience is free; the money comes later from sponsors, affiliate commission or your own products.`;
     case "digital-product":
-      return `You make something once — a guide, a template, a set of files — and sell the same thing to ${who} over and over without remaking it.`;
+      return `You make one ${topic} guide or template, and sell that same thing to ${who} over and over without remaking it.`;
     case "software":
-      return `You build a tool that solves one problem for ${who}, and they pay to keep using it.`;
+      return `You build a ${topic} tool that solves one problem for ${who}, and they pay to keep using it.`;
     case "community":
       return `${titleCase(who)} pay a regular fee to be part of a group you run, for the access and the other members.`;
     case "ecommerce":
@@ -114,7 +125,7 @@ function plainMechanism(ctx: IdeaContext): string {
     case "marketplace":
       return `You connect ${who} with someone who can help them, and take a cut of what changes hands.`;
     case "events":
-      return `You organise something people come to, and they pay for a ticket or a place.`;
+      return `You organise ${topic} sessions ${who} come to, and they pay for a ticket or a place.`;
     default:
       return model.mechanism;
   }
@@ -395,6 +406,15 @@ export function explainBusiness(ctx: IdeaContext, idea: BusinessIdea): Explainer
   const { segment, problem, model, industry, signals } = ctx;
   const price = openingPrice(model, segment);
   const moneyFlow = buildMoneyFlow(ctx, idea);
+  /*
+   * The trade, in the words a founder would use for it.
+   *
+   * Everything below used to print `model.deliverables` raw, which is keyed on
+   * the business model and says nothing about this business. The topic is what
+   * turns "the finished work" into "the finished mobile grooming".
+   */
+  const topic = topicForProblem(problem.id, industry.label);
+  const deliverables = specialiseAll(model.deliverables, topic);
 
   const inSimpleTerms = [
     plainMechanism(ctx),
@@ -407,10 +427,10 @@ export function explainBusiness(ctx: IdeaContext, idea: BusinessIdea): Explainer
     inSimpleTerms,
 
     sixtySeconds: {
-      what: `${titleCase(model.label.toLowerCase())} — ${model.deliverables[0]?.toLowerCase() ?? "the work itself"}.`,
+      what: `${titleCase(model.label.toLowerCase())} — ${deliverables[0]?.toLowerCase() ?? `the ${topic} itself`}.`,
       who: titleCase(segment.description) + ".",
-      why: `${titleCase(problem.statement.replace(/\.$/, ""))}. Today they ${problem.alternative}.`,
-      how: model.deliverables.join(", ") + ".",
+      why: `${titleCase(problem.statement.replace(/\.$/, ""))}. Today they ${doingToday(problem.alternative)}.`,
+      how: deliverables.join(", ") + ".",
       money: `About ${money(price)} ${model.pricing.unit}${model.pricing.recurring ? ", every month" : ""}. You keep roughly ${money(moneyFlow.perSale)} of that before tax.`,
       start: idea.startupCost === 0 ? "Nothing you don't already own." : `About ${money(idea.startupCost)}, and things you already own.`,
       firstStep: `Write down twenty real ${segment.label} you could contact this week.`,
@@ -419,7 +439,7 @@ export function explainBusiness(ctx: IdeaContext, idea: BusinessIdea): Explainer
     flow: buildFlow(ctx),
     moneyFlow,
 
-    whatYouActuallyDo: model.deliverables.map((d) => titleCase(d)),
+    whatYouActuallyDo: deliverables.map((d) => titleCase(d)),
 
     whoPaysYou: {
       customer: titleCase(segment.description) + (signals.location && model.mode !== "online" ? `, near ${signals.location}` : ""),
@@ -435,7 +455,7 @@ export function explainBusiness(ctx: IdeaContext, idea: BusinessIdea): Explainer
       ],
     },
 
-    whyTheyPay: `Nobody pays you because your business exists. They pay because ${problem.statement.toLowerCase().replace(/\.$/, "")}, and right now their only option is to ${problem.alternative}. That costs them something they'd rather keep — usually time, sometimes money, often both. Your job is to make paying you obviously cheaper than carrying on as they are.`,
+    whyTheyPay: `Nobody pays you because your business exists. They pay because ${problem.statement.toLowerCase().replace(/\.$/, "")}, and right now their only option is ${problem.alternative}. That costs them something they'd rather keep — usually time, sometimes money, often both. Your job is to make paying you obviously cheaper than carrying on as they are.`,
 
     howYouGetPaid: paymentMechanics(ctx),
     howYouFindCustomers: findingCustomers(ctx),

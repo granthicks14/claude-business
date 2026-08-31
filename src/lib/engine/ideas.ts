@@ -6,7 +6,7 @@ import { BUSINESS_MODELS } from "./knowledge/models";
 import { capabilityLabel } from "./knowledge/skills";
 import { analyseFounder, structuralAvoidance, violatesConstraint } from "./match";
 import { businessTitle } from "./naming";
-import { topicForProblem } from "./topics";
+import { specialise, specialiseAll, topicForProblem } from "./topics";
 import type { BusinessModel, CustomerSegment, FounderSignals, Industry, IndustryProblem } from "./types";
 
 /**
@@ -701,12 +701,19 @@ export function materializeCandidate(c: Candidate, profile: FounderProfile, seed
   const idea: BusinessIdea = {
     id: newId("idea"),
     name: nameFor(c),
-    oneLiner: `${titleCase(topic)} for ${c.segment.label}. In practice, ${c.model.mechanism}.`,
+    oneLiner: `${titleCase(topic)} for ${c.segment.label}. In practice, ${specialise(c.model.mechanism, topic)}.`,
     whyThisFitsYou: whyThisFits(c, signals, cost),
     problem: c.problem.statement + ".",
     targetCustomer: titleCase(c.segment.description) + (signals.location && c.model.mode !== "online" ? `, within reach of ${signals.location}` : ""),
     customerPain: `${c.problem.label}. Right now, the alternative is ${c.problem.alternative}.`,
-    offering: c.model.deliverables.join("; ") + ".",
+    /*
+     * Specialised, not printed raw.
+     *
+     * `model.deliverables` is keyed on the business model alone, so printing it
+     * here made every done-for-you business — dog grooming, CAD drafting —
+     * describe itself identically. The topic is in scope on the line above.
+     */
+    offering: specialiseAll(c.model.deliverables, topic).join("; ") + ".",
     revenueModel: c.model.revenueModel,
     pricing: `Around $${c.model.pricing.low}–$${c.model.pricing.high} ${c.model.pricing.unit}${c.model.pricing.recurring ? ", recurring" : ""}. Start near the lower end until you have testimonials.`,
     startupCost: cost,
