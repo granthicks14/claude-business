@@ -324,9 +324,38 @@ function TaskRow({ task, businessId }: { task: Task; businessId: string }) {
           </div>
         </button>
 
+        {/*
+          DELETE IS UNDOABLE, WHICH IS WHY IT DOES NOT ASK FIRST.
+          
+          This removed a task on one click with no confirmation and no way
+          back, on data that has no server copy — everything in this app is in
+          the reader's own browser. `/business` asks before archiving; a task
+          had nothing.
+          
+          Undo rather than a confirm dialog, deliberately. A confirmation on a
+          per-row action a founder uses repeatedly is a tax on the common case
+          (they meant it) to protect the rare one (they did not), and people
+          learn to click through it, which protects nobody. Undo costs nothing
+          when you meant it and everything back when you did not.
+        */}
         <button
           onClick={() => {
+            const removed = task;
             actions.mutateBusiness(businessId, (b) => ({ ...b, tasks: b.tasks.filter((t) => t.id !== task.id) }));
+            toast(`Deleted "${removed.title}"`, {
+              tone: "neutral",
+              action: {
+                label: "Undo",
+                onClick: () =>
+                  actions.mutateBusiness(businessId, (b) =>
+                    // Guarded: a second Undo, or an Undo after the same task
+                    // was re-added another way, must not duplicate the row.
+                    b.tasks.some((t) => t.id === removed.id)
+                      ? b
+                      : { ...b, tasks: [...b.tasks, removed] },
+                  ),
+              },
+            });
           }}
           aria-label={`Delete task "${task.title}"`}
           className="size-8 grid place-items-center rounded-lg text-faint hover:text-bad hover:bg-bad-soft transition-colors shrink-0"

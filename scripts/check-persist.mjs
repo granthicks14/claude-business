@@ -449,6 +449,102 @@ async function main() {
       "and it is one click away inside the business section",
     );
 
+    /* ============================ the four things that lost or hid your work == */
+    console.log("\n--- work you can get back, and a place you can return to ---");
+
+    /*
+     * C1. The questionnaire's Back showed the answers as they were at mount,
+     * not as they were after the last save — so answering a question and
+     * pressing Back showed nothing selected. The answer was stored; the
+     * interface said it was not.
+     */
+    const backer = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await backer.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
+    await createAccountOnScreen(backer, "Back Tester");
+    await backer.waitForTimeout(800);
+    await backer.goto(`${ORIGIN}/profile/setup`, { waitUntil: "networkidle" });
+    await backer.waitForTimeout(900);
+
+    const handsOn = backer.getByRole("button", { name: "Hands-on work", exact: true });
+    await handsOn.click();
+    await backer.getByRole("button", { name: /save and continue/i }).click();
+    await backer.waitForTimeout(700);
+    await backer.getByRole("button", { name: /^back$/i }).click();
+    await backer.waitForTimeout(600);
+    check(
+      (await backer.getByRole("button", { name: "Hands-on work", exact: true }).getAttribute("aria-pressed")) === "true",
+      "going Back shows the answer you just gave, not the one you arrived with",
+    );
+
+    /*
+     * C4. Twelve questions and no resume: a refresh put the founder back on
+     * question one and asked again for what had already been answered.
+     */
+    await backer.getByRole("button", { name: /save and continue/i }).click();
+    await backer.waitForTimeout(700);
+    const midway = backer.url();
+    check(/[?&]q=\d+/.test(midway), "the questionnaire keeps its place in the address", midway);
+    await backer.reload({ waitUntil: "networkidle" });
+    await backer.waitForTimeout(900);
+    check(
+      !(await mentions(backer, "What can you already do?")),
+      "and a refresh resumes rather than restarting at question one",
+    );
+
+    /*
+     * C2 and C3. Deleting a task was one click, permanent and silent, on data
+     * with no server copy; and the toast that was the only feedback for
+     * several operations was pointer-events-none and carried no action.
+     */
+    const deleter = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    await deleter.goto(`${ORIGIN}/account`, { waitUntil: "networkidle" });
+    await createAccountOnScreen(deleter, "Undo Tester");
+    await deleter.waitForTimeout(800);
+    await deleter.goto(`${ORIGIN}/`, { waitUntil: "networkidle" });
+    await deleter.waitForTimeout(600);
+    const openExample = deleter.getByRole("button", { name: /open the example business/i }).first();
+    if (await openExample.count()) {
+      await openExample.click();
+      await deleter.waitForTimeout(1000);
+    }
+    await deleter.goto(`${ORIGIN}/tasks`, { waitUntil: "networkidle" });
+    await deleter.waitForTimeout(1000);
+
+    await deleter.getByRole("button", { name: /^add a task$|^add task$/i }).first().click();
+    await deleter.waitForTimeout(500);
+    await deleter.locator("#task-title").fill("A task worth getting back");
+    await deleter.getByRole("button", { name: /^add task$/i }).last().click();
+    await deleter.waitForTimeout(800);
+
+    await deleter.getByRole("button", { name: /delete task "A task worth getting back"/i }).click();
+    await deleter.waitForTimeout(500);
+    /*
+     * Scoped to the list, not the page.
+     *
+     * The undo toast quotes the task's title — that is the point of it — so a
+     * whole-page text search finds the row it has just removed and reports the
+     * delete as having failed. The claim is about the list.
+     */
+    check(
+      (await deleter.locator("main li", { hasText: "A task worth getting back" }).count()) === 0,
+      "deleting a task removes it from the list",
+    );
+    const undo = deleter.getByRole("button", { name: /^undo$/i });
+    check((await undo.count()) > 0, "and the confirmation offers a way back");
+    await undo.click();
+    await deleter.waitForTimeout(700);
+    check(
+      (await deleter.locator("main li", { hasText: "A task worth getting back" }).count()) > 0,
+      "which actually restores it",
+    );
+
+    await deleter.goto(`${ORIGIN}/tasks`, { waitUntil: "networkidle" });
+    await deleter.waitForTimeout(900);
+    check(
+      await mentions(deleter, "A task worth getting back"),
+      "and the restore survives a reload, so it reached storage",
+    );
+
     /* ================================================ the car detailing run == */
     console.log("\n--- telling it what to build, and being heard (the §51 run) ---");
 

@@ -1898,22 +1898,63 @@ interface Toast {
   id: number;
   message: string;
   tone: "good" | "bad" | "neutral";
+  /** An optional way to take it back. See the note on `ToastProvider`. */
+  action?: { label: string; onClick: () => void };
 }
 
-const ToastContext = createContext<(message: string, tone?: Toast["tone"]) => void>(() => {});
+/**
+ * What a toast may carry.
+ *
+ * `action` is the whole reason this signature changed: several state changes
+ * in this app were confirmed only by a toast that was `pointer-events-none`,
+ * gone in 3.6 seconds, and not a link — so "8 steps added to My tasks" was the
+ * only evidence anything had happened and there was no way to undo it.
+ */
+export type ToastOptions = { tone?: Toast["tone"]; action?: Toast["action"] };
+
+const ToastContext = createContext<(message: string, tone?: Toast["tone"] | ToastOptions) => void>(
+  () => {},
+);
 
 export function useToast() {
   return useContext(ToastContext);
 }
 
+/**
+ * TOASTS THAT CAN BE DISMISSED, AND SOMETIMES UNDONE.
+ *
+ * Three things were wrong with the previous one and they compound.
+ *
+ * The container was `pointer-events-none`, so nothing in a toast could be
+ * clicked even in principle. It auto-dismissed after 3.6 seconds with no way
+ * to hold it. And it carried no action, which mattered because for several
+ * operations in this app the toast is the *only* feedback — deleting a task,
+ * adding steps from the money plan — and some of those are irreversible on
+ * data that has no server backup.
+ *
+ * So: the container keeps `pointer-events-none` (it spans the width of the
+ * screen and must not swallow clicks meant for the page), and each toast
+ * re-enables them for itself. A toast with an action holds for longer, because
+ * four seconds is not long enough to read a sentence and decide to undo it.
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const push = useCallback((message: string, tone: Toast["tone"] = "neutral") => {
-    const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, message, tone }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3600);
+  const dismiss = useCallback((id: number) => {
+    setToasts((t) => t.filter((x) => x.id !== id));
   }, []);
+
+  const push = useCallback(
+    (message: string, options?: Toast["tone"] | ToastOptions) => {
+      // The old signature was `(message, tone)`. Accepting both keeps every
+      // existing call site working rather than editing sixty of them.
+      const opts: ToastOptions = typeof options === "string" ? { tone: options } : (options ?? {});
+      const id = Date.now() + Math.random();
+      setToasts((t) => [...t, { id, message, tone: opts.tone ?? "neutral", action: opts.action }]);
+      setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), opts.action ? 9000 : 3600);
+    },
+    [],
+  );
 
   return (
     <ToastContext.Provider value={push}>
@@ -1925,7 +1966,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`animate-in px-4 py-2.5 rounded-xl shadow-pop border text-sm font-medium w-full text-center
+            /* `pointer-events-auto` on the toast, not the container: the
+               container is the full width of the screen and would otherwise
+               block clicks on whatever is underneath it. */
+            className={`animate-in pointer-events-auto flex items-center gap-3 px-4 py-2.5 rounded-xl shadow-pop border text-sm font-medium w-full
               ${
                 t.tone === "good"
                   ? "bg-good-soft border-good/30 text-good"
@@ -1934,7 +1978,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     : "bg-surface border-border text-text"
               }`}
           >
-            {t.message}
+            <span className="flex-1 min-w-0 text-center">{t.message}</span>
+            {t.action && (
+              <button
+                onClick={() => {
+                  t.action?.onClick();
+                  dismiss(t.id);
+                }}
+                className="shrink-0 font-semibold underline underline-offset-2 min-h-8 px-1"
+              >
+                {t.action.label}
+              </button>
+            )}
+            <button
+              onClick={() => dismiss(t.id)}
+              aria-label="Dismiss"
+              className="shrink-0 size-8 grid place-items-center rounded-md hover:bg-surface-2/60 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+              </svg>
+            </button>
           </div>
         ))}
       </div>

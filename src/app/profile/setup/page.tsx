@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 
 import { PageHero, Ready } from "@/components/page";
 import { Button, Eyebrow, LinkButton, Section } from "@/components/ui";
@@ -49,7 +50,18 @@ import { actions, useAppState } from "@/lib/store";
 export default function ProfileSetupPage() {
   return (
     <Ready>
-      <Setup />
+      {/*
+        `useSearchParams` needs a Suspense boundary above it. `null` rather
+        than a skeleton: this resolves in the same tick and a flash of
+        placeholder would be the only thing anybody ever saw of it.
+
+        Read through the hook rather than `window.location.search` in a
+        mount-only effect — that shortcut is what once made the lab's sidebar
+        link do nothing, because a client navigation does not remount.
+      */}
+      <Suspense fallback={null}>
+        <Setup />
+      </Suspense>
     </Ready>
   );
 }
@@ -67,13 +79,60 @@ function Setup() {
   const questions = useMemo(() => SETUP_QUESTIONS, []);
   const initial = useMemo(() => answersFrom(profile), []);
 
-  const [index, setIndex] = useState(0);
-  const [chosen, setChosen] = useState<string[]>(initial[questions[0]?.id ?? ""] ?? []);
+  /*
+   * THE ANSWERS SO FAR, NOT THE ANSWERS AT MOUNT.
+   *
+   * `go()` used to restore `initial[...]` — the snapshot taken when the page
+   * loaded. So: answer question one, press Save and continue, press Back, and
+   * the page showed nothing selected. The answer *was* saved to the profile;
+   * the interface said it was not.
+   *
+   * That is the "a click must cause the result" rule, broken in the route
+   * built to honour it, and it is worse than a cosmetic bug: the founder's
+   * reasonable response is to answer it again, which is the app asking twice
+   * for something it already has.
+   *
+   * One record, seeded from the profile at mount and updated on every save,
+   * is the whole fix. It is state rather than a re-read of the profile for the
+   * reason the frozen question list documents: `answersFrom` cannot recover
+   * every answer (an experience sentence or a "won't do" list does not map
+   * back to option ids), so re-deriving would lose exactly the answers a
+   * founder had just given.
+   */
+  /*
+   * WHERE YOU WERE, IN THE ADDRESS.
+   *
+   * Twelve questions and no resume: a refresh, a tab restore or a shared link
+   * put the founder back on question one. The answers were already saved, so
+   * the effect was being asked things they had just answered.
+   *
+   * `?q=` rather than component state alone, for the reason the workspace puts
+   * the business id in the URL: state that is only in memory is state that a
+   * reload silently discards, and this is a form somebody may well leave and
+   * come back to.
+   */
+  const router = useRouter();
+  const params = useSearchParams();
+  const fromUrl = Number(params.get("q"));
+  const startAt =
+    Number.isInteger(fromUrl) && fromUrl >= 1 && fromUrl <= SETUP_QUESTIONS.length ? fromUrl - 1 : 0;
+
+  const [answers, setAnswers] = useState<Record<string, string[]>>(initial);
+  const [index, setIndex] = useState(startAt);
   const [answered, setAnswered] = useState(0);
   const [done, setDone] = useState(false);
 
   const question = questions[index];
+  const chosen = answers[question?.id ?? ""] ?? [];
   const completeness = profileCompleteness(profile);
+
+  const setChosen = (next: string[] | ((prev: string[]) => string[])) => {
+    if (!question) return;
+    setAnswers((all) => ({
+      ...all,
+      [question.id]: typeof next === "function" ? next(all[question.id] ?? []) : next,
+    }));
+  };
 
   const go = (next: number) => {
     if (next >= questions.length) {
@@ -81,7 +140,13 @@ function Setup() {
       return;
     }
     setIndex(next);
-    setChosen(initial[questions[next].id] ?? []);
+    /*
+     * `replace`, not `push`. Twelve questions would otherwise put twelve
+     * entries in the history and Back would walk the questionnaire backwards
+     * one press at a time instead of leaving it — which is what the Back
+     * button on the page is for.
+     */
+    router.replace(`/profile/setup?q=${next + 1}`, { scroll: false });
   };
 
   const save = () => {
