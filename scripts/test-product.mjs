@@ -46,6 +46,8 @@ import { INDUSTRIES } from "../src/lib/engine/knowledge/industries.ts";
 import { actions, effectiveProfile, emptyProfile, emptyState, hydrateFrom, snapshot } from "../src/lib/store.ts";
 import { looksAutoNamed } from "../src/lib/engine/naming.ts";
 import { crumbsFor, navSections, overflowSections, sectionFor, topSections } from "../src/lib/nav-model.ts";
+import { ROUTE_TITLES } from "../src/lib/route-titles.ts";
+import type { AppState } from "../src/lib/types.ts";
 import type { FounderProfile, SelectedBusiness } from "../src/lib/types.ts";
 
 function profile(over: Partial<FounderProfile> = {}): FounderProfile {
@@ -863,6 +865,48 @@ results.navMatching = {
   };
 }
 
+
+/* ---------------------------------- every navigable route names itself -- */
+
+/*
+ * 48 of 53 routes shared one browser-tab title, because a client component
+ * cannot export \`metadata\` and every page in this app is one. WCAG 2.4.2 is
+ * Level A.
+ *
+ * \`route-titles.ts\` is a map rather than an import from \`nav-model.ts\`, and
+ * that file explains why at length — \`nav-model\` reaches \`store.ts\`, which is
+ * \`"use client"\`, and pulling a client module into the server graph is the
+ * documented scar that made the App Router answer sidebar clicks with a full
+ * document load. So the drift is prevented here instead: if the nav can link
+ * to it, it has a title.
+ */
+{
+  const populated: AppState = { ...emptyState(), businesses: [business()], activeBusinessId: "b1" };
+  const sections = navSections(populated);
+  const navRoutes = new Set<string>();
+  for (const sec of sections) {
+    navRoutes.add(sec.href.split("?")[0]);
+    for (const item of sec.items) navRoutes.add(item.href.split("?")[0]);
+    for (const also of sec.also ?? []) navRoutes.add(also.split("?")[0]);
+  }
+  navRoutes.delete("/");
+
+  const missing = [...navRoutes].filter((r) => !ROUTE_TITLES[r]);
+  const values = Object.values(ROUTE_TITLES);
+
+  results.titles = {
+    navRoutes: navRoutes.size,
+    entries: Object.keys(ROUTE_TITLES).length,
+    everyNavRouteHasOne: missing.length === 0,
+    missing: missing.join(", "),
+    // A tab is about twenty characters wide, and the root template appends
+    // " . Groundwork" to every one of these.
+    allShortEnough: values.every((v) => v.length > 0 && v.length <= 30),
+    // Duplicates are allowed only where two routes are the same destination —
+    // the redirects. Anything else is two pages a person cannot tell apart.
+    duplicated: values.filter((v, i) => values.indexOf(v) !== i).length,
+  };
+}
 console.log(JSON.stringify(results));
 `,
   "utf8",
@@ -1173,6 +1217,12 @@ check("answering it produces a usable profile", r.setup.usableAfterAnswering, `$
 check("which still generates a full batch", r.setup.ideasAfterAnswering === 10, `${r.setup.ideasAfterAnswering}`);
 check("reopening it shows the answers already given", r.setup.restoresItsOwnAnswers);
 check("and it never asks for a name the account already has", r.setup.neverAsksTheName);
+
+console.log("\n--- every navigable route names itself ---");
+check("the nav sweep found routes to check", r.titles.navRoutes > 20, `${r.titles.navRoutes} nav routes, ${r.titles.entries} titles`);
+check("every route the navigation links to has a title", r.titles.everyNavRouteHasOne, r.titles.missing);
+check("and each is short enough for a browser tab", r.titles.allShortEnough);
+check("only the redirects share a title", r.titles.duplicated <= 4, `${r.titles.duplicated} repeated`);
 
 console.log("\n--- what good looks like in this trade ---");
 check("a catalogue match produces trade-specific practices", r.benchmark.deepIsDeep && r.benchmark.deepHasPractices,
